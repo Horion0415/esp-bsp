@@ -19,6 +19,15 @@
 #include "driver/gpio.h"
 #include "esp_lcd_ili9881c.h"
 
+#define ILI9881C_CMD_CNDBKxSEL                (0xFF)
+#define ILI9881C_CMD_BKxSEL_BYTE0             (0x98)
+#define ILI9881C_CMD_BKxSEL_BYTE1             (0x81)
+#define ILI9881C_CMD_BKxSEL_BYTE2_PAGE0       (0x00)
+#define ILI9881C_CMD_BKxSEL_BYTE2_PAGE1       (0x01)
+#define ILI9881C_CMD_BKxSEL_BYTE2_PAGE2       (0x02)
+#define ILI9881C_CMD_BKxSEL_BYTE2_PAGE3       (0x03)
+#define ILI9881C_CMD_BKxSEL_BYTE2_PAGE4       (0x04)
+
 #define ILI9881C_CMD_GS_BIT       (1 << 0)
 #define ILI9881C_CMD_SS_BIT       (1 << 1)
 
@@ -98,8 +107,8 @@ esp_err_t esp_lcd_new_panel_ili9881c(const esp_lcd_panel_io_handle_t io, const e
 
     // The ID register is on the CMD_Page 1
     uint8_t ID1, ID2, ID3;
-    esp_lcd_panel_io_tx_param(io, 0xFF, (uint8_t[]) {
-        0x98, 0x81, 0x01
+    esp_lcd_panel_io_tx_param(io, ILI9881C_CMD_CNDBKxSEL, (uint8_t[]) {
+        ILI9881C_CMD_BKxSEL_BYTE0, ILI9881C_CMD_BKxSEL_BYTE1, ILI9881C_CMD_BKxSEL_BYTE2_PAGE1
     }, 3);
     esp_lcd_panel_io_rx_param(io, 0x00, &ID1, 1);
     esp_lcd_panel_io_rx_param(io, 0x01, &ID2, 1);
@@ -150,7 +159,7 @@ err:
 static const ili9881c_lcd_init_cmd_t vendor_specific_init_code_default[] = {
     // {cmd, { data }, data_size, delay_ms}
     /**** CMD_Page 3 ****/
-    {0xFF, (uint8_t []){0x98, 0x81, 0x03}, 3, 0},
+    {ILI9881C_CMD_CNDBKxSEL, (uint8_t []){ILI9881C_CMD_BKxSEL_BYTE0, ILI9881C_CMD_BKxSEL_BYTE1, ILI9881C_CMD_BKxSEL_BYTE2_PAGE3}, 3, 0},
     {0x01, (uint8_t []){0x00}, 1, 0},
     {0x02, (uint8_t []){0x00}, 1, 0},
     {0x03, (uint8_t []){0x53}, 1, 0},
@@ -278,7 +287,7 @@ static const ili9881c_lcd_init_cmd_t vendor_specific_init_code_default[] = {
     {0x88, (uint8_t []){0x02}, 1, 0},
     {0x89, (uint8_t []){0x02}, 1, 0},
     {0x8A, (uint8_t []){0x02}, 1, 0},
-    {0xFF, (uint8_t []){0x98, 0x81, 0x04}, 3, 0},
+    {ILI9881C_CMD_CNDBKxSEL, (uint8_t []){ILI9881C_CMD_BKxSEL_BYTE0, ILI9881C_CMD_BKxSEL_BYTE1, ILI9881C_CMD_BKxSEL_BYTE2_PAGE4}, 3, 0},
     {0x6C, (uint8_t []){0x15}, 1, 0},
     {0x6E, (uint8_t []){0x30}, 1, 0},
     {0x6F, (uint8_t []){0x33}, 1, 0},
@@ -292,7 +301,7 @@ static const ili9881c_lcd_init_cmd_t vendor_specific_init_code_default[] = {
     {0x3B, (uint8_t []){0x3D}, 1, 0},
     {0x38, (uint8_t []){0x01}, 1, 0},
     {0x39, (uint8_t []){0x00}, 1, 0},
-    {0xFF, (uint8_t []){0x98, 0x81, 0x01}, 3, 0},
+    {ILI9881C_CMD_CNDBKxSEL, (uint8_t []){ILI9881C_CMD_BKxSEL_BYTE0, ILI9881C_CMD_BKxSEL_BYTE1, ILI9881C_CMD_BKxSEL_BYTE2_PAGE1}, 3, 0},
     {0x22, (uint8_t []){0x09}, 1, 0},
     {0x31, (uint8_t []){0x00}, 1, 0},
     {0x40, (uint8_t []){0x53}, 1, 0},
@@ -343,7 +352,7 @@ static const ili9881c_lcd_init_cmd_t vendor_specific_init_code_default[] = {
     {0xD1, (uint8_t []){0x4E}, 1, 0},
     {0xD2, (uint8_t []){0x5F}, 1, 0},
     {0xD3, (uint8_t []){0x39}, 1, 0},
-    {0xFF, (uint8_t []){0x98, 0x81, 0x00}, 3, 0},
+    {ILI9881C_CMD_CNDBKxSEL, (uint8_t []){ILI9881C_CMD_BKxSEL_BYTE0, ILI9881C_CMD_BKxSEL_BYTE1, ILI9881C_CMD_BKxSEL_BYTE2_PAGE0}, 3, 0},
     {0x35, (uint8_t []){0x00}, 1, 0},
     {0x29, (uint8_t []){0x00}, 0, 0},
 
@@ -371,11 +380,12 @@ static esp_err_t panel_ili9881c_init(esp_lcd_panel_t *panel)
     esp_lcd_panel_io_handle_t io = ili9881c->io;
     const ili9881c_lcd_init_cmd_t *init_cmds = NULL;
     uint16_t init_cmds_size = 0;
+    bool is_command0_enable = false;
     bool is_cmd_overwritten = false;
 
     // back to CMD_Page 0
-    ESP_RETURN_ON_ERROR(esp_lcd_panel_io_tx_param(io, 0xFF, (uint8_t[]) {
-        0x98, 0x81, 0x00
+    ESP_RETURN_ON_ERROR(esp_lcd_panel_io_tx_param(io, ILI9881C_CMD_CNDBKxSEL, (uint8_t[]) {
+        ILI9881C_CMD_BKxSEL_BYTE0, ILI9881C_CMD_BKxSEL_BYTE1, ILI9881C_CMD_BKxSEL_BYTE2_PAGE0
     }, 3), TAG, "send command failed");
     // exit sleep mode
     ESP_RETURN_ON_ERROR(esp_lcd_panel_io_tx_param(io, LCD_CMD_SLPOUT, NULL, 0), TAG,
@@ -401,11 +411,15 @@ static esp_err_t panel_ili9881c_init(esp_lcd_panel_t *panel)
 
     for (int i = 0; i < init_cmds_size; i++) {
         // Check if the command has been used or conflicts with the internal
-        if (init_cmds[i].data_bytes > 0) {
+        if (is_command0_enable && init_cmds[i].data_bytes > 0) {
             switch (init_cmds[i].cmd) {
             case LCD_CMD_MADCTL:
                 is_cmd_overwritten = true;
                 ili9881c->madctl_val = ((uint8_t *)init_cmds[i].data)[0];
+                break;
+            case LCD_CMD_COLMOD:
+                is_cmd_overwritten = true;
+                ili9881c->colmod_val = ((uint8_t *)init_cmds[i].data)[0];
                 break;
             default:
                 is_cmd_overwritten = false;
@@ -422,6 +436,12 @@ static esp_err_t panel_ili9881c_init(esp_lcd_panel_t *panel)
         // Send command
         ESP_RETURN_ON_ERROR(esp_lcd_panel_io_tx_param(io, init_cmds[i].cmd, init_cmds[i].data, init_cmds[i].data_bytes), TAG, "send command failed");
         vTaskDelay(pdMS_TO_TICKS(init_cmds[i].delay_ms));
+
+        if((init_cmds[i].cmd == ILI9881C_CMD_CNDBKxSEL) && (init_cmds[i].data[2] == ILI9881C_CMD_BKxSEL_BYTE2_PAGE0)) {
+            is_command0_enable = true;
+        } else if((init_cmds[i].cmd == ILI9881C_CMD_CNDBKxSEL) && (init_cmds[i].data[2] != ILI9881C_CMD_BKxSEL_BYTE2_PAGE0)) {
+            is_command0_enable = false;
+        }
     }
     ESP_LOGD(TAG, "send init commands success");
 

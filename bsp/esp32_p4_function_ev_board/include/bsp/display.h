@@ -67,7 +67,6 @@ typedef struct {
     esp_lcd_dsi_bus_handle_t    mipi_dsi_bus;  /*!< MIPI DSI bus handle */
     esp_lcd_panel_io_handle_t   io;            /*!< ESP LCD IO handle */
     esp_lcd_panel_handle_t      panel;         /*!< ESP LCD panel (color) handle */
-    esp_lcd_panel_handle_t      control;       /*!< ESP LCD panel (control) handle */
 } bsp_lcd_handles_t;
 
 /**

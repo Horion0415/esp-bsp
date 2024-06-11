@@ -39,7 +39,6 @@ typedef struct {
 typedef struct {
     esp_lcd_panel_io_handle_t io_handle;    /*!< LCD panel IO handle */
     esp_lcd_panel_handle_t panel_handle;    /*!< LCD panel handle */
-    esp_lcd_panel_handle_t control_handle;  /*!< LCD panel control handle */
 
     uint32_t    buffer_size;        /*!< Size of the buffer for the screen in pixels */
     bool        double_buffer;      /*!< True, if should be allocated two buffers */

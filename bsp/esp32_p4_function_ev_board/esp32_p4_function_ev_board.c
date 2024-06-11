@@ -227,64 +227,42 @@ esp_err_t bsp_display_new_with_handles(const bsp_display_config_t *config, bsp_l
 
     /* create MIPI DSI bus first, it will initialize the DSI PHY as well */
     esp_lcd_dsi_bus_handle_t mipi_dsi_bus;
-    esp_lcd_dsi_bus_config_t bus_config = {
-        .bus_id = 0,
-        .num_data_lanes = BSP_LCD_MIPI_DSI_LANE_NUM,
-        .phy_clk_src = MIPI_DSI_PHY_CLK_SRC_DEFAULT,
-        .lane_bit_rate_mbps = BSP_LCD_MIPI_DSI_LANE_BITRATE_MBPS,
-    };
+    esp_lcd_dsi_bus_config_t bus_config = ILI9881C_PANEL_BUS_DSI_2CH_CONFIG();
     ESP_RETURN_ON_ERROR(esp_lcd_new_dsi_bus(&bus_config, &mipi_dsi_bus), TAG, "New DSI bus init failed");
 
     ESP_LOGI(TAG, "Install MIPI DSI LCD control panel");
     // we use DBI interface to send LCD commands and parameters
     esp_lcd_panel_io_handle_t io;
-    esp_lcd_dbi_io_config_t dbi_config = {
-        .virtual_channel = 0,
-        .lcd_cmd_bits = 8,   // according to the LCD ILI9881C spec
-        .lcd_param_bits = 8, // according to the LCD ILI9881C spec
-    };
+    esp_lcd_dbi_io_config_t dbi_config = ILI9881C_PANEL_IO_DBI_CONFIG();
     ESP_GOTO_ON_ERROR(esp_lcd_new_panel_io_dbi(mipi_dsi_bus, &dbi_config, &io), err, TAG, "New panel IO failed");
 
-    // create ILI9881C control panel
-    esp_lcd_panel_handle_t ili9881c_ctrl_panel;
-    esp_lcd_panel_dev_config_t lcd_dev_config = {
-        .bits_per_pixel = 16,
-        .rgb_ele_order = BSP_LCD_COLOR_SPACE,
-        .reset_gpio_num = -1,
-    };
-    ESP_GOTO_ON_ERROR(esp_lcd_new_panel_ili9881c(io, &lcd_dev_config, &ili9881c_ctrl_panel), err, TAG, "New LCD panel ILI9881C failed");
-    ESP_GOTO_ON_ERROR(esp_lcd_panel_reset(ili9881c_ctrl_panel), err, TAG, "LCD panel reset failed");
-    ESP_GOTO_ON_ERROR(esp_lcd_panel_init(ili9881c_ctrl_panel), err, TAG, "LCD panel init failed");
-    ESP_GOTO_ON_ERROR(esp_lcd_panel_disp_on_off(ili9881c_ctrl_panel, true), err, TAG, "LCD panel ON failed");
-    esp_lcd_panel_mirror(ili9881c_ctrl_panel, true, true);
-
-    ESP_LOGI(TAG, "Install MIPI DSI LCD data panel");
-    esp_lcd_panel_handle_t ili9881c_panel;
-    esp_lcd_dpi_panel_config_t dpi_config = {
-        .virtual_channel = 0,
-        .dpi_clk_src = MIPI_DSI_DPI_CLK_SRC_DEFAULT,
-        .dpi_clock_freq_mhz = BSP_LCD_PIXEL_CLOCK_MHZ,
-        .pixel_format = LCD_COLOR_PIXEL_FORMAT_RGB565,
-        .video_timing = {
-            .h_size = BSP_LCD_V_RES,
-            .v_size = BSP_LCD_H_RES,
-            .hsync_back_porch = BSP_LCD_MIPI_DSI_LCD_HBP,
-            .hsync_pulse_width = BSP_LCD_MIPI_DSI_LCD_HSYNC,
-            .hsync_front_porch = BSP_LCD_MIPI_DSI_LCD_HFP,
-            .vsync_back_porch = BSP_LCD_MIPI_DSI_LCD_VBP,
-            .vsync_pulse_width = BSP_LCD_MIPI_DSI_LCD_VSYNC,
-            .vsync_front_porch = BSP_LCD_MIPI_DSI_LCD_VFP,
+    esp_lcd_dpi_panel_config_t dpi_config = ILI9881C_800_1280_PANEL_60HZ_DPI_CONFIG(LCD_COLOR_PIXEL_FORMAT_RGB565);
+    ili9881c_vendor_config_t vendor_config = {
+        .mipi_config = {
+            .dsi_bus = mipi_dsi_bus,
+            .dpi_config = &dpi_config,
         },
-        .flags.use_dma2d = true,
     };
-    ESP_GOTO_ON_ERROR(esp_lcd_new_panel_dpi(mipi_dsi_bus, &dpi_config, &ili9881c_panel), err, TAG, "New panel DPI failed");
-    ESP_GOTO_ON_ERROR(esp_lcd_panel_init(ili9881c_panel), err, TAG, "New panel DPI init failed");
+
+    // create ILI9881C panel
+    esp_lcd_panel_handle_t ili9881c_panel;
+    const esp_lcd_panel_dev_config_t lcd_dev_config = {
+        .reset_gpio_num = -1,
+        .rgb_ele_order = BSP_LCD_COLOR_SPACE,
+        .bits_per_pixel = 16,
+        .vendor_config = &vendor_config,
+    };
+
+    ESP_GOTO_ON_ERROR(esp_lcd_new_panel_ili9881c(io, &lcd_dev_config, &ili9881c_panel), err, TAG, "New LCD panel ILI9881C failed");
+    ESP_GOTO_ON_ERROR(esp_lcd_panel_reset(ili9881c_panel), err, TAG, "LCD panel reset failed");    
+    ESP_GOTO_ON_ERROR(esp_lcd_panel_init(ili9881c_panel), err, TAG, "LCD panel init failed");
+    ESP_GOTO_ON_ERROR(esp_lcd_panel_disp_on_off(ili9881c_panel, true), err, TAG, "LCD panel ON failed");
+    esp_lcd_panel_mirror(ili9881c_panel, true, true);
 
     /* Return all handles */
     ret_handles->io = io;
     ret_handles->mipi_dsi_bus = mipi_dsi_bus;
     ret_handles->panel = ili9881c_panel;
-    ret_handles->control = ili9881c_ctrl_panel;
 
     ESP_LOGI(TAG, "Display initialized");
 
@@ -293,9 +271,6 @@ esp_err_t bsp_display_new_with_handles(const bsp_display_config_t *config, bsp_l
 err:
     if (ili9881c_panel) {
         esp_lcd_panel_del(ili9881c_panel);
-    }
-    if (ili9881c_ctrl_panel) {
-        esp_lcd_panel_del(ili9881c_ctrl_panel);
     }
     if (io) {
         esp_lcd_panel_io_del(io);
@@ -345,7 +320,6 @@ static lv_display_t *bsp_display_lcd_init(const bsp_display_cfg_t *cfg)
     const lvgl_port_display_cfg_t disp_cfg = {
         .io_handle = lcd_panels.io,
         .panel_handle = lcd_panels.panel,
-        .control_handle = lcd_panels.control,
         .buffer_size = cfg->buffer_size,
         .double_buffer = cfg->double_buffer,
         .hres = BSP_LCD_V_RES,
