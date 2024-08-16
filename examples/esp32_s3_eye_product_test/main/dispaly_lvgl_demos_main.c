@@ -11,12 +11,18 @@
 #include "lv_demos.h"
 #include "bsp/esp-bsp.h"
 
+#include "app_qma6100.h"
+
 static char *TAG = "app_main";
 
 #define LOG_MEM_INFO    (0)
 
 void app_main(void)
 {
+    bsp_i2c_init();
+    QMA7981_init();
+    QMA7981_begin();
+    
     /* Initialize display and LVGL */
     bsp_display_start();
 
