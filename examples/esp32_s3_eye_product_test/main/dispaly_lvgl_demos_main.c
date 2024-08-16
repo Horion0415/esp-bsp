@@ -21,6 +21,7 @@ static char *TAG = "app_main";
 void app_main(void)
 {
     app_camera_init();
+    app_camera_begin();
 
     QMA7981_init();
     QMA7981_begin();

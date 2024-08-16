@@ -66,3 +66,23 @@ esp_err_t app_camera_init(void)
 
     return ESP_OK;
 }
+
+static void app_camera_task(void *arg)
+{
+    ESP_LOGD(TAG, "Start");
+    while (true)
+    {
+        camera_fb_t *frame = esp_camera_fb_get();
+        if(frame == NULL) {
+            ESP_LOGE(TAG, "Camera capture failed");
+        }
+    }
+    ESP_LOGD(TAG, "Stop");
+    vTaskDelete(NULL);
+}
+
+esp_err_t app_camera_begin(void)
+{
+    xTaskCreatePinnedToCore(app_camera_task, "app_camera_task", 4096, NULL, 5, NULL, 1);
+    return ESP_OK;
+}
