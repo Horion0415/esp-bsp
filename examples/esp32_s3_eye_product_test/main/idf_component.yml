@@ -1,0 +1,5 @@
+description: BSP Display rotation example
+dependencies:
+  esp32_s3_eye:
+    version: "*"
+    override_path: "../../../bsp/esp32_s3_eye"
