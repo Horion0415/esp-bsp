@@ -3,4 +3,6 @@ dependencies:
   esp32_s3_eye:
     version: "*"
     override_path: "../../../bsp/esp32_s3_eye"
-  
+  espressif/esp32-camera:
+    version: "^2"
+    public: true

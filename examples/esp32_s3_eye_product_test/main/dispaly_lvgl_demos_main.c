@@ -12,6 +12,7 @@
 #include "bsp/esp-bsp.h"
 
 #include "app_qma6100.h"
+#include "app_camera.h"
 
 static char *TAG = "app_main";
 
@@ -19,10 +20,11 @@ static char *TAG = "app_main";
 
 void app_main(void)
 {
-    bsp_i2c_init();
+    app_camera_init();
+
     QMA7981_init();
     QMA7981_begin();
-    
+
     /* Initialize display and LVGL */
     bsp_display_start();
 
