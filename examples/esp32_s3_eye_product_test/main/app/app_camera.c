@@ -4,6 +4,9 @@
 
 #include "app_camera.h"
 
+#include "lvgl.h"
+#include "bsp/esp-bsp.h"
+
 static const char *TAG = "app_camera";
 
 esp_err_t app_camera_init(void)
@@ -69,12 +72,19 @@ esp_err_t app_camera_init(void)
 
 static void app_camera_task(void *arg)
 {
+    lv_obj_t *camera_canvas = lv_canvas_create(lv_scr_act());
+    lv_obj_set_size(camera_canvas, 240, 240);
     ESP_LOGD(TAG, "Start");
     while (true)
     {
         camera_fb_t *frame = esp_camera_fb_get();
         if(frame == NULL) {
             ESP_LOGE(TAG, "Camera capture failed");
+        } else {
+            bsp_display_lock(0);
+            lv_canvas_set_buffer(camera_canvas, frame->buf, 240, 240, LV_IMG_CF_TRUE_COLOR);
+            esp_camera_fb_return(frame);
+            bsp_display_unlock();
         }
     }
     ESP_LOGD(TAG, "Stop");

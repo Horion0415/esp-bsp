@@ -21,33 +21,16 @@ static char *TAG = "app_main";
 void app_main(void)
 {
     app_camera_init();
-    app_camera_begin();
 
     QMA7981_init();
     QMA7981_begin();
 
     /* Initialize display and LVGL */
     bsp_display_start();
-
-#if CONFIG_BSP_DISPLAY_LVGL_AVOID_TEAR
-    ESP_LOGI(TAG, "Avoid lcd tearing effect");
-#if CONFIG_BSP_DISPLAY_LVGL_FULL_REFRESH
-    ESP_LOGI(TAG, "LVGL full-refresh");
-#elif CONFIG_BSP_DISPLAY_LVGL_DIRECT_MODE
-    ESP_LOGI(TAG, "LVGL direct-mode");
-#endif
-#endif
-
     /* Set display brightness to 100% */
     bsp_display_backlight_on();
+    app_camera_begin();
 
-    ESP_LOGI(TAG, "Display LVGL demo");
-    bsp_display_lock(0);
-    // lv_demo_widgets();      /* A widgets example */
-    lv_demo_music();        /* A modern, smartphone-like music player demo. */
-    // lv_demo_stress();       /* A stress test for LVGL. */
-    // lv_demo_benchmark();    /* A demo to measure the performance of LVGL or to compare different settings. */
-    bsp_display_unlock();
 
 #if LOG_MEM_INFO
     static char buffer[128];    /* Make sure buffer is enough for `sprintf` */
