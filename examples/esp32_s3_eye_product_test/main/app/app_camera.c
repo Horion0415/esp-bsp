@@ -83,8 +83,8 @@ static void app_camera_task(void *arg)
         } else {
             bsp_display_lock(0);
             lv_canvas_set_buffer(camera_canvas, frame->buf, 240, 240, LV_IMG_CF_TRUE_COLOR);
-            esp_camera_fb_return(frame);
             bsp_display_unlock();
+            esp_camera_fb_return(frame);
         }
     }
     ESP_LOGD(TAG, "Stop");

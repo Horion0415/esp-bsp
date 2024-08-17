@@ -88,7 +88,7 @@ static void QMA7981_data_task(void *arg)
     float data_g;
     while (1) {
         QMA7981_get_data(&data_x, &data_y, &data_z, &data_g);
-        ESP_LOGI(TAG, "G: %.2f", data_g);
+        ESP_LOGD(TAG, "G: %.2f", data_g);
         vTaskDelay(500 / portTICK_PERIOD_MS);
     }
     vTaskDelete(NULL);

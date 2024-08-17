@@ -6,3 +6,4 @@ dependencies:
   espressif/esp32-camera:
     version: "^2"
     public: true
+  espressif/esp-sr: "~1.5.1"
