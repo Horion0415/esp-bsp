@@ -6,6 +6,9 @@
 #include "esp_log.h"
 #include "driver/i2c.h"
 #include "app_qma6100.h"
+#include "app_button.h"
+
+#include "ui.h"
 
 #define I2C_MASTER_SCL_IO           CONFIG_I2C_MASTER_SCL      /*!< GPIO number used for I2C master clock */
 #define I2C_MASTER_SDA_IO           CONFIG_I2C_MASTER_SDA      /*!< GPIO number used for I2C master data  */
@@ -86,10 +89,31 @@ static void QMA7981_data_task(void *arg)
 {
     float data_x, data_y, data_z;
     float data_g;
+    uint8_t time = 0;
     while (1) {
         QMA7981_get_data(&data_x, &data_y, &data_z, &data_g);
         ESP_LOGD(TAG, "G: %.2f", data_g);
-        vTaskDelay(500 / portTICK_PERIOD_MS);
+
+        if(data_g < 1.1 && data_g > 0.9) {
+            lv_label_set_text(ui_LabelPass, "PASS");
+            lv_obj_set_style_text_color(ui_LabelPass, lv_color_hex(0x2FF6AA), LV_PART_MAIN | LV_STATE_DEFAULT);
+            if(app_button_get_screen() == ScreenIMU) {
+                time++;
+            }
+        } else {
+            time = 0;
+            lv_label_set_text(ui_LabelPass, "FAIL");
+            lv_obj_set_style_text_color(ui_LabelPass, lv_color_hex(0xFF0000), LV_PART_MAIN | LV_STATE_DEFAULT);   
+        }
+
+        if(time > 6 && app_button_get_screen() == ScreenIMU) {
+            _ui_screen_change(&ui_ScreenSuccess, LV_SCR_LOAD_ANIM_NONE, 0, 0, ui_ScreenSuccess_screen_init);
+            app_button_change_screen(ScreenSuccess);
+            app_sdcard_write_result();
+            time = 0;
+        }
+
+        vTaskDelay(300 / portTICK_PERIOD_MS);
     }
     vTaskDelete(NULL);
 }

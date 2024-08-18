@@ -14,6 +14,10 @@
 #include "app_qma6100.h"
 #include "app_camera.h"
 #include "app_speech_if.h"
+#include "app_color_check.h"
+#include "app_button.h"
+
+#include "ui.h"
 
 static char *TAG = "app_main";
 
@@ -21,18 +25,26 @@ static char *TAG = "app_main";
 
 void app_main(void)
 {
+    /* Initialize display and LVGL */
+    bsp_display_start();
+    bsp_display_backlight_on();
+    
+    bsp_display_lock(0);
+    ui_init();
+    bsp_display_unlock();
+    
+    app_color_check_init();
+
+    app_sdcard_init();
+    app_button_init();
+
     app_camera_init();
+    app_camera_begin();
 
     QMA7981_init();
     QMA7981_begin();
 
-    /* Initialize display and LVGL */
-    bsp_display_start();
-    /* Set display brightness to 100% */
-    bsp_display_backlight_on();
-    app_camera_begin();
     speech_recognition_init();
-
 
 #if LOG_MEM_INFO
     static char buffer[128];    /* Make sure buffer is enough for `sprintf` */

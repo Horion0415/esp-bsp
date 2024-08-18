@@ -13,6 +13,9 @@
 #include "esp_mn_iface.h"
 #include "esp_mn_models.h"
 
+#include "app_button.h"
+#include "ui.h"
+
 #define I2S_CHANNEL_NUM 1
 #define I2S_CH ((i2s_port_t)1)
 
@@ -124,7 +127,11 @@ static void detect_hander(void)
 
         if (res->wakeup_state == WAKENET_DETECTED) {
             ESP_LOGI(TAG, "WAKEWORD DETECTED\n");
-	        multinet->clean(model_data);  // clean all status of multinet
+            
+            _ui_screen_change(&ui_ScreenColor, LV_SCR_LOAD_ANIM_NONE, 0, 0, ui_ScreenColor_screen_init);
+            app_button_change_screen(ScreenColor);
+	        
+            multinet->clean(model_data);  // clean all status of multinet
         } else if (res->wakeup_state == WAKENET_CHANNEL_VERIFIED) {
             ESP_LOGI(TAG, "AFE_FETCH_CHANNEL_VERIFIED, channel index: %d\n", res->trigger_channel_id);
             ESP_LOGI(TAG, ">>> Say your command <<<");

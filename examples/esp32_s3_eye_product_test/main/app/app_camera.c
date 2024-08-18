@@ -6,6 +6,7 @@
 
 #include "lvgl.h"
 #include "bsp/esp-bsp.h"
+#include "ui.h"
 
 static const char *TAG = "app_camera";
 
@@ -72,7 +73,7 @@ esp_err_t app_camera_init(void)
 
 static void app_camera_task(void *arg)
 {
-    lv_obj_t *camera_canvas = lv_canvas_create(lv_scr_act());
+    lv_obj_t *camera_canvas = lv_canvas_create(ui_ScreenCamera);
     lv_obj_set_size(camera_canvas, 240, 240);
     ESP_LOGD(TAG, "Start");
     while (true)
