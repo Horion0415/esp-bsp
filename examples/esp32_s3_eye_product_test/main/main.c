@@ -25,6 +25,8 @@ static char *TAG = "app_main";
 
 void app_main(void)
 {
+    ESP_LOGI(TAG, "Version: 0.1.0");
+    ESP_LOGI(TAG, "Product test start");
     /* Initialize display and LVGL */
     bsp_display_start();
     bsp_display_backlight_on();
