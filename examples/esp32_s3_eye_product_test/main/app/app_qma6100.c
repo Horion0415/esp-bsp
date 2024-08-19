@@ -107,7 +107,7 @@ static void QMA7981_data_task(void *arg)
             lv_obj_set_style_text_color(ui_LabelPass, lv_color_hex(0xFF0000), LV_PART_MAIN | LV_STATE_DEFAULT);   
         }
 
-        if(time > 3 && app_button_get_screen() == ScreenIMU) {
+        if(time > 2 && app_button_get_screen() == ScreenIMU) {
             app_camera_stop();
             if(app_camera_is_finished() == true) {
                 _ui_screen_change(&ui_ScreenSuccess, LV_SCR_LOAD_ANIM_NONE, 0, 0, ui_ScreenSuccess_screen_init);
