@@ -42,7 +42,7 @@ static void color_check_timer(lv_timer_t * timer)
 
 void ui_ScreenColor_event_cb(lv_event_t *e)
 {
-    lv_timer_t * timer = lv_timer_create(color_check_timer, 1000,  NULL);
+    lv_timer_t * timer = lv_timer_create(color_check_timer, 900,  NULL);
 }
 
 esp_err_t app_color_check_init(void)

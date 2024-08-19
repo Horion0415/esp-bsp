@@ -3,6 +3,7 @@
 #include "esp_log.h"
 #include "esp_mac.h"
 #include "app_button.h"
+#include "app_camera.h"
 #include "bsp/esp-bsp.h"
 #include "ui.h"
 
@@ -53,6 +54,7 @@ static void button_cb(void *button_handle, void *usr_data)
         if (screen == ScreenButton) {
             lv_obj_set_style_bg_color(ui_PanelDown, color, LV_PART_MAIN | LV_STATE_DEFAULT);
             status |= 1 << 2;
+            app_camera_start();
         } else if (screen == ScreenCamera) {
             status = 0;
             s_example_write_file(result, "Camera Pass\n", true);
@@ -100,9 +102,9 @@ ScreenType app_button_get_screen(void)
     return screen;
 }
 
-esp_err_t app_sdcard_write_result(void)
+esp_err_t app_sdcard_write_result(char* sd_log)
 {
-    s_example_write_file(result, "IMU Pass\n", true);
+    s_example_write_file(result, sd_log, true);
 
     return ESP_OK;
 }

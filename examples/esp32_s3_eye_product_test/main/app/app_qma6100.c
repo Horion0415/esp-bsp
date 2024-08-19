@@ -7,6 +7,7 @@
 #include "driver/i2c.h"
 #include "app_qma6100.h"
 #include "app_button.h"
+#include "app_camera.h"
 
 #include "ui.h"
 
@@ -106,10 +107,13 @@ static void QMA7981_data_task(void *arg)
             lv_obj_set_style_text_color(ui_LabelPass, lv_color_hex(0xFF0000), LV_PART_MAIN | LV_STATE_DEFAULT);   
         }
 
-        if(time > 6 && app_button_get_screen() == ScreenIMU) {
-            _ui_screen_change(&ui_ScreenSuccess, LV_SCR_LOAD_ANIM_NONE, 0, 0, ui_ScreenSuccess_screen_init);
-            app_button_change_screen(ScreenSuccess);
-            app_sdcard_write_result();
+        if(time > 3 && app_button_get_screen() == ScreenIMU) {
+            app_camera_stop();
+            if(app_camera_is_finished() == true) {
+                _ui_screen_change(&ui_ScreenSuccess, LV_SCR_LOAD_ANIM_NONE, 0, 0, ui_ScreenSuccess_screen_init);
+                app_button_change_screen(ScreenSuccess);
+                app_sdcard_write_result("IMU Pass\n");
+            }
             time = 0;
         }
 

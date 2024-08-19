@@ -38,6 +38,9 @@ extern "C" {
 
 esp_err_t app_camera_init(void);
 esp_err_t app_camera_begin(void);
+esp_err_t app_camera_start(void);
+esp_err_t app_camera_stop(void);
+bool app_camera_is_finished(void);
 
 #ifdef __cplusplus
 }

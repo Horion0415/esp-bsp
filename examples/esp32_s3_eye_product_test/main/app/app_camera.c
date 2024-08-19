@@ -10,6 +10,9 @@
 
 static const char *TAG = "app_camera";
 
+static bool camera_running = false;
+static bool camera_finished = false;
+
 esp_err_t app_camera_init(void)
 {
     gpio_config_t conf;
@@ -78,14 +81,21 @@ static void app_camera_task(void *arg)
     ESP_LOGD(TAG, "Start");
     while (true)
     {
-        camera_fb_t *frame = esp_camera_fb_get();
-        if(frame == NULL) {
-            ESP_LOGE(TAG, "Camera capture failed");
+        if (camera_running) {
+            camera_finished = false;
+            camera_fb_t *frame = esp_camera_fb_get();
+            if(frame == NULL) {
+                ESP_LOGE(TAG, "Camera capture failed");
+            } else {
+                bsp_display_lock(0);
+                lv_canvas_set_buffer(camera_canvas, frame->buf, 240, 240, LV_IMG_CF_TRUE_COLOR);
+                bsp_display_unlock();
+
+                esp_camera_fb_return(frame);
+            }
+            camera_finished = true;
         } else {
-            bsp_display_lock(0);
-            lv_canvas_set_buffer(camera_canvas, frame->buf, 240, 240, LV_IMG_CF_TRUE_COLOR);
-            bsp_display_unlock();
-            esp_camera_fb_return(frame);
+            vTaskDelay(100 / portTICK_PERIOD_MS);
         }
     }
     ESP_LOGD(TAG, "Stop");
@@ -96,4 +106,21 @@ esp_err_t app_camera_begin(void)
 {
     xTaskCreatePinnedToCore(app_camera_task, "app_camera_task", 4096, NULL, 5, NULL, 1);
     return ESP_OK;
+}
+
+esp_err_t app_camera_start(void)
+{
+    camera_running = true;
+    return ESP_OK;
+}
+
+esp_err_t app_camera_stop(void)
+{
+    camera_running = false;
+    return ESP_OK;
+}
+
+bool app_camera_is_finished(void)
+{
+    return camera_finished;
 }

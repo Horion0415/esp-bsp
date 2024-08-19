@@ -35,7 +35,10 @@ void app_main(void)
     
     app_color_check_init();
 
-    app_sdcard_init();
+    if(app_sdcard_init() == ESP_OK) {
+        ESP_LOGI(TAG, "SD card init success");
+        speech_recognition_init();
+    }
     app_button_init();
 
     app_camera_init();
@@ -43,8 +46,6 @@ void app_main(void)
 
     QMA7981_init();
     QMA7981_begin();
-
-    speech_recognition_init();
 
 #if LOG_MEM_INFO
     static char buffer[128];    /* Make sure buffer is enough for `sprintf` */

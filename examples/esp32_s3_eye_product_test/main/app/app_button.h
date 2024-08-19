@@ -23,7 +23,7 @@ esp_err_t app_button_init(void);
 esp_err_t app_button_change_screen(ScreenType new_screen);
 ScreenType app_button_get_screen(void);
 esp_err_t app_sdcard_init(void);
-esp_err_t app_sdcard_write_result(void);
+esp_err_t app_sdcard_write_result(char* sd_log);
 
 #ifdef __cplusplus
 }
