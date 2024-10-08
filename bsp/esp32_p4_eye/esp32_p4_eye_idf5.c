@@ -5,11 +5,11 @@
  */
 
 #include "esp_err.h"
-#include "bsp/esp32_s3_eye.h"
+#include "bsp/esp32_p4_eye.h"
 #include "bsp_err_check.h"
 #include "esp_codec_dev_defaults.h"
 
-static const char *TAG = "S3-EYE";
+static const char *TAG = "P4-EYE";
 
 static i2s_chan_handle_t i2s_tx_chan = NULL;
 static i2s_chan_handle_t i2s_rx_chan = NULL;

@@ -21,7 +21,7 @@
 #include "driver/ledc.h"
 #include "driver/i2c.h"
 
-#include "bsp/esp32_s3_eye.h"
+#include "bsp/esp32_p4_eye.h"
 #include "bsp_err_check.h"
 #include "bsp/display.h"
 
