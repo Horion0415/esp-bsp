@@ -28,51 +28,28 @@
 static const char *TAG = "p4-eye";
 
 sdmmc_card_t *bsp_sdcard = NULL;    // Global uSD card handler
-static bool i2c_initialized = false;
-#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
-static adc_oneshot_unit_handle_t bsp_adc_handle = NULL;
-#endif
+    static bool i2c_initialized = false;
 
 static const button_config_t bsp_button_config[BSP_BUTTON_NUM] = {
     {
-        .type = BUTTON_TYPE_ADC,
-#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
-        .adc_button_config.adc_handle = &bsp_adc_handle,
-#endif
-        .adc_button_config.adc_channel = ADC_CHANNEL_0, // ADC1 channel 0 is GPIO1
-        .adc_button_config.button_index = BSP_BUTTON_MENU,
-        .adc_button_config.min = 2310, // middle is 2410mV
-        .adc_button_config.max = 2510
+        .type = BUTTON_TYPE_GPIO,
+        .gpio_button_config.active_level = 0,
+        .gpio_button_config.gpio_num = BSP_BUTTON_NUM1
     },
     {
-        .type = BUTTON_TYPE_ADC,
-#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
-        .adc_button_config.adc_handle = &bsp_adc_handle,
-#endif
-        .adc_button_config.adc_channel = ADC_CHANNEL_0, // ADC1 channel 0 is GPIO1
-        .adc_button_config.button_index = BSP_BUTTON_PLAY,
-        .adc_button_config.min = 1880, // middle is 1980mV
-        .adc_button_config.max = 2080
+        .type = BUTTON_TYPE_GPIO,
+        .gpio_button_config.active_level = 0,
+        .gpio_button_config.gpio_num = BSP_BUTTON_NUM2
     },
     {
-        .type = BUTTON_TYPE_ADC,
-#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
-        .adc_button_config.adc_handle = &bsp_adc_handle,
-#endif
-        .adc_button_config.adc_channel = ADC_CHANNEL_0, // ADC1 channel 0 is GPIO1
-        .adc_button_config.button_index = BSP_BUTTON_DOWN,
-        .adc_button_config.min = 720, // middle is 820mV
-        .adc_button_config.max = 920
+        .type = BUTTON_TYPE_GPIO,
+        .gpio_button_config.active_level = 0,
+        .gpio_button_config.gpio_num = BSP_BUTTON_NUM3
     },
     {
-        .type = BUTTON_TYPE_ADC,
-#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
-        .adc_button_config.adc_handle = &bsp_adc_handle,
-#endif
-        .adc_button_config.adc_channel = ADC_CHANNEL_0, // ADC1 channel 0 is GPIO1
-        .adc_button_config.button_index = BSP_BUTTON_UP,
-        .adc_button_config.min = 280, // middle is 380mV
-        .adc_button_config.max = 480
+        .type = BUTTON_TYPE_GPIO,
+        .gpio_button_config.active_level = 0,
+        .gpio_button_config.gpio_num = BSP_BUTTON_NUM4
     },
     {
         .type = BUTTON_TYPE_GPIO,
@@ -440,11 +417,6 @@ esp_err_t bsp_iot_button_create(button_handle_t btn_array[], int *btn_cnt, int b
             (btn_array == NULL)) {
         return ESP_ERR_INVALID_ARG;
     }
-#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
-    /* Initialize ADC and get ADC handle */
-    BSP_ERROR_CHECK_RETURN_NULL(bsp_adc_initialize());
-    bsp_adc_handle = bsp_adc_get_handle();
-#endif
 
     if (btn_cnt) {
         *btn_cnt = 0;

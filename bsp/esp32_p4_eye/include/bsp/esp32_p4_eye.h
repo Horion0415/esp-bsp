@@ -87,12 +87,11 @@
 #define BSP_SD_CLK           (GPIO_NUM_39)
 
 /* Buttons */
-#define BSP_BUTTON_BOOT_IO   (GPIO_NUM_54)
 #define BSP_BUTTON_NUM1      (GPIO_NUM_50)
 #define BSP_BUTTON_NUM2      (GPIO_NUM_51)
 #define BSP_BUTTON_NUM3      (GPIO_NUM_52)
 #define BSP_BUTTON_NUM4      (GPIO_NUM_53)
-// #define BSP_BUTTONS_IO       (GPIO_NUM_1) // All 4 buttons mapped to this GPIO
+#define BSP_BUTTON_BOOT_IO   (GPIO_NUM_54)
 typedef enum bsp_led_t {
     BSP_LED_GREEN = GPIO_NUM_3,
 } bsp_led_t;
@@ -113,10 +112,10 @@ extern "C" {
  * \endcode
  **************************************************************************************************/
 typedef enum {
-    BSP_BUTTON_MENU = 0,
-    BSP_BUTTON_PLAY,
-    BSP_BUTTON_DOWN,
-    BSP_BUTTON_UP,
+    BSP_BUTTON_1 = 0,
+    BSP_BUTTON_2,
+    BSP_BUTTON_3,
+    BSP_BUTTON_4,
     BSP_BUTTON_BOOT,
     BSP_BUTTON_NUM
 } bsp_button_t;
