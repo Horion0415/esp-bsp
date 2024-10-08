@@ -81,10 +81,18 @@
 #define BSP_CAMERA_D6        (GPIO_NUM_17)
 #define BSP_CAMERA_D7        (GPIO_NUM_16)
 
-// /* uSD card */
-#define BSP_SD_D0            (GPIO_NUM_40)
-#define BSP_SD_CMD           (GPIO_NUM_38)
-#define BSP_SD_CLK           (GPIO_NUM_39)
+/* uSD card */
+#define BSP_SD_SLOT_0_DEFAULT_INIT     \
+    .clk = 0,                          \
+    .cmd = 0,                          \
+    .d0  = 0,                          \
+    .d1  = 0,                          \
+    .d2  = 0,                          \
+    .d3  = 0,                          \
+    .d4  = 0,                          \
+    .d5  = 0,                          \
+    .d6  = 0,                          \
+    .d7  = 0
 
 /* Buttons */
 #define BSP_BUTTON_NUM1      (GPIO_NUM_50)
@@ -94,7 +102,7 @@
 #define BSP_BUTTON_NUM5      (GPIO_NUM_54)
 
 typedef enum bsp_led_t {
-    BSP_LED_GREEN = GPIO_NUM_49,
+    BSP_LED_WHITE = GPIO_NUM_49,
 } bsp_led_t;
 
 #ifdef __cplusplus
@@ -114,10 +122,10 @@ extern "C" {
  **************************************************************************************************/
 typedef enum {
     BSP_BUTTON_1 = 0,
-    // BSP_BUTTON_2,
-    // BSP_BUTTON_3,
-    // BSP_BUTTON_4,
-    // BSP_BUTTON_5,
+    BSP_BUTTON_2,
+    BSP_BUTTON_3,
+    BSP_BUTTON_4,
+    BSP_BUTTON_5,
     BSP_BUTTON_NUM
 } bsp_button_t;
 
@@ -169,6 +177,8 @@ esp_err_t bsp_i2c_init(void);
  *
  */
 esp_err_t bsp_i2c_deinit(void);
+
+esp_err_t bsp_get_i2c_bus_handle(i2c_master_bus_handle_t *handle);
 
 /**************************************************************************************************
  *

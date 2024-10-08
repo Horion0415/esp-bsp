@@ -13,19 +13,23 @@
 #include "esp_check.h"
 #include "esp_vfs_fat.h"
 #include "esp_spiffs.h"
+#include "esp_ldo_regulator.h"
+#include "sd_pwr_ctrl_by_on_chip_ldo.h"
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 
 #include "driver/spi_master.h"
 #include "driver/ledc.h"
-#include "driver/i2c.h"
+#include "driver/i2c_master.h"
 
 #include "bsp/esp32_p4_eye.h"
 #include "bsp_err_check.h"
 #include "bsp/display.h"
 
 static const char *TAG = "p4-eye";
+
+static i2c_master_bus_handle_t i2c_bus_handle;
 
 sdmmc_card_t *bsp_sdcard = NULL;    // Global uSD card handler
     static bool i2c_initialized = false;
@@ -36,26 +40,26 @@ static const button_config_t bsp_button_config[BSP_BUTTON_NUM] = {
         .gpio_button_config.active_level = 0,
         .gpio_button_config.gpio_num = BSP_BUTTON_NUM1
     },
-    // {
-    //     .type = BUTTON_TYPE_GPIO,
-    //     .gpio_button_config.active_level = 0,
-    //     .gpio_button_config.gpio_num = BSP_BUTTON_NUM2
-    // },
-    // {
-    //     .type = BUTTON_TYPE_GPIO,
-    //     .gpio_button_config.active_level = 0,
-    //     .gpio_button_config.gpio_num = BSP_BUTTON_NUM3
-    // },
-    // {
-    //     .type = BUTTON_TYPE_GPIO,
-    //     .gpio_button_config.active_level = 0,
-    //     .gpio_button_config.gpio_num = BSP_BUTTON_NUM4
-    // },
-    // {
-    //     .type = BUTTON_TYPE_GPIO,
-    //     .gpio_button_config.active_level = 0,
-    //     .gpio_button_config.gpio_num = BSP_BUTTON_NUM5
-    // }
+    {
+        .type = BUTTON_TYPE_GPIO,
+        .gpio_button_config.active_level = 0,
+        .gpio_button_config.gpio_num = BSP_BUTTON_NUM2
+    },
+    {
+        .type = BUTTON_TYPE_GPIO,
+        .gpio_button_config.active_level = 0,
+        .gpio_button_config.gpio_num = BSP_BUTTON_NUM3
+    },
+    {
+        .type = BUTTON_TYPE_GPIO,
+        .gpio_button_config.active_level = 0,
+        .gpio_button_config.gpio_num = BSP_BUTTON_NUM4
+    },
+    {
+        .type = BUTTON_TYPE_GPIO,
+        .gpio_button_config.active_level = 0,
+        .gpio_button_config.gpio_num = BSP_BUTTON_NUM5
+    }
 };
 
 esp_err_t bsp_i2c_init(void)
@@ -65,16 +69,14 @@ esp_err_t bsp_i2c_init(void)
         return ESP_OK;
     }
 
-    const i2c_config_t i2c_conf = {
-        .mode = I2C_MODE_MASTER,
-        .sda_io_num = BSP_I2C_SDA,
-        .sda_pullup_en = GPIO_PULLUP_ENABLE,
+    i2c_master_bus_config_t i2c_mst_config = {
+        .clk_source = I2C_CLK_SRC_DEFAULT,
+        .i2c_port = BSP_I2C_NUM,
         .scl_io_num = BSP_I2C_SCL,
-        .scl_pullup_en = GPIO_PULLUP_ENABLE,
-        .master.clk_speed = CONFIG_BSP_I2C_CLK_SPEED_HZ
+        .sda_io_num = BSP_I2C_SDA,
+        .flags.enable_internal_pullup = false,  // no pull-up
     };
-    BSP_ERROR_CHECK_RETURN_ERR(i2c_param_config(BSP_I2C_NUM, &i2c_conf));
-    BSP_ERROR_CHECK_RETURN_ERR(i2c_driver_install(BSP_I2C_NUM, i2c_conf.mode, 0, 0, 0));
+    BSP_ERROR_CHECK_RETURN_ERR(i2c_new_master_bus(&i2c_mst_config, &i2c_bus_handle));
 
     i2c_initialized = true;
 
@@ -83,8 +85,16 @@ esp_err_t bsp_i2c_init(void)
 
 esp_err_t bsp_i2c_deinit(void)
 {
-    BSP_ERROR_CHECK_RETURN_ERR(i2c_driver_delete(BSP_I2C_NUM));
-    i2c_initialized = false;
+    BSP_ERROR_CHECK_RETURN_ERR(i2c_del_master_bus(i2c_bus_handle));
+    return ESP_OK;
+}
+
+esp_err_t bsp_get_i2c_bus_handle(i2c_master_bus_handle_t *handle)
+{
+    if (handle == NULL) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    *handle = i2c_bus_handle;
     return ESP_OK;
 }
 
@@ -130,30 +140,31 @@ esp_err_t bsp_sdcard_mount(void)
         .format_if_mount_failed = false,
 #endif
         .max_files = 5,
-        .allocation_unit_size = 16 * 1024
+        .allocation_unit_size = 64 * 1024
     };
 
-    const sdmmc_host_t host = SDMMC_HOST_DEFAULT();
+    sdmmc_host_t host = SDMMC_HOST_DEFAULT();
+    host.slot = SDMMC_HOST_SLOT_0;
+    host.max_freq_khz = SDMMC_FREQ_HIGHSPEED;
+
+    sd_pwr_ctrl_ldo_config_t ldo_config = {
+        .ldo_chan_id = 4,
+    };
+    sd_pwr_ctrl_handle_t pwr_ctrl_handle = NULL;
+    esp_err_t ret = sd_pwr_ctrl_new_on_chip_ldo(&ldo_config, &pwr_ctrl_handle);
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to create a new on-chip LDO power control driver");
+        return ret;
+    }
+    host.pwr_ctrl_handle = pwr_ctrl_handle;
+
     const sdmmc_slot_config_t slot_config = {
-        .clk = BSP_SD_CLK,
-        .cmd = BSP_SD_CMD,
-        .d0 = BSP_SD_D0,
-        .d1 = GPIO_NUM_NC,
-        .d2 = GPIO_NUM_NC,
-        .d3 = GPIO_NUM_NC,
-        .d4 = GPIO_NUM_NC,
-        .d5 = GPIO_NUM_NC,
-        .d6 = GPIO_NUM_NC,
-        .d7 = GPIO_NUM_NC,
+        BSP_SD_SLOT_0_DEFAULT_INIT,
         .cd = SDMMC_SLOT_NO_CD,
         .wp = SDMMC_SLOT_NO_WP,
-        .width = 1,
+        .width = 4,
         .flags = 0,
     };
-
-#if !CONFIG_FATFS_LONG_FILENAMES
-    ESP_LOGW(TAG, "Warning: Long filenames on SD card are disabled in menuconfig!");
-#endif
 
     return esp_vfs_fat_sdmmc_mount(BSP_SD_MOUNT_POINT, &host, &slot_config, &mount_config, &bsp_sdcard);
 }
@@ -374,8 +385,8 @@ void bsp_display_rotate(lv_disp_t *disp, lv_disp_rot_t rotation)
 esp_err_t bsp_leds_init(void)
 {
     const gpio_config_t led_io_config = {
-        .pin_bit_mask = BIT64(BSP_LED_GREEN),
-        .mode = GPIO_MODE_OUTPUT_OD, // GPIO3 is connected directly to the LED (on board revision 2.1), so we use Open-drain here
+        .pin_bit_mask = BIT64(BSP_LED_WHITE),
+        .mode = GPIO_MODE_OUTPUT, // GPIO49 is connected directly to the LED (on board revision 2.1), so we use Open-drain here
         .pull_up_en = GPIO_PULLUP_DISABLE,
         .pull_down_en = GPIO_PULLDOWN_DISABLE,
         .intr_type = GPIO_INTR_DISABLE
