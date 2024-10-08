@@ -6,7 +6,7 @@
 
 /**
  * @file
- * @brief ESP BSP: S3-EYE
+ * @brief ESP BSP: p4-eye
  */
 
 #pragma once
@@ -44,27 +44,30 @@
 #define BSP_CAPS_IMU            0 // There is an IMU, but not supported in this BSP
 
 /**************************************************************************************************
- * ESP32-S3-EYE pinout
+ * ESP32-P4-EYE pinout
  **************************************************************************************************/
 
 /* I2C */
-#define BSP_I2C_SCL           (GPIO_NUM_5)
-#define BSP_I2C_SDA           (GPIO_NUM_4)
+#define BSP_I2C_SCL           (GPIO_NUM_28)
+#define BSP_I2C_SDA           (GPIO_NUM_29)
 
 /* Audio */
 #define BSP_I2S_SCLK          (GPIO_NUM_41)
 #define BSP_I2S_LCLK          (GPIO_NUM_42)
 #define BSP_I2S_DIN           (GPIO_NUM_2)
 
-/* Display */
-#define BSP_LCD_SPI_MOSI      (GPIO_NUM_47)
-#define BSP_LCD_SPI_CLK       (GPIO_NUM_21)
-#define BSP_LCD_SPI_CS        (GPIO_NUM_44)
-#define BSP_LCD_DC            (GPIO_NUM_43)
-#define BSP_LCD_RST           (GPIO_NUM_NC)
-#define BSP_LCD_BACKLIGHT     (GPIO_NUM_48)
+#define BSP_I2S_DAT           (GPIO_NUM_30)
+#define BSP_I2S_CLK           (GPIO_NUM_31)
 
-/* Camera */
+/* Display */
+#define BSP_LCD_SPI_MOSI      (GPIO_NUM_0)
+#define BSP_LCD_SPI_CLK       (GPIO_NUM_1)
+#define BSP_LCD_SPI_CS        (GPIO_NUM_2)
+#define BSP_LCD_DC            (GPIO_NUM_3)
+#define BSP_LCD_RST           (GPIO_NUM_NC)
+#define BSP_LCD_BACKLIGHT     (GPIO_NUM_4)
+
+// /* Camera */
 #define BSP_CAMERA_XCLK      (GPIO_NUM_15)
 #define BSP_CAMERA_PCLK      (GPIO_NUM_13)
 #define BSP_CAMERA_VSYNC     (GPIO_NUM_6)
@@ -78,14 +81,18 @@
 #define BSP_CAMERA_D6        (GPIO_NUM_17)
 #define BSP_CAMERA_D7        (GPIO_NUM_16)
 
-/* uSD card */
+// /* uSD card */
 #define BSP_SD_D0            (GPIO_NUM_40)
 #define BSP_SD_CMD           (GPIO_NUM_38)
 #define BSP_SD_CLK           (GPIO_NUM_39)
 
 /* Buttons */
-#define BSP_BUTTON_BOOT_IO   (GPIO_NUM_0)
-#define BSP_BUTTONS_IO       (GPIO_NUM_1) // All 4 buttons mapped to this GPIO
+#define BSP_BUTTON_BOOT_IO   (GPIO_NUM_54)
+#define BSP_BUTTON_NUM1      (GPIO_NUM_50)
+#define BSP_BUTTON_NUM2      (GPIO_NUM_51)
+#define BSP_BUTTON_NUM3      (GPIO_NUM_52)
+#define BSP_BUTTON_NUM4      (GPIO_NUM_53)
+// #define BSP_BUTTONS_IO       (GPIO_NUM_1) // All 4 buttons mapped to this GPIO
 typedef enum bsp_led_t {
     BSP_LED_GREEN = GPIO_NUM_3,
 } bsp_led_t;
@@ -167,7 +174,7 @@ esp_err_t bsp_i2c_deinit(void);
  *
  * Camera interface
  *
- * ESP32-S3-EYE is shipped with OV2640 camera module.
+ * ESP32-P4-EYE is shipped with OV2640 camera module.
  * As a camera driver, esp32-camera component is used.
  *
  * Example configuration:
@@ -177,7 +184,7 @@ esp_err_t bsp_i2c_deinit(void);
  * \endcode
  **************************************************************************************************/
 /**
- * @brief ESP32-S3-EYE camera default configuration
+ * @brief ESP32-P4-EYE camera default configuration
  *
  * In this configuration we select RGB565 color format and 240x240 image size - matching the display.
  * We use double-buffering for the best performance.
@@ -292,7 +299,7 @@ esp_err_t bsp_sdcard_unmount(void);
  *
  * LCD interface
  *
- * ESP32-S3-EYE is shipped with 1.3inch ST7789 display controller.
+ * ESP32-P4-EYE is shipped with 1.3inch ST7789 display controller.
  * It features 16-bit colors and 240x240 resolution.
  *
  * LVGL is used as graphics library. LVGL is NOT thread safe, therefore the user must take LVGL mutex
@@ -301,8 +308,8 @@ esp_err_t bsp_sdcard_unmount(void);
  *
  * If you want to use the display without LVGL, see bsp/display.h API and use BSP version with 'noglib' suffix.
  **************************************************************************************************/
-#define BSP_LCD_PIXEL_CLOCK_HZ     (80 * 1000 * 1000)
-#define BSP_LCD_SPI_NUM            (SPI3_HOST)
+#define BSP_LCD_PIXEL_CLOCK_HZ     (20 * 1000 * 1000)
+#define BSP_LCD_SPI_NUM            (SPI2_HOST)
 
 #if (BSP_CONFIG_NO_GRAPHIC_LIB == 0)
 #define BSP_LCD_DRAW_BUFF_SIZE     (BSP_LCD_H_RES * BSP_LCD_V_RES)

@@ -1,5 +1,5 @@
 version: "3.0.4"
-description: Board Support Package (BSP) for ESP32-S3-EYE
+description: Board Support Package (BSP) for ESP32-P4-EYE
 url: https://github.com/espressif/esp-bsp/tree/master/bsp/esp32_s3_eye
 
 targets:

@@ -20,7 +20,7 @@ static adc_oneshot_unit_handle_t bsp_adc_handle = NULL;
 #define BSP_MIC_SAMPLE_RATE (48000u)
 
 /*
- * ESP32-S3-EYE I2S pinout
+ * ESP32-P4-EYE I2S pinout
  * Can be used for i2s_std_gpio_config_t and/or i2s_std_config_t initialization
  */
 #define BSP_I2S_GPIO_CFG()     \

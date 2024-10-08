@@ -9,7 +9,7 @@
 #include "bsp_err_check.h"
 #include "esp_codec_dev_defaults.h"
 
-static const char *TAG = "S3-EYE";
+static const char *TAG = "p4-eye";
 
 /* Sample rate of MSM261S4030H0 */
 #define BSP_MIC_SAMPLE_RATE (48000u)

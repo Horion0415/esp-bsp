@@ -5,4 +5,4 @@
  */
 
 #pragma once
-#include "bsp/esp32_s3_eye.h"
+#include "bsp/esp32_p4_eye.h"

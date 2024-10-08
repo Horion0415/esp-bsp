@@ -25,7 +25,7 @@
 #include "bsp_err_check.h"
 #include "bsp/display.h"
 
-static const char *TAG = "S3-EYE";
+static const char *TAG = "p4-eye";
 
 sdmmc_card_t *bsp_sdcard = NULL;    // Global uSD card handler
 static bool i2c_initialized = false;

@@ -12,7 +12,7 @@ Board support packages for development boards using Espressif's SoCs, written in
 | [ESP32-Azure IoT Kit](bsp/esp32_azure_iot_kit) | ESP32 | OLED display, uSD card slot, accelerometer,<br>magnetometer, humidity, pressure, light<br>and temperature sensors | <img src="docu/pics/azure.png" width="150"> |
 | [ESP32-S2-Kaluga Kit](bsp/esp32_s2_kaluga_kit) | ESP32-S2 | LCD display, audio codec + power amplifier,<br>smart LED and camera | <img src="docu/pics/kaluga.png" width="150">  |
 | [ESP32-S3-USB-OTG](bsp/esp32_s3_usb_otg) | ESP32-S3 | LCD display, uSD card slot, USB-OTG | <img src="docu/pics/esp32_s3_otg.png" width="150">  |
-| [ESP32-S3-EYE](bsp/esp32_s3_eye) | ESP32-S3 | LCD display, camera, uSD card slot, microphone and accelerometer | <img src="docu/pics/s3-eye.webp" width="150"> |
+| [ESP32-P4-EYE](bsp/esp32_s3_eye) | ESP32-S3 | LCD display, camera, uSD card slot, microphone and accelerometer | <img src="docu/pics/p4-eye.webp" width="150"> |
 | [ESP32-S3-LCD-EV-Board](bsp/esp32_s3_lcd_ev_board) | ESP32-S3 | LCD display with touch, audio codec + power amplifier | <img src="docu/pics/esp32-s3-lcd-ev-board_480x480.png" width="150"> |
 | [ESP32-S3-LCD-EV-Board-2](bsp/esp32_s3_lcd_ev_board) | ESP32-S3 | LCD display with touch, audio codec + power amplifier | <img src="docu/pics/esp32-s3-lcd-ev-board_800x480.png" width="150"> |
 | [ESP32-S3-Korvo-2](bsp/esp32_s3_korvo_2) | ESP32-S3 | LCD display, camera, uSD card slot, microphone, audio codec + power amplifier | <img src="docu/pics/korvo-2.png" width="150"> |

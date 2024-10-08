@@ -6,7 +6,7 @@
 
 /**
  * @file
- * @brief ESP BSP: S3-EYE
+ * @brief ESP BSP: p4-eye
  */
 
 #pragma once
@@ -44,7 +44,7 @@
 #define BSP_CAPS_IMU            0 // There is an IMU, but not supported in this BSP
 
 /**************************************************************************************************
- * ESP32-S3-EYE pinout
+ * ESP32-P4-EYE pinout
  **************************************************************************************************/
 
 /* I2C */
@@ -167,7 +167,7 @@ esp_err_t bsp_i2c_deinit(void);
  *
  * Camera interface
  *
- * ESP32-S3-EYE is shipped with OV2640 camera module.
+ * ESP32-P4-EYE is shipped with OV2640 camera module.
  * As a camera driver, esp32-camera component is used.
  *
  * Example configuration:
@@ -177,7 +177,7 @@ esp_err_t bsp_i2c_deinit(void);
  * \endcode
  **************************************************************************************************/
 /**
- * @brief ESP32-S3-EYE camera default configuration
+ * @brief ESP32-P4-EYE camera default configuration
  *
  * In this configuration we select RGB565 color format and 240x240 image size - matching the display.
  * We use double-buffering for the best performance.
@@ -292,7 +292,7 @@ esp_err_t bsp_sdcard_unmount(void);
  *
  * LCD interface
  *
- * ESP32-S3-EYE is shipped with 1.3inch ST7789 display controller.
+ * ESP32-P4-EYE is shipped with 1.3inch ST7789 display controller.
  * It features 16-bit colors and 240x240 resolution.
  *
  * LVGL is used as graphics library. LVGL is NOT thread safe, therefore the user must take LVGL mutex
