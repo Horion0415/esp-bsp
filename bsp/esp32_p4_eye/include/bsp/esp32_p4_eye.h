@@ -91,9 +91,10 @@
 #define BSP_BUTTON_NUM2      (GPIO_NUM_51)
 #define BSP_BUTTON_NUM3      (GPIO_NUM_52)
 #define BSP_BUTTON_NUM4      (GPIO_NUM_53)
-#define BSP_BUTTON_BOOT_IO   (GPIO_NUM_54)
+#define BSP_BUTTON_NUM5      (GPIO_NUM_54)
+
 typedef enum bsp_led_t {
-    BSP_LED_GREEN = GPIO_NUM_3,
+    BSP_LED_GREEN = GPIO_NUM_49,
 } bsp_led_t;
 
 #ifdef __cplusplus
@@ -113,10 +114,10 @@ extern "C" {
  **************************************************************************************************/
 typedef enum {
     BSP_BUTTON_1 = 0,
-    BSP_BUTTON_2,
-    BSP_BUTTON_3,
-    BSP_BUTTON_4,
-    BSP_BUTTON_BOOT,
+    // BSP_BUTTON_2,
+    // BSP_BUTTON_3,
+    // BSP_BUTTON_4,
+    // BSP_BUTTON_5,
     BSP_BUTTON_NUM
 } bsp_button_t;
 
