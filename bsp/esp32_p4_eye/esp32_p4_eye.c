@@ -22,17 +22,51 @@
 #include "driver/spi_master.h"
 #include "driver/ledc.h"
 #include "driver/i2c_master.h"
+#include "driver/i2s_std.h"
 
 #include "bsp/esp32_p4_eye.h"
 #include "bsp_err_check.h"
 #include "bsp/display.h"
 
+#include "esp_codec_dev_defaults.h"
+
 static const char *TAG = "p4-eye";
+
+/**
+ * @brief ESP32-C3-LCDkit I2S pinout
+ *
+ * Can be used for i2s_pdm_rx_gpio_config_t and/or i2s_pdm_rx_config_t initialization
+ */
+#define BSP_I2S_PDM_GPIO_CFG     \
+    {                            \
+        .clk = BSP_I2S_CLK,   \
+        .din = BSP_I2S_DAT,   \
+        .invert_flags = {        \
+            .clk_inv = false,    \
+        },                       \
+    }
+
+/**
+ * @brief Mono Duplex I2S configuration structure
+ *
+ * This configuration is used by default in bsp_microphone_init()
+ */
+#define BSP_I2S_PDM_DUPLEX_MONO_CFG(_sample_rate)                                         \
+    {                                                                                    \
+        .clk_cfg = I2S_PDM_RX_CLK_DEFAULT_CONFIG(_sample_rate),                          \
+        .slot_cfg = I2S_PDM_RX_SLOT_DEFAULT_CONFIG(I2S_DATA_BIT_WIDTH_16BIT,             \
+                                                   I2S_SLOT_MODE_MONO),                  \
+        .gpio_cfg = BSP_I2S_PDM_GPIO_CFG,                                                \
+    }
 
 static i2c_master_bus_handle_t i2c_bus_handle;
 
+static esp_codec_dev_handle_t pdm_dev_handle;
+static i2s_chan_handle_t i2s_pdm_rx_chan;
+static const audio_codec_data_if_t *i2s_pdm_data_if = NULL;  /* Codec data interface */
+
 sdmmc_card_t *bsp_sdcard = NULL;    // Global uSD card handler
-    static bool i2c_initialized = false;
+static bool i2c_initialized = false;
 
 static const button_config_t bsp_button_config[BSP_BUTTON_NUM] = {
     {
@@ -401,24 +435,79 @@ esp_err_t bsp_led_set(const bsp_led_t led_io, const bool on)
     return ESP_OK;
 }
 
-esp_codec_dev_handle_t bsp_audio_codec_microphone_init(void)
+esp_err_t bsp_extra_pdm_i2s_read(void *audio_buffer, size_t len, size_t *bytes_read, uint32_t timeout_ms)
 {
-    const audio_codec_data_if_t *i2s_data_if = bsp_audio_get_codec_itf();
-    if (i2s_data_if == NULL) {
-        /* Initilize I2C */
-        BSP_ERROR_CHECK_RETURN_NULL(bsp_i2c_init());
-        /* Configure I2S peripheral and Power Amplifier */
-        BSP_ERROR_CHECK_RETURN_NULL(bsp_audio_init(NULL));
-        i2s_data_if = bsp_audio_get_codec_itf();
+    esp_err_t ret = ESP_OK;
+    ret = esp_codec_dev_read(pdm_dev_handle, audio_buffer, len);
+    *bytes_read = len;
+    return ret;
+}
+
+esp_err_t bsp_pdm_audio_init(const i2s_pdm_rx_config_t *i2s_config)
+{
+    if (i2s_pdm_rx_chan) {
+        /* microphone was initialized before */
+        return ESP_OK;
     }
-    assert(i2s_data_if);
+
+    ESP_LOGI(TAG, "bsp_microphone_init: %d", I2S_NUM_0);
+
+    /* Setup I2S peripheral */
+    i2s_chan_config_t chan_cfg = I2S_CHANNEL_DEFAULT_CONFIG(I2S_NUM_0, I2S_ROLE_MASTER);
+    ESP_ERROR_CHECK(i2s_new_channel(&chan_cfg, NULL, &i2s_pdm_rx_chan));
+
+    /* Setup I2S channels */
+    const i2s_pdm_rx_config_t pdm_cfg_default = BSP_I2S_PDM_DUPLEX_MONO_CFG(16000);
+    const i2s_pdm_rx_config_t *p_i2s_pdm_cfg = &pdm_cfg_default;
+    if (i2s_config != NULL) {
+        p_i2s_pdm_cfg = i2s_config;
+    }
+
+    if (i2s_pdm_rx_chan != NULL) {
+        ESP_ERROR_CHECK(i2s_channel_init_pdm_rx_mode(i2s_pdm_rx_chan, p_i2s_pdm_cfg));
+        ESP_ERROR_CHECK(i2s_channel_enable(i2s_pdm_rx_chan));
+    }
+
+    audio_codec_i2s_cfg_t i2s_cfg = {
+        .port = I2S_NUM_0,
+        .rx_handle = i2s_pdm_rx_chan,
+        .tx_handle = NULL,
+    };
+    i2s_pdm_data_if = audio_codec_new_i2s_data(&i2s_cfg);
+    BSP_NULL_CHECK(i2s_pdm_data_if, NULL);
+
+    return ESP_OK;
+}
+
+esp_codec_dev_handle_t bsp_audio_pdm_microphone_init(void)
+{
+    if (i2s_pdm_data_if == NULL) {
+        /* Configure I2S PDM peripheral */
+        BSP_ERROR_CHECK_RETURN_ERR(bsp_pdm_audio_init(NULL));
+    }
+    assert(i2s_pdm_data_if);
 
     esp_codec_dev_cfg_t codec_dev_cfg = {
         .dev_type = ESP_CODEC_DEV_TYPE_IN,
         .codec_if = NULL,
-        .data_if = i2s_data_if,
+        .data_if = i2s_pdm_data_if,
     };
     return esp_codec_dev_new(&codec_dev_cfg);
+}
+
+esp_err_t bsp_extra_pdm_codec_init()
+{
+    pdm_dev_handle = bsp_audio_pdm_microphone_init();
+    assert((pdm_dev_handle) && "pdm_dev_handle not initialized");
+
+    esp_codec_dev_sample_info_t pdm_fs = {
+        .sample_rate = 16000,
+        .channel = 2,
+        .bits_per_sample = 16,
+    };
+    esp_codec_dev_open(pdm_dev_handle, &pdm_fs);
+
+    return ESP_OK;
 }
 
 esp_err_t bsp_iot_button_create(button_handle_t btn_array[], int *btn_cnt, int btn_array_size)

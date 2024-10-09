@@ -18,6 +18,7 @@
 #include "iot_button.h"
 #include "bsp/config.h"
 #include "bsp/display.h"
+#include "driver/i2s_pdm.h"
 
 #if ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(5, 0, 0)
 #include "driver/i2s.h"
@@ -454,26 +455,13 @@ esp_err_t bsp_led_set(const bsp_led_t led_io, const bool on);
  *      - ESP_ERR_NO_MEM        No memory for storing the channel information
  *      - ESP_ERR_INVALID_STATE This channel has not initialized or already started
  */
-#if ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(5, 0, 0)
-esp_err_t bsp_audio_init(const i2s_config_t *i2s_config);
-#else
-esp_err_t bsp_audio_init(const i2s_std_config_t *i2s_config);
-#endif
+esp_err_t bsp_extra_pdm_i2s_read(void *audio_buffer, size_t len, size_t *bytes_read, uint32_t timeout_ms);
 
-/**
- * @brief Get codec I2S interface (initialized in bsp_audio_init)
- *
- * @return
- *      - Pointer to codec I2S interface handle or NULL when error occurred
- */
-const audio_codec_data_if_t *bsp_audio_get_codec_itf(void);
+esp_err_t bsp_pdm_audio_init(const i2s_pdm_rx_config_t *i2s_config);
 
-/**
- * @brief Initialize microphone codec device
- *
- * @return Pointer to codec device handle or NULL when error occurred
- */
-esp_codec_dev_handle_t bsp_audio_codec_microphone_init(void);
+esp_codec_dev_handle_t bsp_audio_pdm_microphone_init(void);
+
+esp_err_t bsp_extra_pdm_codec_init();
 
 /**************************************************************************************************
  *
