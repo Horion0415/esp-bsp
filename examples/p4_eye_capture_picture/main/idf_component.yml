@@ -1,0 +1,16 @@
+description: BSP Display example
+
+dependencies:
+  esp32_p4_eye:
+    version: "0.*"
+    override_path: "../../../bsp/esp32_p4_eye"
+
+  esp_video:
+    version: "0.6.*"
+    public: true
+
+  espressif/esp_wifi_remote:
+    version: "*"
+    
+  espressif/esp_hosted:
+    version: "*"
