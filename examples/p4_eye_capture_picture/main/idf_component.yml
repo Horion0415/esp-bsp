@@ -8,9 +8,3 @@ dependencies:
   esp_video:
     version: "0.6.*"
     public: true
-
-  espressif/esp_wifi_remote:
-    version: "*"
-    
-  espressif/esp_hosted:
-    version: "*"

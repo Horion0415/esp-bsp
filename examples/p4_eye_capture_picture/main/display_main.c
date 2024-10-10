@@ -42,7 +42,7 @@ static const char *TAG = "main";
 
 static void deep_sleep_register_rtc_timer_wakeup(void)
 {
-    const int wakeup_time_sec = 5;
+    const int wakeup_time_sec = 10;
     printf("Enabling timer wakeup, %ds\n", wakeup_time_sec);
 
     ESP_ERROR_CHECK(esp_sleep_enable_timer_wakeup(wakeup_time_sec * 1000000));
@@ -82,7 +82,7 @@ static void video_capture_task(void *arg)
     uint32_t camera_buf_hes = 0;
     uint32_t camera_buf_ves = 0;
 
-    int image_count = get_next_file_index("/sdcard");;
+    int image_count = get_next_file_index("/sdcard/pic_save");;
 
     video_get_hes_ves(&camera_buf_hes, &camera_buf_ves);
 
@@ -112,13 +112,12 @@ static void video_capture_task(void *arg)
         ESP_ERROR_CHECK(jpeg_encoder_process(jpeg_handle, &enc_config, camera_buf[v4l2_buf.index], app_video_get_buf_size(), jpg_buf, rx_buffer_size, &jpg_size));
 
         char file_name[64];
-        snprintf(file_name, sizeof(file_name), "/sdcard/outjpg_%d.jpg", image_count++);        
+        snprintf(file_name, sizeof(file_name), "/sdcard/pic_save/OUTJPG_%d.JPG", image_count++);        
 
         FILE *file_jpg = fopen(file_name, "wb");
         ESP_LOGI(TAG, "Writing jpg to %s", file_name);
         if (file_jpg == NULL) {
             ESP_LOGE(TAG, "fopen file_jpg error");
-            return;
         }
 
         fwrite(jpg_buf, 1, jpg_size, file_jpg);
