@@ -134,6 +134,18 @@ esp_err_t app_video_stream_task_stop(int video_fd);
  */
 esp_err_t app_video_register_frame_operation_cb(app_video_frame_operation_cb_t operation_cb);
 
+
+// extra functions
+esp_err_t video_stream_start(int video_fd);
+
+int video_get_buf_index(void);
+
+esp_err_t video_get_hes_ves(uint32_t *hes, uint32_t *ves);
+
+esp_err_t video_receive_video_frame(int video_fd);
+
+esp_err_t video_free_video_frame(int video_fd);
+
 #ifdef __cplusplus
 }
 #endif

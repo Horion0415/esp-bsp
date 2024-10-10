@@ -249,7 +249,7 @@ uint32_t app_video_get_buf_size(void)
     return buf_size;
 }
 
-static inline esp_err_t video_receive_video_frame(int video_fd)
+esp_err_t video_receive_video_frame(int video_fd)
 {
     memset(&app_camera_video.v4l2_buf, 0, sizeof(app_camera_video.v4l2_buf));
     app_camera_video.v4l2_buf.type   = V4L2_BUF_TYPE_VIDEO_CAPTURE;
@@ -283,7 +283,7 @@ static inline void video_operation_video_frame(int video_fd)
                     );
 }
 
-static inline esp_err_t video_free_video_frame(int video_fd)
+esp_err_t video_free_video_frame(int video_fd)
 {
     if (ioctl(video_fd, VIDIOC_QBUF, &(app_camera_video.v4l2_buf)) != 0) {
         ESP_LOGE(TAG, "failed to free video frame");
@@ -296,7 +296,20 @@ errout:
     return ESP_FAIL;
 }
 
-static inline esp_err_t video_stream_start(int video_fd)
+int video_get_buf_index(void)
+{
+    return app_camera_video.v4l2_buf.index;
+}
+
+esp_err_t video_get_hes_ves(uint32_t *hes, uint32_t *ves)
+{
+    *hes = app_camera_video.camera_buf_hes;
+    *ves = app_camera_video.camera_buf_ves;
+
+    return ESP_OK;
+}
+
+esp_err_t video_stream_start(int video_fd)
 {
     ESP_LOGI(TAG, "Video Stream Start");
 
