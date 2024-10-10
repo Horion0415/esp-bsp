@@ -194,5 +194,6 @@ void app_main(void)
     jpg_buf = (uint8_t*)jpeg_alloc_encoder_mem(app_video_get_buf_size() / 10, &rx_mem_cfg, &rx_buffer_size); // Assume that compression ratio of 10 to 1
     assert(jpg_buf != NULL);
 
+    // Start the video capture task
     xTaskCreatePinnedToCore(video_capture_task, "video capture task", 4 * 1024, &video_cam_fd0, 4, NULL, 0);
 }
