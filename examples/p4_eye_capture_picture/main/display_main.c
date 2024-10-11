@@ -38,11 +38,16 @@ static uint32_t jpg_size;
 static uint8_t *jpg_buf;
 static size_t rx_buffer_size = 0;
 
+static lv_obj_t *file_label;
+static lv_obj_t *time_label;
+
+static int wakeup_time_sec;
+
 static const char *TAG = "main";
 
 static void deep_sleep_register_rtc_timer_wakeup(void)
 {
-    const int wakeup_time_sec = 10;
+    wakeup_time_sec = 60;
     printf("Enabling timer wakeup, %ds\n", wakeup_time_sec);
 
     ESP_ERROR_CHECK(esp_sleep_enable_timer_wakeup(wakeup_time_sec * 1000000));
@@ -113,6 +118,10 @@ static void video_capture_task(void *arg)
 
         char file_name[64];
         snprintf(file_name, sizeof(file_name), "/sdcard/pic_save/OUTJPG_%d.JPG", image_count++);        
+
+        bsp_display_lock(0);
+        lv_label_set_text_fmt(file_label, "Saved count: %d", image_count);
+        bsp_display_unlock();
 
         FILE *file_jpg = fopen(file_name, "wb");
         ESP_LOGI(TAG, "Writing jpg to %s", file_name);
@@ -193,6 +202,20 @@ void app_main(void)
 
     jpg_buf = (uint8_t*)jpeg_alloc_encoder_mem(app_video_get_buf_size() / 10, &rx_mem_cfg, &rx_buffer_size); // Assume that compression ratio of 10 to 1
     assert(jpg_buf != NULL);
+
+    bsp_display_lock(0);
+
+    time_label = lv_label_create(lv_scr_act());
+    lv_obj_align(time_label, LV_ALIGN_CENTER, 0, 50);
+    lv_obj_set_style_text_font(time_label, &lv_font_montserrat_24, 0);
+    lv_label_set_text_fmt(time_label, "Timed Shooting: %d", wakeup_time_sec);
+
+    file_label = lv_label_create(lv_scr_act());
+    lv_obj_align(file_label, LV_ALIGN_CENTER, 0, 0);
+    lv_obj_set_style_text_font(file_label, &lv_font_montserrat_24, 0);
+    lv_label_set_text_fmt(file_label, "Start filming");
+
+    bsp_display_unlock();
 
     // Start the video capture task
     xTaskCreatePinnedToCore(video_capture_task, "video capture task", 4 * 1024, &video_cam_fd0, 4, NULL, 0);
