@@ -29,6 +29,9 @@
 #include "bsp/esp-bsp.h"
 #include "app_video.h"
 
+#define P4_EYE_C6_EN_PIN                           (GPIO_NUM_5)
+#define P4_EYE_CAMERA_EN_PIN                       (GPIO_NUM_15)
+
 static i2c_master_bus_handle_t i2c_handle;
 static size_t data_cache_line_size = 0;
 static void *camera_buf[EXAMPLE_CAM_BUF_NUM];
@@ -47,10 +50,19 @@ static const char *TAG = "main";
 
 static void deep_sleep_register_rtc_timer_wakeup(void)
 {
-    wakeup_time_sec = 60;
     printf("Enabling timer wakeup, %ds\n", wakeup_time_sec);
 
     ESP_ERROR_CHECK(esp_sleep_enable_timer_wakeup(wakeup_time_sec * 1000000));
+}
+
+static void set_slave_power(bool on)
+{
+    gpio_set_level(P4_EYE_C6_EN_PIN, on);
+}
+
+static void set_camera_power(bool on)
+{
+    gpio_set_level(P4_EYE_CAMERA_EN_PIN, on);
 }
 
 static int get_next_file_index(const char *path) {
@@ -139,6 +151,7 @@ static void video_capture_task(void *arg)
         bsp_led_set(BSP_LED_WHITE, 0);
 
         // enter deep sleep
+        set_camera_power(false);
         esp_deep_sleep_start();
     }
 }
@@ -147,6 +160,26 @@ void app_main(void)
 {   
     ESP_LOGI(TAG, "LEDs initialized");
     ESP_ERROR_CHECK(bsp_leds_init());
+
+    const gpio_config_t led_io_config = {
+        .pin_bit_mask = BIT64(P4_EYE_C6_EN_PIN),
+        .mode = GPIO_MODE_OUTPUT, 
+        .pull_up_en = GPIO_PULLUP_DISABLE,
+        .pull_down_en = GPIO_PULLDOWN_DISABLE,
+        .intr_type = GPIO_INTR_DISABLE
+    };
+    ESP_ERROR_CHECK(gpio_config(&led_io_config));
+    set_slave_power(false);
+
+    const gpio_config_t camera_io_config = {
+        .pin_bit_mask = BIT64(P4_EYE_CAMERA_EN_PIN),
+        .mode = GPIO_MODE_OUTPUT, 
+        .pull_up_en = GPIO_PULLUP_DISABLE,
+        .pull_down_en = GPIO_PULLDOWN_DISABLE,
+        .intr_type = GPIO_INTR_DISABLE
+    };
+    ESP_ERROR_CHECK(gpio_config(&camera_io_config));
+    set_camera_power(true);
 
     ESP_ERROR_CHECK(bsp_sdcard_mount());
     ESP_LOGI(TAG, "SD card mounted");
@@ -206,12 +239,12 @@ void app_main(void)
     bsp_display_lock(0);
 
     time_label = lv_label_create(lv_scr_act());
-    lv_obj_align(time_label, LV_ALIGN_CENTER, 0, 50);
+    lv_obj_align(time_label, LV_ALIGN_CENTER, 0, 0);
     lv_obj_set_style_text_font(time_label, &lv_font_montserrat_24, 0);
     lv_label_set_text_fmt(time_label, "Timed Shooting: %d", wakeup_time_sec);
 
     file_label = lv_label_create(lv_scr_act());
-    lv_obj_align(file_label, LV_ALIGN_CENTER, 0, 0);
+    lv_obj_align(file_label, LV_ALIGN_CENTER, 0, -50);
     lv_obj_set_style_text_font(file_label, &lv_font_montserrat_24, 0);
     lv_label_set_text_fmt(file_label, "Start filming");
 
