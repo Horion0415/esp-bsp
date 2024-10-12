@@ -37,7 +37,7 @@
 #define P4_EYE_C6_EN_PIN                           (GPIO_NUM_5)
 #define P4_EYE_CAMERA_EN_PIN                       (GPIO_NUM_15)
 
-nvs_handle_t nvs_handle;
+static nvs_handle_t nvs_save_handle;
 
 static i2c_master_bus_handle_t i2c_handle;
 static size_t data_cache_line_size = 0;
@@ -52,7 +52,8 @@ static size_t rx_buffer_size = 0;
 static lv_obj_t *file_label;
 static lv_obj_t *time_label;
 
-static int wakeup_time_sec;
+static uint8_t wakeup_time_sec;
+static uint8_t shutter_flag = 0; // value will default to 0, if not set yet in NVS
 static int count_down = 4;
 
 static const char *TAG = "main";
@@ -173,8 +174,8 @@ static void count_down_timer(lv_timer_t * timer)
             ESP_LOGI(TAG, "Starting video capture task");
             wakeup_time_sec = 10;
 
-            nvs_set_i8(nvs_handle, "shutter_flag", 1);
-            nvs_set_i8(nvs_handle, "wakeup_time_sec", wakeup_time_sec);
+            nvs_set_i8(nvs_save_handle, "shutter_flag", 1);
+            nvs_set_i8(nvs_save_handle, "wakeup_time_sec", wakeup_time_sec);
             
             lv_timer_del(timer);
 
@@ -201,7 +202,7 @@ void app_main(void)
     }
     ESP_ERROR_CHECK(err);
 
-    err = nvs_open("storage", NVS_READWRITE, &nvs_handle);
+    err = nvs_open("storage", NVS_READWRITE, &nvs_save_handle);
     if (err != ESP_OK) {
         printf("Error (%s) opening NVS handle!\n", esp_err_to_name(err));
     } else {
@@ -209,9 +210,9 @@ void app_main(void)
 
         // Read
         printf("Reading shutter flag from NVS ... ");
-        int8_t shutter_flag = 0; // value will default to 0, if not set yet in NVS
-        err = nvs_get_i8(nvs_handle, "shutter_flag", &shutter_flag);
-        err |= nvs_get_i8(nvs_handle, "wakeup_time_sec", &wakeup_time_sec);
+
+        err = nvs_get_i8(nvs_save_handle, "shutter_flag", (int8_t *)&shutter_flag);
+        err |= nvs_get_i8(nvs_save_handle, "wakeup_time_sec", (int8_t *)&wakeup_time_sec);
         switch (err) {
             case ESP_OK:
                 ESP_LOGI(TAG, "Done\n");
@@ -222,6 +223,7 @@ void app_main(void)
             default :
                 printf("Error (%s) reading!\n", esp_err_to_name(err));
         }
+    }
 
     // Initialize the led
     ESP_ERROR_CHECK(bsp_leds_init());
@@ -329,6 +331,7 @@ void app_main(void)
         xTaskCreatePinnedToCore(video_capture_task, "video capture task", 4 * 1024, &video_cam_fd0, 4, NULL, 0);
     } else {
         shutter_flag = 0;
-        err = nvs_set_i8(nvs_handle, "shutter_flag", shutter_flag);
+        err = nvs_set_i8(nvs_save_handle, "shutter_flag", shutter_flag);
     }
+
 }
