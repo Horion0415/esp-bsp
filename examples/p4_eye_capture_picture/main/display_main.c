@@ -54,6 +54,7 @@ lv_obj_t *time_label;
 
 static uint8_t wakeup_time_sec;
 static int count_down = 4;
+static uint8_t shoot_flag = false;
 
 static const char *TAG = "main";
 
@@ -114,9 +115,9 @@ static void video_capture_task(void *arg)
     video_get_hes_ves(&camera_buf_hes, &camera_buf_ves);
 
     jpeg_encode_cfg_t enc_config = {
-        .src_type = JPEG_ENCODE_IN_FORMAT_RGB565,
-        .sub_sample = JPEG_DOWN_SAMPLING_YUV420,
-        .image_quality = 80,
+        .src_type = JPEG_ENCODE_IN_FORMAT_YUV422,
+        .sub_sample = JPEG_DOWN_SAMPLING_YUV422,
+        .image_quality = 50,
         .width = camera_buf_hes,
         .height = camera_buf_ves,
     };
@@ -170,6 +171,9 @@ static void count_down_timer(lv_timer_t * timer)
     count_down--;
     if(count_down == 0) {
         ESP_LOGI(TAG, "Starting video capture task");
+
+        shoot_flag = true;
+        nvs_set_i8(nvs_save_handle, "shoot_flag", shoot_flag);
         
         lv_timer_del(timer);
 
@@ -224,6 +228,7 @@ void app_main(void)
         // Read
         printf("Reading shutter flag from NVS ... ");
         err |= nvs_get_i8(nvs_save_handle, "wakeup_time_sec", (int8_t *)&wakeup_time_sec);
+        err |= nvs_get_i8(nvs_save_handle, "shoot_flag", (int8_t *)&shoot_flag);
         switch (err) {
             case ESP_OK:
                 ESP_LOGI(TAG, "Done\n");
@@ -264,6 +269,9 @@ void app_main(void)
     ESP_ERROR_CHECK(bsp_sdcard_mount());
     ESP_LOGI(TAG, "SD card mounted");
 
+    // Initialize the USB MSC
+    app_usb_msc_init();
+
     // Initialize the display
     bsp_display_start();
 
@@ -278,9 +286,6 @@ void app_main(void)
     lv_obj_set_style_text_font(file_label, &lv_font_montserrat_24, 0);
 
     bsp_display_unlock();
-
-    // Initialize the USB MSC
-    app_usb_msc_init();
 
     /* Init Buttons */
     button_handle_t btns[BSP_BUTTON_NUM];
@@ -298,7 +303,7 @@ void app_main(void)
     }
 
     // Open the video device
-    video_cam_fd0 = app_video_open(EXAMPLE_CAM_DEV_PATH, APP_VIDEO_FMT);
+    video_cam_fd0 = app_video_open(EXAMPLE_CAM_DEV_PATH, APP_VIDEO_FMT_YUV422);
     if (video_cam_fd0 < 0) {
         ESP_LOGE(TAG, "video cam open failed");
         return;
@@ -337,7 +342,7 @@ void app_main(void)
     ESP_ERROR_CHECK(iot_button_register_cb(btns[BSP_BUTTON_2], BUTTON_PRESS_DOWN, increase_btn_handler, NULL));
     ESP_ERROR_CHECK(iot_button_register_cb(btns[BSP_BUTTON_3], BUTTON_PRESS_DOWN, decrease_btn_handler, NULL));
 
-    if(!app_usb_msc_stage()) {
+    if(!app_usb_msc_stage() && shoot_flag) {
         bsp_display_backlight_off();
 
         deep_sleep_register_rtc_timer_wakeup();
@@ -346,7 +351,12 @@ void app_main(void)
     } else {
         bsp_display_backlight_on();
 
+        shoot_flag = false;
+        nvs_set_i8(nvs_save_handle, "shoot_flag", shoot_flag);
+
+        bsp_display_lock(0);
         lv_label_set_text_fmt(file_label, "Set shooting timer");
         lv_label_set_text_fmt(time_label, "Timer set to: %d", wakeup_time_sec);
+        bsp_display_unlock();
     }
 }
