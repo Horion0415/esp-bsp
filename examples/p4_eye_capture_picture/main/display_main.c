@@ -64,16 +64,6 @@ static void deep_sleep_register_rtc_timer_wakeup(void)
     ESP_ERROR_CHECK(esp_sleep_enable_timer_wakeup(wakeup_time_sec * 1000000));
 }
 
-static void set_slave_power(bool on)
-{
-    gpio_set_level(P4_EYE_C6_EN_PIN, on);
-}
-
-static void set_camera_power(bool on)
-{
-    gpio_set_level(P4_EYE_CAMERA_EN_PIN, on);
-}
-
 static int get_next_file_index(const char *path) {
     DIR *dir = opendir(path);
     if (!dir) {
@@ -97,6 +87,16 @@ static int get_next_file_index(const char *path) {
 
     closedir(dir);
     return max_index + 1;  
+}
+
+static void set_slave_power(bool on)
+{
+    gpio_set_level(P4_EYE_C6_EN_PIN, on);
+}
+
+static void set_camera_power(bool on)
+{
+    gpio_set_level(P4_EYE_CAMERA_EN_PIN, on);
 }
 
 static void video_capture_task(void *arg)
@@ -170,15 +170,12 @@ static void count_down_timer(lv_timer_t * timer)
     count_down--;
     if(count_down == 0) {
         ESP_LOGI(TAG, "Starting video capture task");
-        wakeup_time_sec = 10;
-
-        nvs_set_i8(nvs_save_handle, "wakeup_time_sec", wakeup_time_sec);
         
         lv_timer_del(timer);
 
         esp_restart();
     } else {
-        lv_label_set_text_fmt(file_label, "Starting to shoot soon");
+        lv_label_set_text_fmt(file_label, "Starting shoot");
         lv_label_set_text_fmt(time_label, "%d", count_down);
     }
 }
