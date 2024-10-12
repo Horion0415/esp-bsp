@@ -174,6 +174,8 @@ static void count_down_timer(lv_timer_t * timer)
         
         lv_timer_del(timer);
 
+        bsp_display_backlight_off();
+
         esp_restart();
     } else {
         lv_label_set_text_fmt(file_label, "Starting shoot");
@@ -270,6 +272,7 @@ void app_main(void)
     app_usb_msc_init();
 
     // Initialize the display
+    ESP_LOGI(TAG, "Initializing display");
     bsp_display_start();
     bsp_display_backlight_off();
 
@@ -341,8 +344,6 @@ void app_main(void)
     ESP_ERROR_CHECK(iot_button_register_cb(btns[BSP_BUTTON_3], BUTTON_PRESS_DOWN, decrease_btn_handler, NULL));
 
     if(!app_usb_msc_stage() && shoot_flag) {
-        bsp_display_backlight_off();
-
         deep_sleep_register_rtc_timer_wakeup();
         
         xTaskCreatePinnedToCore(video_capture_task, "video capture task", 4 * 1024, &video_cam_fd0, 4, NULL, 0);

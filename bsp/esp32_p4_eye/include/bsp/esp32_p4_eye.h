@@ -350,6 +350,8 @@ typedef struct {
  */
 lv_disp_t *bsp_display_start(void);
 
+esp_err_t bsp_display_brightness_init(void);
+
 /**
  * @brief Initialize display
  *

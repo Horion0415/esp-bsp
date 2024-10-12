@@ -223,7 +223,7 @@ esp_err_t bsp_get_sdcard_handle(sdmmc_card_t **card)
 #define LVGL_TICK_PERIOD_MS  (CONFIG_BSP_DISPLAY_LVGL_TICK)
 #define LVGL_MAX_SLEEP_MS    (CONFIG_BSP_DISPLAY_LVGL_MAX_SLEEP)
 
-static esp_err_t bsp_display_brightness_init(void)
+esp_err_t bsp_display_brightness_init(void)
 {
     // Setup LEDC peripheral for PWM backlight control
     const ledc_channel_config_t LCD_backlight_channel = {
