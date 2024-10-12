@@ -168,10 +168,6 @@ static void video_capture_task(void *arg)
 
 static void count_down_timer(lv_timer_t * timer)
 {
-    if(app_usb_msc_stage()) {
-        return;
-    }
-
     count_down--;
     if(count_down == 0) {
         ESP_LOGI(TAG, "Starting video capture task");
@@ -324,7 +320,7 @@ void app_main(void)
     assert(jpg_buf != NULL);
 
     ESP_ERROR_CHECK(iot_button_register_cb(btns[BSP_BUTTON_1], BUTTON_PRESS_DOWN, shutter_btn_handler, NULL));
-    
+
     if(!app_usb_msc_stage() && shutter_flag) {
         bsp_display_backlight_off();
         deep_sleep_register_rtc_timer_wakeup();

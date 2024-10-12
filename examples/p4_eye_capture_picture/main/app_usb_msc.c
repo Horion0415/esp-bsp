@@ -160,12 +160,6 @@ static void storage_mount_changed_cb(tinyusb_msc_event_t *event)
 
         lv_label_set_text_fmt(time_label, "USB connected");
         lv_label_set_text_fmt(file_label, "Viewable on PC");
-    } else {
-        ESP_LOGW(TAG, "Mounting storage...");
-        usb_msc_exposed = false;
-
-        lv_label_set_text_fmt(time_label, "Ready to capture");
-        lv_label_set_text_fmt(file_label, "Please press the shutter");
     }
 }
 
