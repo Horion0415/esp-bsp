@@ -26,6 +26,7 @@
 #endif
 
 #include "bsp/esp-bsp.h"
+#include "lvgl.h"
 
 /*
  * We warn if a secondary serial console is enabled. A secondary serial console is always output-only and
@@ -41,6 +42,9 @@
 static const char *TAG = "example_main";
 static esp_console_repl_t *repl = NULL;
 static bool usb_msc_exposed = false;
+
+extern lv_obj_t *file_label;
+extern lv_obj_t *time_label;
 
 /* TinyUSB descriptors
    ********************************************************************* */
@@ -282,10 +286,19 @@ static void storage_mount_changed_cb(tinyusb_msc_event_t *event)
 {
     ESP_LOGI(TAG, "Storage %s", event->mount_changed_data.is_mounted ? "mounted" : "unmounted");
     if(!event->mount_changed_data.is_mounted) {
+        ESP_LOGI(TAG, "Unmounting storage...");
         usb_msc_exposed = true;
+
+        lv_label_set_text_fmt(time_label, "USB connected");
+        lv_label_set_text_fmt(file_label, "Viewable on PC");
+    } else {
+        ESP_LOGI(TAG, "Mounting storage...");
+        usb_msc_exposed = false;
+
+        lv_label_set_text_fmt(time_label, "Ready to capture");
+        lv_label_set_text_fmt(file_label, "Please press the shutter");
     }
 }
-
 
 bool app_usb_msc_stage(void)
 {

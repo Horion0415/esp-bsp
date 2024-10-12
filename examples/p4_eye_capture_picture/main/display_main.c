@@ -49,8 +49,8 @@ static uint32_t jpg_size;
 static uint8_t *jpg_buf;
 static size_t rx_buffer_size = 0;
 
-static lv_obj_t *file_label;
-static lv_obj_t *time_label;
+lv_obj_t *file_label;
+lv_obj_t *time_label;
 
 static uint8_t wakeup_time_sec;
 static uint8_t shutter_flag = 0; // value will default to 0, if not set yet in NVS
@@ -168,19 +168,21 @@ static void video_capture_task(void *arg)
 
 static void count_down_timer(lv_timer_t * timer)
 {
+    if(app_usb_msc_stage()) {
+        return;
+    }
+
     count_down--;
     if(count_down == 0) {
-        if(!app_usb_msc_stage()) {
-            ESP_LOGI(TAG, "Starting video capture task");
-            wakeup_time_sec = 10;
+        ESP_LOGI(TAG, "Starting video capture task");
+        wakeup_time_sec = 10;
 
-            nvs_set_i8(nvs_save_handle, "shutter_flag", 1);
-            nvs_set_i8(nvs_save_handle, "wakeup_time_sec", wakeup_time_sec);
-            
-            lv_timer_del(timer);
+        nvs_set_i8(nvs_save_handle, "shutter_flag", 1);
+        nvs_set_i8(nvs_save_handle, "wakeup_time_sec", wakeup_time_sec);
+        
+        lv_timer_del(timer);
 
-            esp_restart();
-        }
+        esp_restart();
     } else {
         lv_label_set_text_fmt(file_label, "Starting to shoot soon");
         lv_label_set_text_fmt(time_label, "%d", count_down);
@@ -252,17 +254,33 @@ void app_main(void)
     ESP_ERROR_CHECK(bsp_sdcard_mount());
     ESP_LOGI(TAG, "SD card mounted");
 
+    // Initialize the display
+    bsp_display_start();
+    if(!app_usb_msc_stage() && shutter_flag) {
+        bsp_display_backlight_off();
+    } else {
+        bsp_display_backlight_on();
+    }
+
+    bsp_display_lock(0);
+
+    time_label = lv_label_create(lv_scr_act());
+    lv_obj_align(time_label, LV_ALIGN_CENTER, 0, 0);
+    lv_obj_set_style_text_font(time_label, &lv_font_montserrat_24, 0);
+
+    file_label = lv_label_create(lv_scr_act());
+    lv_obj_align(file_label, LV_ALIGN_CENTER, 0, -50);
+    lv_obj_set_style_text_font(file_label, &lv_font_montserrat_24, 0);
+
+    bsp_display_unlock();
+
     // Initialize the USB MSC
     app_usb_msc_init();
 
     /* Init Buttons */
     button_handle_t btns[BSP_BUTTON_NUM];
     ESP_ERROR_CHECK(bsp_iot_button_create(btns, NULL, BSP_BUTTON_NUM));
-
-    // Initialize the display
-    bsp_display_start();
-    bsp_display_backlight_on();
-
+    
     // Initialize the I2C
     ESP_ERROR_CHECK(bsp_i2c_init());
     bsp_get_i2c_bus_handle(&i2c_handle);
@@ -309,20 +327,6 @@ void app_main(void)
     jpg_buf = (uint8_t*)jpeg_alloc_encoder_mem(app_video_get_buf_size() / 10, &rx_mem_cfg, &rx_buffer_size); // Assume that compression ratio of 10 to 1
     assert(jpg_buf != NULL);
 
-    bsp_display_lock(0);
-
-    time_label = lv_label_create(lv_scr_act());
-    lv_obj_align(time_label, LV_ALIGN_CENTER, 0, 0);
-    lv_obj_set_style_text_font(time_label, &lv_font_montserrat_24, 0);
-    lv_label_set_text_fmt(time_label, "Timed Shooting: %d", wakeup_time_sec);
-
-    file_label = lv_label_create(lv_scr_act());
-    lv_obj_align(file_label, LV_ALIGN_CENTER, 0, -50);
-    lv_obj_set_style_text_font(file_label, &lv_font_montserrat_24, 0);
-    lv_label_set_text_fmt(file_label, "Start filming");
-
-    bsp_display_unlock();
-
     ESP_ERROR_CHECK(iot_button_register_cb(btns[BSP_BUTTON_1], BUTTON_PRESS_DOWN, shutter_btn_handler, NULL));
 
     if(!app_usb_msc_stage() && shutter_flag) {
@@ -330,8 +334,12 @@ void app_main(void)
         
         xTaskCreatePinnedToCore(video_capture_task, "video capture task", 4 * 1024, &video_cam_fd0, 4, NULL, 0);
     } else {
-        shutter_flag = 0;
-        err = nvs_set_i8(nvs_save_handle, "shutter_flag", shutter_flag);
-    }
+        if(app_usb_msc_stage()) {
+            lv_label_set_text_fmt(time_label, "USB connected");
+            lv_label_set_text_fmt(file_label, "Viewable on PC");
 
+            shutter_flag = 0;
+            err = nvs_set_i8(nvs_save_handle, "shutter_flag", shutter_flag);
+        }
+    }
 }
