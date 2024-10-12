@@ -105,12 +105,21 @@ static void video_capture_task(void *arg)
 
     struct v4l2_buffer v4l2_buf;
 
+    char file_name[64];
     uint32_t camera_buf_hes = 0;
     uint32_t camera_buf_ves = 0;
 
     int image_count = get_next_file_index("/sdcard/pic_save");;
 
     video_get_hes_ves(&camera_buf_hes, &camera_buf_ves);
+
+    jpeg_encode_cfg_t enc_config = {
+        .src_type = JPEG_ENCODE_IN_FORMAT_RGB565,
+        .sub_sample = JPEG_DOWN_SAMPLING_YUV420,
+        .image_quality = 80,
+        .width = camera_buf_hes,
+        .height = camera_buf_ves,
+    };
 
     while(1) {
         memset(&v4l2_buf, 0, sizeof(v4l2_buf));
@@ -127,17 +136,8 @@ static void video_capture_task(void *arg)
         v4l2_buf.m.userptr = (unsigned long)camera_buf[v4l2_buf.index];
         v4l2_buf.length = app_video_get_buf_size();
 
-        jpeg_encode_cfg_t enc_config = {
-            .src_type = JPEG_ENCODE_IN_FORMAT_RGB565,
-            .sub_sample = JPEG_DOWN_SAMPLING_YUV420,
-            .image_quality = 80,
-            .width = camera_buf_hes,
-            .height = camera_buf_ves,
-        };
-
         ESP_ERROR_CHECK(jpeg_encoder_process(jpeg_handle, &enc_config, camera_buf[v4l2_buf.index], app_video_get_buf_size(), jpg_buf, rx_buffer_size, &jpg_size));
 
-        char file_name[64];
         snprintf(file_name, sizeof(file_name), "/sdcard/pic_save/OUTJPG_%d.JPG", image_count++);        
 
         bsp_display_lock(0);
@@ -182,7 +182,7 @@ static void count_down_timer(lv_timer_t * timer)
 
 static void shutter_btn_handler(void *button_handle, void *usr_data)
 {
-    lv_timer_t * timer = lv_timer_create(count_down_timer, 1000, NULL);
+    lv_timer_create(count_down_timer, 1000, NULL);
 }
 
 static void increase_btn_handler(void *button_handle, void *usr_data)
