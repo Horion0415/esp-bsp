@@ -315,7 +315,6 @@ esp_err_t bsp_display_new(const bsp_display_config_t *config, esp_lcd_panel_hand
     };
     ESP_GOTO_ON_ERROR(esp_lcd_new_panel_st7789(*ret_io, &panel_config, ret_panel), err, TAG, "New panel failed");
 
-
     esp_lcd_panel_reset(*ret_panel);
     esp_lcd_panel_init(*ret_panel);
     esp_lcd_panel_invert_color(*ret_panel, true);

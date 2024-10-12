@@ -141,10 +141,6 @@ static void video_capture_task(void *arg)
 
         snprintf(file_name, sizeof(file_name), "/sdcard/pic_save/OUTJPG_%d.JPG", image_count++);        
 
-        bsp_display_lock(0);
-        lv_label_set_text_fmt(file_label, "Saved count: %d", image_count);
-        bsp_display_unlock();
-
         FILE *file_jpg = fopen(file_name, "wb");
         ESP_LOGI(TAG, "Writing jpg to %s", file_name);
         if (file_jpg == NULL) {
@@ -160,8 +156,9 @@ static void video_capture_task(void *arg)
 
         bsp_led_set(BSP_LED_WHITE, 0);
 
-        // enter deep sleep
         set_camera_power(false);
+
+        // enter deep sleep
         esp_deep_sleep_start();
     }
 }
@@ -274,6 +271,7 @@ void app_main(void)
 
     // Initialize the display
     bsp_display_start();
+    bsp_display_backlight_off();
 
     bsp_display_lock(0);
 
