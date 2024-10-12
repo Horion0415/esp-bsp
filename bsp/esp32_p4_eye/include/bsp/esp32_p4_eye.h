@@ -306,6 +306,8 @@ esp_err_t bsp_sdcard_mount(void);
  */
 esp_err_t bsp_sdcard_unmount(void);
 
+esp_err_t bsp_get_sdcard_handle(sdmmc_card_t **card);
+
 /**************************************************************************************************
  *
  * LCD interface

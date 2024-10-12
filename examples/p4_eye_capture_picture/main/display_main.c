@@ -6,6 +6,9 @@
 
 #include <stdio.h>
 
+#include "nvs_flash.h"
+#include "nvs.h"
+#include "esp_system.h"
 #include "esp_log.h"
 #include "esp_video_init.h"
 #include "esp_cache.h"
@@ -27,14 +30,19 @@
 
 #include "lvgl.h"
 #include "bsp/esp-bsp.h"
+
 #include "app_video.h"
+#include "app_usb_msc.h"
 
 #define P4_EYE_C6_EN_PIN                           (GPIO_NUM_5)
 #define P4_EYE_CAMERA_EN_PIN                       (GPIO_NUM_15)
 
+nvs_handle_t nvs_handle;
+
 static i2c_master_bus_handle_t i2c_handle;
 static size_t data_cache_line_size = 0;
 static void *camera_buf[EXAMPLE_CAM_BUF_NUM];
+static int video_cam_fd0;
 
 static jpeg_encoder_handle_t jpeg_handle;
 static uint32_t jpg_size;
@@ -45,6 +53,7 @@ static lv_obj_t *file_label;
 static lv_obj_t *time_label;
 
 static int wakeup_time_sec;
+static int count_down = 4;
 
 static const char *TAG = "main";
 
@@ -156,11 +165,68 @@ static void video_capture_task(void *arg)
     }
 }
 
+static void count_down_timer(lv_timer_t * timer)
+{
+    count_down--;
+    if(count_down == 0) {
+        if(!app_usb_msc_stage()) {
+            ESP_LOGI(TAG, "Starting video capture task");
+            wakeup_time_sec = 10;
+
+            nvs_set_i8(nvs_handle, "shutter_flag", 1);
+            nvs_set_i8(nvs_handle, "wakeup_time_sec", wakeup_time_sec);
+            
+            lv_timer_del(timer);
+
+            esp_restart();
+        }
+    } else {
+        lv_label_set_text_fmt(file_label, "Starting to shoot soon");
+        lv_label_set_text_fmt(time_label, "%d", count_down);
+    }
+}
+
+static void shutter_btn_handler(void *button_handle, void *usr_data)
+{
+    lv_timer_t * timer = lv_timer_create(count_down_timer, 1000, NULL);
+}
+
 void app_main(void)
 {   
-    ESP_LOGI(TAG, "LEDs initialized");
+    // Initialize NVS
+    esp_err_t err = nvs_flash_init();
+    if (err == ESP_ERR_NVS_NO_FREE_PAGES || err == ESP_ERR_NVS_NEW_VERSION_FOUND) {
+        ESP_ERROR_CHECK(nvs_flash_erase());
+        err = nvs_flash_init();
+    }
+    ESP_ERROR_CHECK(err);
+
+    err = nvs_open("storage", NVS_READWRITE, &nvs_handle);
+    if (err != ESP_OK) {
+        printf("Error (%s) opening NVS handle!\n", esp_err_to_name(err));
+    } else {
+        printf("Done\n");
+
+        // Read
+        printf("Reading shutter flag from NVS ... ");
+        int8_t shutter_flag = 0; // value will default to 0, if not set yet in NVS
+        err = nvs_get_i8(nvs_handle, "shutter_flag", &shutter_flag);
+        err |= nvs_get_i8(nvs_handle, "wakeup_time_sec", &wakeup_time_sec);
+        switch (err) {
+            case ESP_OK:
+                ESP_LOGI(TAG, "Done\n");
+                break;
+            case ESP_ERR_NVS_NOT_FOUND:
+                printf("The value is not initialized yet!\n");
+                break;
+            default :
+                printf("Error (%s) reading!\n", esp_err_to_name(err));
+        }
+
+    // Initialize the led
     ESP_ERROR_CHECK(bsp_leds_init());
 
+    // Initialize the power control
     const gpio_config_t led_io_config = {
         .pin_bit_mask = BIT64(P4_EYE_C6_EN_PIN),
         .mode = GPIO_MODE_OUTPUT, 
@@ -184,6 +250,13 @@ void app_main(void)
     ESP_ERROR_CHECK(bsp_sdcard_mount());
     ESP_LOGI(TAG, "SD card mounted");
 
+    // Initialize the USB MSC
+    app_usb_msc_init();
+
+    /* Init Buttons */
+    button_handle_t btns[BSP_BUTTON_NUM];
+    ESP_ERROR_CHECK(bsp_iot_button_create(btns, NULL, BSP_BUTTON_NUM));
+
     // Initialize the display
     bsp_display_start();
     bsp_display_backlight_on();
@@ -200,7 +273,7 @@ void app_main(void)
     }
 
     // Open the video device
-    int video_cam_fd0 = app_video_open(EXAMPLE_CAM_DEV_PATH, APP_VIDEO_FMT);
+    video_cam_fd0 = app_video_open(EXAMPLE_CAM_DEV_PATH, APP_VIDEO_FMT);
     if (video_cam_fd0 < 0) {
         ESP_LOGE(TAG, "video cam open failed");
         return;
@@ -219,8 +292,6 @@ void app_main(void)
     ESP_ERROR_CHECK(app_video_set_bufs(video_cam_fd0, EXAMPLE_CAM_BUF_NUM, (void*)camera_buf));
 
     ESP_ERROR_CHECK(video_stream_start(video_cam_fd0));
-
-    deep_sleep_register_rtc_timer_wakeup();
 
     // Initialize the JPEG encoder
     jpeg_encode_engine_cfg_t encode_eng_cfg = {
@@ -250,6 +321,14 @@ void app_main(void)
 
     bsp_display_unlock();
 
-    // Start the video capture task
-    xTaskCreatePinnedToCore(video_capture_task, "video capture task", 4 * 1024, &video_cam_fd0, 4, NULL, 0);
+    ESP_ERROR_CHECK(iot_button_register_cb(btns[BSP_BUTTON_1], BUTTON_PRESS_DOWN, shutter_btn_handler, NULL));
+
+    if(!app_usb_msc_stage() && shutter_flag) {
+        deep_sleep_register_rtc_timer_wakeup();
+        
+        xTaskCreatePinnedToCore(video_capture_task, "video capture task", 4 * 1024, &video_cam_fd0, 4, NULL, 0);
+    } else {
+        shutter_flag = 0;
+        err = nvs_set_i8(nvs_handle, "shutter_flag", shutter_flag);
+    }
 }

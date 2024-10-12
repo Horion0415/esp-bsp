@@ -208,6 +208,15 @@ esp_err_t bsp_sdcard_unmount(void)
     return esp_vfs_fat_sdcard_unmount(BSP_SD_MOUNT_POINT, bsp_sdcard);
 }
 
+esp_err_t bsp_get_sdcard_handle(sdmmc_card_t **card)
+{
+    if (card == NULL) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    *card = bsp_sdcard;
+    return ESP_OK;
+}
+
 #define LCD_CMD_BITS         (8)
 #define LCD_PARAM_BITS       (8)
 #define LCD_LEDC_CH          (CONFIG_BSP_DISPLAY_BRIGHTNESS_LEDC_CH)
