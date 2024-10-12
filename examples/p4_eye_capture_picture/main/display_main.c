@@ -53,7 +53,6 @@ lv_obj_t *file_label;
 lv_obj_t *time_label;
 
 static uint8_t wakeup_time_sec;
-static uint8_t shutter_flag = 0; // value will default to 0, if not set yet in NVS
 static int count_down = 4;
 
 static const char *TAG = "main";
@@ -173,7 +172,6 @@ static void count_down_timer(lv_timer_t * timer)
         ESP_LOGI(TAG, "Starting video capture task");
         wakeup_time_sec = 10;
 
-        nvs_set_i8(nvs_save_handle, "shutter_flag", 1);
         nvs_set_i8(nvs_save_handle, "wakeup_time_sec", wakeup_time_sec);
         
         lv_timer_del(timer);
@@ -188,6 +186,26 @@ static void count_down_timer(lv_timer_t * timer)
 static void shutter_btn_handler(void *button_handle, void *usr_data)
 {
     lv_timer_t * timer = lv_timer_create(count_down_timer, 1000, NULL);
+}
+
+static void increase_btn_handler(void *button_handle, void *usr_data)
+{
+    wakeup_time_sec += 5;
+    if(wakeup_time_sec > 60) {
+        wakeup_time_sec = 60;
+    }
+    lv_label_set_text_fmt(time_label, "Timer set to: %d", wakeup_time_sec);
+    nvs_set_i8(nvs_save_handle, "wakeup_time_sec", wakeup_time_sec);
+}
+
+static void decrease_btn_handler(void *button_handle, void *usr_data)
+{
+    wakeup_time_sec -= 5;
+    if(wakeup_time_sec < 5) {
+        wakeup_time_sec = 5;
+    }
+    lv_label_set_text_fmt(time_label, "Timer set to: %d", wakeup_time_sec);
+    nvs_set_i8(nvs_save_handle, "wakeup_time_sec", wakeup_time_sec);
 }
 
 void app_main(void)
@@ -208,8 +226,6 @@ void app_main(void)
 
         // Read
         printf("Reading shutter flag from NVS ... ");
-
-        err = nvs_get_i8(nvs_save_handle, "shutter_flag", (int8_t *)&shutter_flag);
         err |= nvs_get_i8(nvs_save_handle, "wakeup_time_sec", (int8_t *)&wakeup_time_sec);
         switch (err) {
             case ESP_OK:
@@ -319,21 +335,21 @@ void app_main(void)
     jpg_buf = (uint8_t*)jpeg_alloc_encoder_mem(app_video_get_buf_size() / 10, &rx_mem_cfg, &rx_buffer_size); // Assume that compression ratio of 10 to 1
     assert(jpg_buf != NULL);
 
+    //register button handlers
     ESP_ERROR_CHECK(iot_button_register_cb(btns[BSP_BUTTON_1], BUTTON_PRESS_DOWN, shutter_btn_handler, NULL));
+    ESP_ERROR_CHECK(iot_button_register_cb(btns[BSP_BUTTON_2], BUTTON_PRESS_DOWN, increase_btn_handler, NULL));
+    ESP_ERROR_CHECK(iot_button_register_cb(btns[BSP_BUTTON_3], BUTTON_PRESS_DOWN, decrease_btn_handler, NULL));
 
-    if(!app_usb_msc_stage() && shutter_flag) {
+    if(!app_usb_msc_stage()) {
         bsp_display_backlight_off();
+
         deep_sleep_register_rtc_timer_wakeup();
         
         xTaskCreatePinnedToCore(video_capture_task, "video capture task", 4 * 1024, &video_cam_fd0, 4, NULL, 0);
     } else {
         bsp_display_backlight_on();
-        if(app_usb_msc_stage()) {
-            lv_label_set_text_fmt(time_label, "USB connected");
-            lv_label_set_text_fmt(file_label, "Viewable on PC");
 
-            shutter_flag = 0;
-            err = nvs_set_i8(nvs_save_handle, "shutter_flag", shutter_flag);
-        }
+        lv_label_set_text_fmt(file_label, "Set shooting timer");
+        lv_label_set_text_fmt(time_label, "Timer set to: %d", wakeup_time_sec);
     }
 }
