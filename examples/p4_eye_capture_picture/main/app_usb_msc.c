@@ -286,13 +286,13 @@ static void storage_mount_changed_cb(tinyusb_msc_event_t *event)
 {
     ESP_LOGI(TAG, "Storage %s", event->mount_changed_data.is_mounted ? "mounted" : "unmounted");
     if(!event->mount_changed_data.is_mounted) {
-        ESP_LOGI(TAG, "Unmounting storage...");
+        ESP_LOGW(TAG, "Unmounting storage...");
         usb_msc_exposed = true;
 
         lv_label_set_text_fmt(time_label, "USB connected");
         lv_label_set_text_fmt(file_label, "Viewable on PC");
     } else {
-        ESP_LOGI(TAG, "Mounting storage...");
+        ESP_LOGW(TAG, "Mounting storage...");
         usb_msc_exposed = false;
 
         lv_label_set_text_fmt(time_label, "Ready to capture");

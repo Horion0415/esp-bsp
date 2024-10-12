@@ -251,16 +251,12 @@ void app_main(void)
     ESP_ERROR_CHECK(gpio_config(&camera_io_config));
     set_camera_power(true);
 
+    // Initialize the SD card
     ESP_ERROR_CHECK(bsp_sdcard_mount());
     ESP_LOGI(TAG, "SD card mounted");
 
     // Initialize the display
     bsp_display_start();
-    if(!app_usb_msc_stage() && shutter_flag) {
-        bsp_display_backlight_off();
-    } else {
-        bsp_display_backlight_on();
-    }
 
     bsp_display_lock(0);
 
@@ -328,12 +324,14 @@ void app_main(void)
     assert(jpg_buf != NULL);
 
     ESP_ERROR_CHECK(iot_button_register_cb(btns[BSP_BUTTON_1], BUTTON_PRESS_DOWN, shutter_btn_handler, NULL));
-
+    
     if(!app_usb_msc_stage() && shutter_flag) {
+        bsp_display_backlight_off();
         deep_sleep_register_rtc_timer_wakeup();
         
         xTaskCreatePinnedToCore(video_capture_task, "video capture task", 4 * 1024, &video_cam_fd0, 4, NULL, 0);
     } else {
+        bsp_display_backlight_on();
         if(app_usb_msc_stage()) {
             lv_label_set_text_fmt(time_label, "USB connected");
             lv_label_set_text_fmt(file_label, "Viewable on PC");
