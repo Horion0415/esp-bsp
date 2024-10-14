@@ -36,6 +36,7 @@
 
 #define P4_EYE_C6_EN_PIN                           (GPIO_NUM_5)
 #define P4_EYE_CAMERA_EN_PIN                       (GPIO_NUM_15)
+#define CAPTURE_INDEX                              (5)
 
 static nvs_handle_t nvs_save_handle;
 
@@ -122,7 +123,11 @@ static void video_capture_task(void *arg)
         .height = camera_buf_ves,
     };
 
+    uint8_t capture_index = 0;
+
     while(1) {
+        capture_index++;
+
         memset(&v4l2_buf, 0, sizeof(v4l2_buf));
         v4l2_buf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
         v4l2_buf.memory = V4L2_MEMORY_USERPTR;
@@ -132,34 +137,38 @@ static void video_capture_task(void *arg)
             ESP_LOGE(TAG, "failed to receive video frame");
         }
 
-        bsp_led_set(BSP_LED_WHITE, 1);
-
         v4l2_buf.m.userptr = (unsigned long)camera_buf[v4l2_buf.index];
         v4l2_buf.length = app_video_get_buf_size();
 
-        ESP_ERROR_CHECK(jpeg_encoder_process(jpeg_handle, &enc_config, camera_buf[v4l2_buf.index], app_video_get_buf_size(), jpg_buf, rx_buffer_size, &jpg_size));
+        if (capture_index == CAPTURE_INDEX) {
+            bsp_led_set(BSP_LED_WHITE, 1);
 
-        snprintf(file_name, sizeof(file_name), "/sdcard/pic_save/OUTJPG_%d.JPG", image_count++);        
+            ESP_ERROR_CHECK(jpeg_encoder_process(jpeg_handle, &enc_config, camera_buf[v4l2_buf.index], app_video_get_buf_size(), jpg_buf, rx_buffer_size, &jpg_size));
 
-        FILE *file_jpg = fopen(file_name, "wb");
-        ESP_LOGI(TAG, "Writing jpg to %s", file_name);
-        if (file_jpg == NULL) {
-            ESP_LOGE(TAG, "fopen file_jpg error");
+            snprintf(file_name, sizeof(file_name), "/sdcard/pic_save/OUTJPG_%d.JPG", image_count++);        
+
+            FILE *file_jpg = fopen(file_name, "wb");
+            ESP_LOGI(TAG, "Writing jpg to %s", file_name);
+            if (file_jpg == NULL) {
+                ESP_LOGE(TAG, "fopen file_jpg error");
+            }
+
+            fwrite(jpg_buf, 1, jpg_size, file_jpg);
+            fclose(file_jpg);
         }
-
-        fwrite(jpg_buf, 1, jpg_size, file_jpg);
-        fclose(file_jpg);
 
         if (ioctl(video_fd, VIDIOC_QBUF, &v4l2_buf) != 0) {
             ESP_LOGE(TAG, "failed to free video frame");
         }
 
-        bsp_led_set(BSP_LED_WHITE, 0);
+        if(capture_index == CAPTURE_INDEX) {
+            bsp_led_set(BSP_LED_WHITE, 0);
 
-        set_camera_power(false);
+            set_camera_power(false);
 
-        // enter deep sleep
-        esp_deep_sleep_start();
+            // enter deep sleep
+            esp_deep_sleep_start();
+        }
     }
 }
 
