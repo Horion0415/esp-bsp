@@ -302,7 +302,9 @@ static void camera_video_frame_operation(uint8_t *camera_buf, uint8_t camera_buf
 
         ESP_ERROR_CHECK(esp_timer_stop(periodic_timer));
 
+        bsp_display_lock(0);
         _ui_screen_change(&ui_ScreenUSB, LV_SCR_LOAD_ANIM_NONE, 0, 0, &ui_ScreenUSB_screen_init);
+        bsp_display_unlock();
     }
 }
 
