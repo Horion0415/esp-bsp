@@ -70,7 +70,8 @@ void app_smtp_task(void *pvParameters)
 {
     app_smtp_tls_init();
     app_smtp_connect_server();
-    // app_smtp_perform_authentication();
+    app_smtp_perform_authentication();
+    app_smtp_compose_email();
 
     vTaskDelete(NULL);
 }
@@ -83,133 +84,133 @@ void app_main(void)
         ESP_ERROR_CHECK(nvs_flash_erase());
         err = nvs_flash_init();
     }
-    // ESP_ERROR_CHECK(err);
+    ESP_ERROR_CHECK(err);
     ESP_ERROR_CHECK(esp_netif_init());
     ESP_ERROR_CHECK(esp_event_loop_create_default());
 
-    // err = nvs_open("storage", NVS_READWRITE, &nvs_save_handle);
-    // if (err != ESP_OK) {
-    //     printf("Error (%s) opening NVS handle!\n", esp_err_to_name(err));
-    // } else {
-    //     printf("Done\n");
+    err = nvs_open("storage", NVS_READWRITE, &nvs_save_handle);
+    if (err != ESP_OK) {
+        printf("Error (%s) opening NVS handle!\n", esp_err_to_name(err));
+    } else {
+        printf("Done\n");
 
-    //     // Read
-    //     printf("Reading shutter flag from NVS ... ");
-    //     err |= nvs_get_u32(nvs_save_handle, "timed_min", &timed_min);
-    //     switch (err) {
-    //         case ESP_OK:
-    //             ESP_LOGI(TAG, "Done\n");
-    //             break;
-    //         case ESP_ERR_NVS_NOT_FOUND:
-    //             printf("The value is not initialized yet!\n");
-    //             break;
-    //         default :
-    //             printf("Error (%s) reading!\n", esp_err_to_name(err));
-    //     }
-    // }
+        // Read
+        printf("Reading shutter flag from NVS ... ");
+        err |= nvs_get_u32(nvs_save_handle, "timed_min", &timed_min);
+        switch (err) {
+            case ESP_OK:
+                ESP_LOGI(TAG, "Done\n");
+                break;
+            case ESP_ERR_NVS_NOT_FOUND:
+                printf("The value is not initialized yet!\n");
+                break;
+            default :
+                printf("Error (%s) reading!\n", esp_err_to_name(err));
+        }
+    }
 
     // Connect to the wifi network
     ESP_ERROR_CHECK(example_connect());
 
-    // // Initialize the display
-    // bsp_display_start();
+    // Initialize the display
+    bsp_display_start();
 
-    // // Initialize the led
-    // ESP_ERROR_CHECK(bsp_leds_init());
+    // Initialize the led
+    ESP_ERROR_CHECK(bsp_leds_init());
 
-    // // Initialize the PPA
-    // ppa_client_config_t ppa_srm_config = {
-    //     .oper_type = PPA_OPERATION_SRM,
-    // };
-    // ESP_ERROR_CHECK(ppa_register_client(&ppa_srm_config, &ppa_srm_handle));
-    // ESP_ERROR_CHECK(esp_cache_get_alignment(MALLOC_CAP_SPIRAM, &data_cache_line_size));
+    // Initialize the PPA
+    ppa_client_config_t ppa_srm_config = {
+        .oper_type = PPA_OPERATION_SRM,
+    };
+    ESP_ERROR_CHECK(ppa_register_client(&ppa_srm_config, &ppa_srm_handle));
+    ESP_ERROR_CHECK(esp_cache_get_alignment(MALLOC_CAP_SPIRAM, &data_cache_line_size));
 
-    // // Initialize the SD card
-    // ESP_ERROR_CHECK(bsp_sdcard_mount());
-    // ESP_LOGI(TAG, "SD card mounted");
+    // Initialize the SD card
+    ESP_ERROR_CHECK(bsp_sdcard_mount());
+    ESP_LOGI(TAG, "SD card mounted");
 
-    // // Initialize the USB MSC
-    // app_usb_msc_init();
+    // Initialize the USB MSC
+    app_usb_msc_init();
 
-    // // Initialize the I2C
-    // ESP_ERROR_CHECK(bsp_i2c_init());
-    // bsp_get_i2c_bus_handle(&i2c_handle);
+    // Initialize the I2C
+    ESP_ERROR_CHECK(bsp_i2c_init());
+    bsp_get_i2c_bus_handle(&i2c_handle);
 
-    // // Initialize the video camera
-    // esp_err_t ret = app_video_main(i2c_handle);
-    // if (ret != ESP_OK) {
-    //     ESP_LOGE(TAG, "video main init failed with error 0x%x", ret);
-    //     return;
-    // }
+    // Initialize the video camera
+    esp_err_t ret = app_video_main(i2c_handle);
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "video main init failed with error 0x%x", ret);
+        return;
+    }
 
-    // // Open the video device
-    // int video_cam_fd0 = app_video_open(EXAMPLE_CAM_DEV_PATH, APP_VIDEO_FMT);
-    // if (video_cam_fd0 < 0) {
-    //     ESP_LOGE(TAG, "video cam open failed");
-    //     return;
-    // }
+    // Open the video device
+    int video_cam_fd0 = app_video_open(EXAMPLE_CAM_DEV_PATH, APP_VIDEO_FMT);
+    if (video_cam_fd0 < 0) {
+        ESP_LOGE(TAG, "video cam open failed");
+        return;
+    }
 
-    // // Initialize video capture device
-    // ESP_ERROR_CHECK(app_video_set_bufs(video_cam_fd0, EXAMPLE_CAM_BUF_NUM, NULL));
+    // Initialize video capture device
+    ESP_ERROR_CHECK(app_video_set_bufs(video_cam_fd0, EXAMPLE_CAM_BUF_NUM, NULL));
     
-    // ESP_ERROR_CHECK(esp_cache_get_alignment(MALLOC_CAP_SPIRAM, &data_cache_line_size));
-    // for (int i = 0; i < EXAMPLE_CAM_BUF_NUM; i++) {
-    //     canvas_buf[i] = heap_caps_aligned_calloc(data_cache_line_size, 1, app_video_get_buf_size(), MALLOC_CAP_SPIRAM);
-    //     if (canvas_buf[i] == NULL) {
-    //         ESP_LOGE(TAG, "Failed to allocate canvas buffer");
-    //         return;
-    //     }
-    // }
+    ESP_ERROR_CHECK(esp_cache_get_alignment(MALLOC_CAP_SPIRAM, &data_cache_line_size));
+    for (int i = 0; i < EXAMPLE_CAM_BUF_NUM; i++) {
+        canvas_buf[i] = heap_caps_aligned_calloc(data_cache_line_size, 1, app_video_get_buf_size(), MALLOC_CAP_SPIRAM);
+        if (canvas_buf[i] == NULL) {
+            ESP_LOGE(TAG, "Failed to allocate canvas buffer");
+            return;
+        }
+    }
 
-    // // Initialize the JPEG encoder
-    // jpeg_encode_engine_cfg_t encode_eng_cfg = {
-    //     .timeout_ms = 70,
-    // };
+    // Initialize the JPEG encoder
+    jpeg_encode_engine_cfg_t encode_eng_cfg = {
+        .timeout_ms = 70,
+    };
 
-    // ESP_ERROR_CHECK(jpeg_new_encoder_engine(&encode_eng_cfg, &jpeg_handle));
+    ESP_ERROR_CHECK(jpeg_new_encoder_engine(&encode_eng_cfg, &jpeg_handle));
 
-    // jpeg_encode_memory_alloc_cfg_t rx_mem_cfg = {
-    //     .buffer_direction = JPEG_DEC_ALLOC_OUTPUT_BUFFER,
-    // };
+    jpeg_encode_memory_alloc_cfg_t rx_mem_cfg = {
+        .buffer_direction = JPEG_DEC_ALLOC_OUTPUT_BUFFER,
+    };
 
-    // jpg_buf = (uint8_t*)jpeg_alloc_encoder_mem(app_video_get_buf_size() / 10, &rx_mem_cfg, &rx_buffer_size); // Assume that compression ratio of 10 to 1
-    // assert(jpg_buf != NULL);
+    jpg_buf = (uint8_t*)jpeg_alloc_encoder_mem(app_video_get_buf_size() / 10, &rx_mem_cfg, &rx_buffer_size); // Assume that compression ratio of 10 to 1
+    assert(jpg_buf != NULL);
 
-    // // Initialize the timer
-    // const esp_timer_create_args_t periodic_timer_args = {
-    //         .callback = &periodic_timer_callback,
-    //         .name = "periodic"
-    // };
-    // ESP_ERROR_CHECK(esp_timer_create(&periodic_timer_args, &periodic_timer));
-    // ESP_ERROR_CHECK(esp_timer_start_periodic(periodic_timer, timed_min * TIMER_SEC_INTERVAL));
+    // Initialize the timer
+    const esp_timer_create_args_t periodic_timer_args = {
+            .callback = &periodic_timer_callback,
+            .name = "periodic"
+    };
+    ESP_ERROR_CHECK(esp_timer_create(&periodic_timer_args, &periodic_timer));
+    ESP_ERROR_CHECK(esp_timer_start_periodic(periodic_timer, timed_min * TIMER_SEC_INTERVAL));
 
-    // // Register the video frame operation callback
-    // ESP_ERROR_CHECK(app_video_register_frame_operation_cb(camera_video_frame_operation));
+    // Register the video frame operation callback
+    ESP_ERROR_CHECK(app_video_register_frame_operation_cb(camera_video_frame_operation));
 
-    // // Start the camera stream task
-    // ESP_ERROR_CHECK(app_video_stream_task_start(video_cam_fd0, 0));
+    // Start the camera stream task
+    ESP_ERROR_CHECK(app_video_stream_task_start(video_cam_fd0, 0));
 
-    // // Initialize the UI
-    // screen_index = SCREEN_EYE_CAMERA;
-    // bsp_display_lock(0);
+    // Initialize the UI
+    screen_index = SCREEN_EYE_CAMERA;
+    bsp_display_lock(0);
 
-    // ui_init();
+    ui_init();
 
-    // lv_label_set_text_fmt(ui_LabelSet, "Set time: %ld minutes\n\n\n\n\n\n\n", timed_min);
+    lv_label_set_text_fmt(ui_LabelSet, "Set time: %ld minutes\n\n\n\n\n\n\n", timed_min);
 
-    // cam_canvas = lv_canvas_create(ui_ScreenMain);
-    // lv_obj_set_size(cam_canvas, BSP_LCD_H_RES, BSP_LCD_V_RES);
-    // lv_obj_set_align(cam_canvas, LV_ALIGN_CENTER);
+    cam_canvas = lv_canvas_create(ui_ScreenMain);
+    lv_obj_set_size(cam_canvas, BSP_LCD_H_RES, BSP_LCD_V_RES);
+    lv_obj_set_align(cam_canvas, LV_ALIGN_CENTER);
 
-    // bsp_display_unlock();
-    // bsp_display_backlight_on();
+    bsp_display_unlock();
+    bsp_display_backlight_on();
 
-    // /* Init Buttons */
-    // button_handle_t btns[BSP_BUTTON_NUM];
-    // ESP_ERROR_CHECK(bsp_iot_button_create(btns, NULL, BSP_BUTTON_NUM));
-    // ESP_ERROR_CHECK(iot_button_register_cb(btns[BSP_BUTTON_1], BUTTON_PRESS_DOWN, mode_switch_btn_handler, (void *) BSP_BUTTON_1));
-    // ESP_ERROR_CHECK(iot_button_register_cb(btns[BSP_BUTTON_2], BUTTON_PRESS_DOWN, increase_btn_handler, (void *) BSP_BUTTON_2));
-    // ESP_ERROR_CHECK(iot_button_register_cb(btns[BSP_BUTTON_3], BUTTON_PRESS_DOWN, decrease_btn_handler, (void *) BSP_BUTTON_3));
+    /* Init Buttons */
+    button_handle_t btns[BSP_BUTTON_NUM];
+    ESP_ERROR_CHECK(bsp_iot_button_create(btns, NULL, BSP_BUTTON_NUM));
+    ESP_ERROR_CHECK(iot_button_register_cb(btns[BSP_BUTTON_1], BUTTON_PRESS_DOWN, mode_switch_btn_handler, (void *) BSP_BUTTON_1));
+    ESP_ERROR_CHECK(iot_button_register_cb(btns[BSP_BUTTON_2], BUTTON_PRESS_DOWN, increase_btn_handler, (void *) BSP_BUTTON_2));
+    ESP_ERROR_CHECK(iot_button_register_cb(btns[BSP_BUTTON_3], BUTTON_PRESS_DOWN, decrease_btn_handler, (void *) BSP_BUTTON_3));
 
     xTaskCreatePinnedToCore(app_smtp_task, "app_smtp_task", 1024 * 8, NULL, 5, NULL, 1);
 }
