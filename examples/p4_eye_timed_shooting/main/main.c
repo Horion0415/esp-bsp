@@ -27,7 +27,7 @@
 
 enum {
     SCREEN_EYE_CAMERA,
-    SCREEN_CAMERA_SET,
+    SCREEN_EYE_SET,
 } screen_index;
 
 static const char *TAG = "main";
@@ -39,7 +39,7 @@ static size_t data_cache_line_size = 0;
 static void *canvas_buf[EXAMPLE_CAM_BUF_NUM];
 static lv_obj_t* cam_canvas;
 
-static uint8_t timed_sec = 1;
+static uint8_t timed_sec = 5;
 static bool timed_shooting = false;
 
 static jpeg_encoder_handle_t jpeg_handle;
@@ -55,11 +55,8 @@ static int get_next_file_index(const char *path);
 
 static void mode_switch_btn_handler(void *button_handle, void *usr_data)
 {
-    int button_pressed = (int)usr_data;
-    ESP_LOGI(TAG, "Button %d pressed", button_pressed);
-
     if(screen_index == SCREEN_EYE_CAMERA) {
-        screen_index = SCREEN_CAMERA_SET;
+        screen_index = SCREEN_EYE_SET;
         
         ESP_ERROR_CHECK(esp_timer_stop(periodic_timer));
 
@@ -249,12 +246,12 @@ static void camera_video_frame_operation(uint8_t *camera_buf, uint8_t camera_buf
 
         int image_count = get_next_file_index(BSP_SD_MOUNT_POINT"/pic_save");
         snprintf(file_name, sizeof(file_name), BSP_SD_MOUNT_POINT"/pic_save/OUTJPG_%d.JPG", image_count++);
+
         FILE *file_jpg = fopen(file_name, "wb");
         ESP_LOGI(TAG, "Writing jpg to %s", file_name);
         if (file_jpg == NULL) {
             ESP_LOGE(TAG, "fopen file_jpg error");
         }
-
         fwrite(jpg_buf, 1, jpg_size, file_jpg);
         fclose(file_jpg);
 
@@ -264,11 +261,7 @@ static void camera_video_frame_operation(uint8_t *camera_buf, uint8_t camera_buf
     if(app_usb_msc_stage()) {
         app_usb_set_exposed(false);
         
-        screen_index = SCREEN_CAMERA_SET;
-        
         ESP_ERROR_CHECK(esp_timer_stop(periodic_timer));
-
-        _ui_screen_change(&ui_ScreenSet, LV_SCR_LOAD_ANIM_NONE, 0, 0, &ui_ScreenSet_screen_init);
     }
 }
 
