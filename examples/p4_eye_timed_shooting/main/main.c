@@ -24,6 +24,8 @@
 
 #define ALIGN_UP(num, align)    (((num) + ((align) - 1)) & ~((align) - 1))
 #define P4_EYE_CAMERA_EN_PIN                       (GPIO_NUM_15)
+#define TIMER_SEC_INTERVAL                         (1 * 1000000)
+#define TIMER_MIN_INTERVAL                         (60 * 1000000)
 
 enum {
     SCREEN_EYE_CAMERA,
@@ -39,7 +41,7 @@ static size_t data_cache_line_size = 0;
 static void *canvas_buf[EXAMPLE_CAM_BUF_NUM];
 static lv_obj_t* cam_canvas;
 
-static uint8_t timed_sec = 5;
+static uint32_t timed_min = 5;
 static bool timed_shooting = false;
 
 static jpeg_encoder_handle_t jpeg_handle;
@@ -64,10 +66,31 @@ static void mode_switch_btn_handler(void *button_handle, void *usr_data)
     } else {
         screen_index = SCREEN_EYE_CAMERA;
 
-        ESP_ERROR_CHECK(esp_timer_start_periodic(periodic_timer, timed_sec * 1000000));
+        ESP_ERROR_CHECK(esp_timer_start_periodic(periodic_timer, timed_min * TIMER_SEC_INTERVAL));
 
         _ui_screen_change(&ui_ScreenMain, LV_SCR_LOAD_ANIM_NONE, 0, 0, &ui_ScreenMain_screen_init);
     }
+}
+
+static void increase_btn_handler(void *button_handle, void *usr_data)
+{
+    timed_min += 5;
+    if(timed_min > 120) {
+        timed_min = 5;
+    }
+
+    lv_label_set_text_fmt(ui_LabelSet, "Set time: %ld minutes\n\n\n\n\n\n\n", timed_min);
+}
+
+static void decrease_btn_handler(void *button_handle, void *usr_data)
+{
+    timed_min -= 5;
+    if(timed_min < 5) {
+        timed_min = 120;
+    }
+
+
+    lv_label_set_text_fmt(ui_LabelSet, "Set time: %ld minutes\n\n\n\n\n\n\n", timed_min);
 }
 
 void app_main(void)
@@ -142,7 +165,7 @@ void app_main(void)
             .name = "periodic"
     };
     ESP_ERROR_CHECK(esp_timer_create(&periodic_timer_args, &periodic_timer));
-    ESP_ERROR_CHECK(esp_timer_start_periodic(periodic_timer, timed_sec * 1000000));
+    ESP_ERROR_CHECK(esp_timer_start_periodic(periodic_timer, timed_min * TIMER_SEC_INTERVAL));
 
     // Register the video frame operation callback
     ESP_ERROR_CHECK(app_video_register_frame_operation_cb(camera_video_frame_operation));
@@ -167,6 +190,8 @@ void app_main(void)
     button_handle_t btns[BSP_BUTTON_NUM];
     ESP_ERROR_CHECK(bsp_iot_button_create(btns, NULL, BSP_BUTTON_NUM));
     ESP_ERROR_CHECK(iot_button_register_cb(btns[BSP_BUTTON_1], BUTTON_PRESS_DOWN, mode_switch_btn_handler, (void *) BSP_BUTTON_1));
+    ESP_ERROR_CHECK(iot_button_register_cb(btns[BSP_BUTTON_2], BUTTON_PRESS_DOWN, increase_btn_handler, (void *) BSP_BUTTON_2));
+    ESP_ERROR_CHECK(iot_button_register_cb(btns[BSP_BUTTON_3], BUTTON_PRESS_DOWN, decrease_btn_handler, (void *) BSP_BUTTON_3));
 }
 
 static void camera_video_frame_operation(uint8_t *camera_buf, uint8_t camera_buf_index, uint32_t camera_buf_hes, uint32_t camera_buf_ves, size_t camera_buf_len)
@@ -260,7 +285,7 @@ static void camera_video_frame_operation(uint8_t *camera_buf, uint8_t camera_buf
 
     if(app_usb_msc_stage()) {
         app_usb_set_exposed(false);
-        
+
         ESP_ERROR_CHECK(esp_timer_stop(periodic_timer));
     }
 }
