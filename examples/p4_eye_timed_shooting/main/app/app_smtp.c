@@ -430,16 +430,16 @@ esp_err_t app_smtp_compose_email(uint8_t *pic_buf, uint32_t pic_size)
     /* Text */
     len = snprintf((char *) buf, BUF_SIZE,
                    "Content-Type: text/plain\n"
-                   "This is a simple test mail from the SMTP client example.\r\n"
+                   "The image comes from the ESP32-P4-EYE.\r\n"
                    "\r\n"
                    "Enjoy!\n\n--XYZabcd1234\n");
     ret = write_ssl_data(&ssl, (unsigned char *) buf, len);
 
     /* Attachment */
     len = snprintf((char *) buf, BUF_SIZE,
-                   "Content-Type: image/png;name=esp_logo.png\n"
+                   "Content-Type: image/png;name=esp32-p4-eye.jpg\n"
                    "Content-Transfer-Encoding: base64\n"
-                   "Content-Disposition:attachment;filename=\"esp_logo.png\"\r\n\n");
+                   "Content-Disposition:attachment;filename=\"esp32-p4-eye.jpg\"\r\n\n");
     ret = write_ssl_data(&ssl, (unsigned char *) buf, len);
 
     /* Image contents... */
@@ -480,8 +480,6 @@ esp_err_t app_smtp_compose_email(uint8_t *pic_buf, uint32_t pic_size)
 
 esp_err_t app_smtp_close_connection(void)
 {
-    int ret = 0;
-
     /* Close connection */
     mbedtls_ssl_close_notify(&ssl);
 
