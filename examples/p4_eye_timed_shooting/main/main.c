@@ -66,16 +66,6 @@ static void increase_btn_handler(void *button_handle, void *usr_data);
 static void decrease_btn_handler(void *button_handle, void *usr_data);
 static void mode_switch_btn_handler(void *button_handle, void *usr_data);
 
-void app_smtp_task(void *pvParameters)
-{
-    app_smtp_tls_init();
-    app_smtp_connect_server();
-    app_smtp_perform_authentication();
-    app_smtp_compose_email();
-
-    vTaskDelete(NULL);
-}
-
 void app_main(void)
 {
     // Initialize NVS
@@ -111,6 +101,9 @@ void app_main(void)
 
     // Connect to the wifi network
     ESP_ERROR_CHECK(example_connect());
+    app_smtp_tls_init();
+    app_smtp_connect_server();
+    app_smtp_perform_authentication();
 
     // Initialize the display
     bsp_display_start();
@@ -211,8 +204,6 @@ void app_main(void)
     ESP_ERROR_CHECK(iot_button_register_cb(btns[BSP_BUTTON_1], BUTTON_PRESS_DOWN, mode_switch_btn_handler, (void *) BSP_BUTTON_1));
     ESP_ERROR_CHECK(iot_button_register_cb(btns[BSP_BUTTON_2], BUTTON_PRESS_DOWN, increase_btn_handler, (void *) BSP_BUTTON_2));
     ESP_ERROR_CHECK(iot_button_register_cb(btns[BSP_BUTTON_3], BUTTON_PRESS_DOWN, decrease_btn_handler, (void *) BSP_BUTTON_3));
-
-    xTaskCreatePinnedToCore(app_smtp_task, "app_smtp_task", 1024 * 8, NULL, 5, NULL, 1);
 }
 
 static void camera_video_frame_operation(uint8_t *camera_buf, uint8_t camera_buf_index, uint32_t camera_buf_hes, uint32_t camera_buf_ves, size_t camera_buf_len)
@@ -302,6 +293,8 @@ static void camera_video_frame_operation(uint8_t *camera_buf, uint8_t camera_buf
         fclose(file_jpg);
 
         bsp_led_set(BSP_LED_WHITE, 0);  // Turn off the white LED
+
+        app_smtp_compose_email(jpg_buf, jpg_size);
     }
 
     if(app_usb_msc_stage()) {

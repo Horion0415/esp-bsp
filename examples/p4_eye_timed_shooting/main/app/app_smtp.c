@@ -387,7 +387,7 @@ esp_err_t app_smtp_perform_authentication(void)
     return ESP_OK;
 }
 
-esp_err_t app_smtp_compose_email(void)
+esp_err_t app_smtp_compose_email(uint8_t *pic_buf, uint32_t pic_size)
 {
     int ret = 0;
 
@@ -443,9 +443,20 @@ esp_err_t app_smtp_compose_email(void)
     ret = write_ssl_data(&ssl, (unsigned char *) buf, len);
 
     /* Image contents... */
-    const uint8_t *offset = esp_logo_png_start;
-    while (offset < esp_logo_png_end - 1) {
-        int read_bytes = MIN(((sizeof (base64_buffer) - 1) / 4) * 3, esp_logo_png_end - offset - 1);
+    const uint8_t *offset = pic_buf;
+    // while (offset < esp_logo_png_end - 1) {
+    //     int read_bytes = MIN(((sizeof (base64_buffer) - 1) / 4) * 3, esp_logo_png_end - offset - 1);
+    //     ret = mbedtls_base64_encode((unsigned char *) base64_buffer, sizeof(base64_buffer),
+    //                                 &base64_len, (unsigned char *) offset, read_bytes);
+    //     if (ret != 0) {
+    //         ESP_LOGE(TAG, "Error in mbedtls encode! ret = -0x%x", -ret);
+    //     }
+    //     offset += read_bytes;
+    //     len = snprintf((char *) buf, BUF_SIZE, "%s\r\n", base64_buffer);
+    //     ret = write_ssl_data(&ssl, (unsigned char *) buf, len);
+    // }
+    while (offset < pic_buf + pic_size) {
+        int read_bytes = MIN(((sizeof (base64_buffer) - 1) / 4) * 3, pic_buf + pic_size - offset);
         ret = mbedtls_base64_encode((unsigned char *) base64_buffer, sizeof(base64_buffer),
                                     &base64_len, (unsigned char *) offset, read_bytes);
         if (ret != 0) {
