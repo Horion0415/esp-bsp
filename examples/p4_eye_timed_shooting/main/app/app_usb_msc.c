@@ -14,7 +14,6 @@
 #include <errno.h>
 #include <dirent.h>
 #include <stdlib.h>
-#include "esp_console.h"
 #include "esp_check.h"
 #include "esp_partition.h"
 #include "driver/gpio.h"
@@ -160,7 +159,10 @@ bool app_usb_msc_stage(void)
     return usb_msc_exposed;
 }
 
-
+void app_usb_set_exposed(bool exposed)
+{
+    usb_msc_exposed = exposed;
+}
 
 void app_usb_msc_init(void)
 {

@@ -5,33 +5,81 @@
  */
 
 #include <stdio.h>
+#include <dirent.h> 
+#include <fcntl.h>
 #include "esp_log.h"
 #include "esp_cache.h"
 #include "esp_heap_caps.h"
 #include "esp_private/esp_cache_private.h"
 #include "esp_timer.h"
 
+#include "driver/jpeg_encode.h"
 #include "driver/ppa.h"
 #include "bsp/esp-bsp.h"
 #include "lvgl.h"
 
 #include "app_video.h"
+#include "app_usb_msc.h"
+#include "ui.h"
 
 #define ALIGN_UP(num, align)    (((num) + ((align) - 1)) & ~((align) - 1))
+#define P4_EYE_CAMERA_EN_PIN                       (GPIO_NUM_15)
+
+enum {
+    SCREEN_EYE_CAMERA,
+    SCREEN_CAMERA_SET,
+} screen_index;
 
 static const char *TAG = "main";
 
-static void *canvas_buf[EXAMPLE_CAM_BUF_NUM];
 static i2c_master_bus_handle_t i2c_handle;
 static ppa_client_handle_t ppa_srm_handle = NULL;
 static size_t data_cache_line_size = 0;
-lv_obj_t* cam_canvas;
+
+static void *canvas_buf[EXAMPLE_CAM_BUF_NUM];
+static lv_obj_t* cam_canvas;
+
+static uint8_t timed_sec = 1;
+static bool timed_shooting = false;
+
+static jpeg_encoder_handle_t jpeg_handle;
+static uint32_t jpg_size;
+static uint8_t *jpg_buf;
+static size_t rx_buffer_size = 0;
+
+static esp_timer_handle_t periodic_timer;
 
 static void camera_video_frame_operation(uint8_t *camera_buf, uint8_t camera_buf_index, uint32_t camera_buf_hes, uint32_t camera_buf_ves, size_t camera_buf_len);
+static void periodic_timer_callback(void* arg);
+static int get_next_file_index(const char *path);
+
+static void mode_switch_btn_handler(void *button_handle, void *usr_data)
+{
+    int button_pressed = (int)usr_data;
+    ESP_LOGI(TAG, "Button %d pressed", button_pressed);
+
+    if(screen_index == SCREEN_EYE_CAMERA) {
+        screen_index = SCREEN_CAMERA_SET;
+        
+        ESP_ERROR_CHECK(esp_timer_stop(periodic_timer));
+
+        _ui_screen_change(&ui_ScreenSet, LV_SCR_LOAD_ANIM_NONE, 0, 0, &ui_ScreenSet_screen_init);
+    } else {
+        screen_index = SCREEN_EYE_CAMERA;
+
+        ESP_ERROR_CHECK(esp_timer_start_periodic(periodic_timer, timed_sec * 1000000));
+
+        _ui_screen_change(&ui_ScreenMain, LV_SCR_LOAD_ANIM_NONE, 0, 0, &ui_ScreenMain_screen_init);
+    }
+}
+
 void app_main(void)
 {
     // Initialize the display
     bsp_display_start();
+
+    // Initialize the led
+    ESP_ERROR_CHECK(bsp_leds_init());
 
     // Initialize the PPA
     ppa_client_config_t ppa_srm_config = {
@@ -39,6 +87,13 @@ void app_main(void)
     };
     ESP_ERROR_CHECK(ppa_register_client(&ppa_srm_config, &ppa_srm_handle));
     ESP_ERROR_CHECK(esp_cache_get_alignment(MALLOC_CAP_SPIRAM, &data_cache_line_size));
+
+    // Initialize the SD card
+    ESP_ERROR_CHECK(bsp_sdcard_mount());
+    ESP_LOGI(TAG, "SD card mounted");
+
+    // Initialize the USB MSC
+    app_usb_msc_init();
 
     // Initialize the I2C
     ESP_ERROR_CHECK(bsp_i2c_init());
@@ -70,20 +125,51 @@ void app_main(void)
         }
     }
 
+    // Initialize the JPEG encoder
+    jpeg_encode_engine_cfg_t encode_eng_cfg = {
+        .timeout_ms = 70,
+    };
+
+    ESP_ERROR_CHECK(jpeg_new_encoder_engine(&encode_eng_cfg, &jpeg_handle));
+
+    jpeg_encode_memory_alloc_cfg_t rx_mem_cfg = {
+        .buffer_direction = JPEG_DEC_ALLOC_OUTPUT_BUFFER,
+    };
+
+    jpg_buf = (uint8_t*)jpeg_alloc_encoder_mem(app_video_get_buf_size() / 10, &rx_mem_cfg, &rx_buffer_size); // Assume that compression ratio of 10 to 1
+    assert(jpg_buf != NULL);
+
+    // Initialize the timer
+    const esp_timer_create_args_t periodic_timer_args = {
+            .callback = &periodic_timer_callback,
+            .name = "periodic"
+    };
+    ESP_ERROR_CHECK(esp_timer_create(&periodic_timer_args, &periodic_timer));
+    ESP_ERROR_CHECK(esp_timer_start_periodic(periodic_timer, timed_sec * 1000000));
+
     // Register the video frame operation callback
     ESP_ERROR_CHECK(app_video_register_frame_operation_cb(camera_video_frame_operation));
 
     // Start the camera stream task
     ESP_ERROR_CHECK(app_video_stream_task_start(video_cam_fd0, 0));
 
+    // Initialize the UI
+    screen_index = SCREEN_EYE_CAMERA;
     bsp_display_lock(0);
 
-    cam_canvas = lv_canvas_create(lv_scr_act());
+    ui_init();
+
+    cam_canvas = lv_canvas_create(ui_ScreenMain);
     lv_obj_set_size(cam_canvas, BSP_LCD_H_RES, BSP_LCD_V_RES);
     lv_obj_set_align(cam_canvas, LV_ALIGN_CENTER);
 
     bsp_display_unlock();
     bsp_display_backlight_on();
+
+    /* Init Buttons */
+    button_handle_t btns[BSP_BUTTON_NUM];
+    ESP_ERROR_CHECK(bsp_iot_button_create(btns, NULL, BSP_BUTTON_NUM));
+    ESP_ERROR_CHECK(iot_button_register_cb(btns[BSP_BUTTON_1], BUTTON_PRESS_DOWN, mode_switch_btn_handler, (void *) BSP_BUTTON_1));
 }
 
 static void camera_video_frame_operation(uint8_t *camera_buf, uint8_t camera_buf_index, uint32_t camera_buf_hes, uint32_t camera_buf_ves, size_t camera_buf_len)
@@ -143,4 +229,76 @@ static void camera_video_frame_operation(uint8_t *camera_buf, uint8_t camera_buf
     bsp_display_lock(0);
     lv_canvas_set_buffer(cam_canvas, canvas_buf[camera_buf_index], BSP_LCD_H_RES, BSP_LCD_V_RES, LV_IMG_CF_TRUE_COLOR);
     bsp_display_unlock();
+
+    if(timed_shooting) {
+        jpeg_encode_cfg_t enc_config = {
+            .src_type = JPEG_ENCODE_IN_FORMAT_RGB565,
+            .sub_sample = JPEG_DOWN_SAMPLING_YUV422,
+            .image_quality = 50,
+            .width = camera_buf_hes,
+            .height = camera_buf_ves,
+        };
+
+        timed_shooting = false;
+
+        char file_name[64];
+
+        // bsp_led_set(BSP_LED_WHITE, 1); // Turn on the white LED
+
+        ESP_ERROR_CHECK(jpeg_encoder_process(jpeg_handle, &enc_config, camera_buf, app_video_get_buf_size(), jpg_buf, rx_buffer_size, &jpg_size));
+
+        int image_count = get_next_file_index(BSP_SD_MOUNT_POINT"/pic_save");
+        snprintf(file_name, sizeof(file_name), BSP_SD_MOUNT_POINT"/pic_save/OUTJPG_%d.JPG", image_count++);
+        FILE *file_jpg = fopen(file_name, "wb");
+        ESP_LOGI(TAG, "Writing jpg to %s", file_name);
+        if (file_jpg == NULL) {
+            ESP_LOGE(TAG, "fopen file_jpg error");
+        }
+
+        fwrite(jpg_buf, 1, jpg_size, file_jpg);
+        fclose(file_jpg);
+
+        // bsp_led_set(BSP_LED_WHITE, 0);  // Turn off the white LED
+    }
+
+    if(app_usb_msc_stage()) {
+        app_usb_set_exposed(false);
+        
+        screen_index = SCREEN_CAMERA_SET;
+        
+        ESP_ERROR_CHECK(esp_timer_stop(periodic_timer));
+
+        _ui_screen_change(&ui_ScreenSet, LV_SCR_LOAD_ANIM_NONE, 0, 0, &ui_ScreenSet_screen_init);
+    }
+}
+
+static void periodic_timer_callback(void* arg)
+{
+    timed_shooting = true;
+}
+
+static int get_next_file_index(const char *path) 
+{
+    DIR *dir = opendir(path);
+    if (!dir) {
+        ESP_LOGE(TAG, "Failed to open directory %s", path);
+        return 0;
+    }
+
+    struct dirent *entry;
+    int max_index = -1;  
+
+    while ((entry = readdir(dir)) != NULL) {
+        if (strstr(entry->d_name, "OUTJPG_") && strstr(entry->d_name, ".JPG")) {
+            int index;
+            if (sscanf(entry->d_name, "OUTJPG_%d.JPG", &index) == 1) {
+                if (index > max_index) {
+                    max_index = index;  
+                }
+            }
+        }
+    }
+
+    closedir(dir);
+    return max_index + 1;  
 }

@@ -111,7 +111,7 @@ static void video_capture_task(void *arg)
     uint32_t camera_buf_hes = 0;
     uint32_t camera_buf_ves = 0;
 
-    int image_count = get_next_file_index("/sdcard/pic_save");;
+    int image_count = get_next_file_index("/sdcard/pic_save");
 
     video_get_hes_ves(&camera_buf_hes, &camera_buf_ves);
 

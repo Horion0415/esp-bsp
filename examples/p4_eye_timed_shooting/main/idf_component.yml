@@ -14,3 +14,5 @@ dependencies:
     
   espressif/esp_hosted:
     version: "*"
+
+  espressif/esp_tinyusb: "^1.4.2"
