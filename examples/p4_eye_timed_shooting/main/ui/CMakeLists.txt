@@ -1,5 +1,6 @@
 SET(SOURCES screens/ui_ScreenMain.c
     screens/ui_ScreenSet.c
+    screens/ui_ScreenUSB.c
     ui.c
     components/ui_comp_hook.c
     ui_helpers.c

@@ -22,6 +22,10 @@ extern lv_obj_t * ui_ScreenMain;
 void ui_ScreenSet_screen_init(void);
 extern lv_obj_t * ui_ScreenSet;
 extern lv_obj_t * ui_LabelSet;
+// SCREEN: ui_ScreenUSB
+void ui_ScreenUSB_screen_init(void);
+extern lv_obj_t * ui_ScreenUSB;
+extern lv_obj_t * ui_LabelUSB;
 extern lv_obj_t * ui____initial_actions0;
 
 LV_IMG_DECLARE(ui_img_1924961647);    // assets/coffee-1839734_1280.png

@@ -7,6 +7,9 @@
 #include <stdio.h>
 #include <dirent.h> 
 #include <fcntl.h>
+#include "nvs_flash.h"
+#include "nvs.h"
+#include "esp_system.h"
 #include "esp_log.h"
 #include "esp_cache.h"
 #include "esp_heap_caps.h"
@@ -51,50 +54,46 @@ static size_t rx_buffer_size = 0;
 
 static esp_timer_handle_t periodic_timer;
 
+static nvs_handle_t nvs_save_handle;
+
 static void camera_video_frame_operation(uint8_t *camera_buf, uint8_t camera_buf_index, uint32_t camera_buf_hes, uint32_t camera_buf_ves, size_t camera_buf_len);
 static void periodic_timer_callback(void* arg);
 static int get_next_file_index(const char *path);
-
-static void mode_switch_btn_handler(void *button_handle, void *usr_data)
-{
-    if(screen_index == SCREEN_EYE_CAMERA) {
-        screen_index = SCREEN_EYE_SET;
-        
-        ESP_ERROR_CHECK(esp_timer_stop(periodic_timer));
-
-        _ui_screen_change(&ui_ScreenSet, LV_SCR_LOAD_ANIM_NONE, 0, 0, &ui_ScreenSet_screen_init);
-    } else {
-        screen_index = SCREEN_EYE_CAMERA;
-
-        ESP_ERROR_CHECK(esp_timer_start_periodic(periodic_timer, timed_min * TIMER_SEC_INTERVAL));
-
-        _ui_screen_change(&ui_ScreenMain, LV_SCR_LOAD_ANIM_NONE, 0, 0, &ui_ScreenMain_screen_init);
-    }
-}
-
-static void increase_btn_handler(void *button_handle, void *usr_data)
-{
-    timed_min += 5;
-    if(timed_min > 120) {
-        timed_min = 5;
-    }
-
-    lv_label_set_text_fmt(ui_LabelSet, "Set time: %ld minutes\n\n\n\n\n\n\n", timed_min);
-}
-
-static void decrease_btn_handler(void *button_handle, void *usr_data)
-{
-    timed_min -= 5;
-    if(timed_min < 5) {
-        timed_min = 120;
-    }
-
-
-    lv_label_set_text_fmt(ui_LabelSet, "Set time: %ld minutes\n\n\n\n\n\n\n", timed_min);
-}
+static void increase_btn_handler(void *button_handle, void *usr_data);
+static void decrease_btn_handler(void *button_handle, void *usr_data);
+static void mode_switch_btn_handler(void *button_handle, void *usr_data);
 
 void app_main(void)
 {
+    // Initialize NVS
+    esp_err_t err = nvs_flash_init();
+    if (err == ESP_ERR_NVS_NO_FREE_PAGES || err == ESP_ERR_NVS_NEW_VERSION_FOUND) {
+        ESP_ERROR_CHECK(nvs_flash_erase());
+        err = nvs_flash_init();
+    }
+    ESP_ERROR_CHECK(err);
+
+    err = nvs_open("storage", NVS_READWRITE, &nvs_save_handle);
+    if (err != ESP_OK) {
+        printf("Error (%s) opening NVS handle!\n", esp_err_to_name(err));
+    } else {
+        printf("Done\n");
+
+        // Read
+        printf("Reading shutter flag from NVS ... ");
+        err |= nvs_get_u32(nvs_save_handle, "timed_min", &timed_min);
+        switch (err) {
+            case ESP_OK:
+                ESP_LOGI(TAG, "Done\n");
+                break;
+            case ESP_ERR_NVS_NOT_FOUND:
+                printf("The value is not initialized yet!\n");
+                break;
+            default :
+                printf("Error (%s) reading!\n", esp_err_to_name(err));
+        }
+    }
+
     // Initialize the display
     bsp_display_start();
 
@@ -178,6 +177,8 @@ void app_main(void)
     bsp_display_lock(0);
 
     ui_init();
+
+    lv_label_set_text_fmt(ui_LabelSet, "Set time: %ld minutes\n\n\n\n\n\n\n", timed_min);
 
     cam_canvas = lv_canvas_create(ui_ScreenMain);
     lv_obj_set_size(cam_canvas, BSP_LCD_H_RES, BSP_LCD_V_RES);
@@ -265,7 +266,7 @@ static void camera_video_frame_operation(uint8_t *camera_buf, uint8_t camera_buf
 
         char file_name[64];
 
-        // bsp_led_set(BSP_LED_WHITE, 1); // Turn on the white LED
+        bsp_led_set(BSP_LED_WHITE, 1); // Turn on the white LED
 
         ESP_ERROR_CHECK(jpeg_encoder_process(jpeg_handle, &enc_config, camera_buf, app_video_get_buf_size(), jpg_buf, rx_buffer_size, &jpg_size));
 
@@ -280,13 +281,15 @@ static void camera_video_frame_operation(uint8_t *camera_buf, uint8_t camera_buf
         fwrite(jpg_buf, 1, jpg_size, file_jpg);
         fclose(file_jpg);
 
-        // bsp_led_set(BSP_LED_WHITE, 0);  // Turn off the white LED
+        bsp_led_set(BSP_LED_WHITE, 0);  // Turn off the white LED
     }
 
     if(app_usb_msc_stage()) {
         app_usb_set_exposed(false);
 
         ESP_ERROR_CHECK(esp_timer_stop(periodic_timer));
+
+        _ui_screen_change(&ui_ScreenUSB, LV_SCR_LOAD_ANIM_NONE, 0, 0, &ui_ScreenUSB_screen_init);
     }
 }
 
@@ -319,4 +322,48 @@ static int get_next_file_index(const char *path)
 
     closedir(dir);
     return max_index + 1;  
+}
+
+static void mode_switch_btn_handler(void *button_handle, void *usr_data)
+{
+    if(screen_index == SCREEN_EYE_CAMERA) {
+        screen_index = SCREEN_EYE_SET;
+        
+        ESP_ERROR_CHECK(esp_timer_stop(periodic_timer));
+
+        _ui_screen_change(&ui_ScreenSet, LV_SCR_LOAD_ANIM_NONE, 0, 0, &ui_ScreenSet_screen_init);
+    } else {
+        screen_index = SCREEN_EYE_CAMERA;
+
+        ESP_ERROR_CHECK(esp_timer_start_periodic(periodic_timer, timed_min * TIMER_SEC_INTERVAL));
+
+        _ui_screen_change(&ui_ScreenMain, LV_SCR_LOAD_ANIM_NONE, 0, 0, &ui_ScreenMain_screen_init);
+    }
+}
+
+static void increase_btn_handler(void *button_handle, void *usr_data)
+{
+    timed_min += 5;
+    if(timed_min > 120) {
+        timed_min = 5;
+    }
+
+    lv_label_set_text_fmt(ui_LabelSet, "Set time: %ld minutes\n\n\n\n\n\n\n", timed_min);
+    ESP_LOGI(TAG, "timed_min: %ld", timed_min);
+
+    ESP_ERROR_CHECK(nvs_set_u32(nvs_save_handle, "timed_min", timed_min));
+}
+
+static void decrease_btn_handler(void *button_handle, void *usr_data)
+{
+    timed_min -= 5;
+    if(timed_min < 5) {
+        timed_min = 120;
+    }
+
+
+    lv_label_set_text_fmt(ui_LabelSet, "Set time: %ld minutes\n\n\n\n\n\n\n", timed_min);
+    ESP_LOGI(TAG, "timed_min: %ld", timed_min);
+
+    ESP_ERROR_CHECK(nvs_set_u32(nvs_save_handle, "timed_min", timed_min));
 }
