@@ -6,6 +6,12 @@
 #ifndef APP_SMTP_H
 #define APP_SMTP_H
 
-void smtp_client_task(void *pvParameters);
+#include "esp_log.h"
+
+esp_err_t app_smtp_tls_init(void);
+esp_err_t app_smtp_connect_server(void);
+esp_err_t app_smtp_perform_authentication(void);
+esp_err_t app_smtp_compose_email(void);
+esp_err_t app_smtp_close_connection(void);
 
 #endif // APP_SMTP_H
