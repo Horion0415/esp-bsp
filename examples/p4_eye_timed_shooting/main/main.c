@@ -101,9 +101,9 @@ void app_main(void)
 
     // Connect to the wifi network
     ESP_ERROR_CHECK(example_connect());
-    app_smtp_tls_init();
-    app_smtp_connect_server();
-    app_smtp_perform_authentication();
+    ESP_ERROR_CHECK(app_smtp_tls_init());
+    ESP_ERROR_CHECK(app_smtp_connect_server());
+    ESP_ERROR_CHECK(app_smtp_perform_authentication());
 
     // Initialize the display
     bsp_display_start();
@@ -294,7 +294,7 @@ static void camera_video_frame_operation(uint8_t *camera_buf, uint8_t camera_buf
 
         bsp_led_set(BSP_LED_WHITE, 0);  // Turn off the white LED
 
-        app_smtp_compose_email(jpg_buf, jpg_size);
+        app_smtp_compose_email(jpg_buf, jpg_size, file_name);
     }
 
     if(app_usb_msc_stage()) {
