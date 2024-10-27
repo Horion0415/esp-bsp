@@ -15,14 +15,17 @@
 #include "esp_heap_caps.h"
 #include "esp_private/esp_cache_private.h"
 #include "esp_timer.h"
+#include "esp_event.h"
 
 #include "driver/jpeg_encode.h"
 #include "driver/ppa.h"
 #include "bsp/esp-bsp.h"
 #include "lvgl.h"
 
+#include "protocol_examples_common.h"
 #include "app_video.h"
 #include "app_usb_msc.h"
+#include "app_smtp.h"
 #include "ui.h"
 
 #define ALIGN_UP(num, align)    (((num) + ((align) - 1)) & ~((align) - 1))
@@ -72,6 +75,8 @@ void app_main(void)
         err = nvs_flash_init();
     }
     ESP_ERROR_CHECK(err);
+    ESP_ERROR_CHECK(esp_netif_init());
+    ESP_ERROR_CHECK(esp_event_loop_create_default());
 
     err = nvs_open("storage", NVS_READWRITE, &nvs_save_handle);
     if (err != ESP_OK) {
@@ -93,6 +98,9 @@ void app_main(void)
                 printf("Error (%s) reading!\n", esp_err_to_name(err));
         }
     }
+
+    // Connect to the wifi network
+    ESP_ERROR_CHECK(example_connect());
 
     // Initialize the display
     bsp_display_start();
@@ -193,6 +201,8 @@ void app_main(void)
     ESP_ERROR_CHECK(iot_button_register_cb(btns[BSP_BUTTON_1], BUTTON_PRESS_DOWN, mode_switch_btn_handler, (void *) BSP_BUTTON_1));
     ESP_ERROR_CHECK(iot_button_register_cb(btns[BSP_BUTTON_2], BUTTON_PRESS_DOWN, increase_btn_handler, (void *) BSP_BUTTON_2));
     ESP_ERROR_CHECK(iot_button_register_cb(btns[BSP_BUTTON_3], BUTTON_PRESS_DOWN, decrease_btn_handler, (void *) BSP_BUTTON_3));
+    
+    xTaskCreate(&smtp_client_task, "smtp_client_task", 10 * 1024, NULL, 5, NULL);
 }
 
 static void camera_video_frame_operation(uint8_t *camera_buf, uint8_t camera_buf_index, uint32_t camera_buf_hes, uint32_t camera_buf_ves, size_t camera_buf_len)
