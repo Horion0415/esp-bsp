@@ -216,7 +216,7 @@ void app_main(void)
 
 static void camera_video_frame_operation(uint8_t *camera_buf, uint8_t camera_buf_index, uint32_t camera_buf_hes, uint32_t camera_buf_ves, size_t camera_buf_len)
 {
-#if 0 // Scale, rotate, and mirror the camera frame
+#if 1 // Scale, rotate, and mirror the camera frame
     ppa_srm_oper_config_t srm_config = {
         .in.buffer = camera_buf,
         .in.pic_w = camera_buf_hes,
@@ -237,7 +237,7 @@ static void camera_video_frame_operation(uint8_t *camera_buf, uint8_t camera_buf
         .scale_x = 0.3333,
         .scale_y = 0.3333,
         .rgb_swap = 0,
-        .byte_swap = 1,
+        .byte_swap = 0,
         .mode = PPA_TRANS_MODE_BLOCKING,
     };
 #else
@@ -267,6 +267,13 @@ static void camera_video_frame_operation(uint8_t *camera_buf, uint8_t camera_buf
 #endif
 
     ESP_ERROR_CHECK(ppa_do_scale_rotate_mirror(ppa_srm_handle, &srm_config));
+
+    uint16_t *canvas_buf_ptr = (uint16_t *)canvas_buf[camera_buf_index];
+    for(int i =0 ;i< BSP_LCD_H_RES * BSP_LCD_V_RES; i++) {
+        uint16_t swap16 = *(canvas_buf_ptr + i);
+        swap16 = (swap16 >> 8) | (swap16 << 8);
+        *(canvas_buf_ptr + i) = swap16;
+    }
 
     bsp_display_lock(0);
     lv_canvas_set_buffer(cam_canvas, canvas_buf[camera_buf_index], BSP_LCD_H_RES, BSP_LCD_V_RES, LV_IMG_CF_TRUE_COLOR);
