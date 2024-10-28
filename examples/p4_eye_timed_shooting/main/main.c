@@ -34,8 +34,8 @@
 #define TIMER_MIN_INTERVAL                         (60 * 1000000)
 #define UNIT_TIME                                  (TIMER_SEC_INTERVAL)
 
-#define LED_LIGHT_ON                               (0)
-#define WIFI_SWITCH_ON                             (0)
+#define LED_LIGHT_ON                               (1)
+#define WIFI_SWITCH_ON                             (1)
 
 enum {
     SCREEN_EYE_CAMERA,
@@ -69,7 +69,7 @@ static int get_next_file_index(const char *path);
 static void increase_btn_handler(void *button_handle, void *usr_data);
 static void decrease_btn_handler(void *button_handle, void *usr_data);
 static void mode_switch_btn_handler(void *button_handle, void *usr_data);
-void detect_usb_task(void *arg);
+static void detect_usb_task(void *arg);
 
 void app_main(void)
 {
@@ -313,7 +313,7 @@ static void camera_video_frame_operation(uint8_t *camera_buf, uint8_t camera_buf
     }
 }
 
-void detect_usb_task(void *arg)
+static void detect_usb_task(void *arg)
 {
     while (1) {
         if(app_usb_msc_stage()) {
