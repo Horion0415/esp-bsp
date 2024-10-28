@@ -216,7 +216,7 @@ void app_main(void)
 
 static void camera_video_frame_operation(uint8_t *camera_buf, uint8_t camera_buf_index, uint32_t camera_buf_hes, uint32_t camera_buf_ves, size_t camera_buf_len)
 {
-#if 0 // Scale, rotate, and mirror the camera frame
+#if 1 // Scale, rotate, and mirror the camera frame
     ppa_srm_oper_config_t srm_config = {
         .in.buffer = camera_buf,
         .in.pic_w = camera_buf_hes,
@@ -277,8 +277,8 @@ static void camera_video_frame_operation(uint8_t *camera_buf, uint8_t camera_buf
             .src_type = JPEG_ENCODE_IN_FORMAT_RGB565,
             .sub_sample = JPEG_DOWN_SAMPLING_YUV422,
             .image_quality = 50,
-            .width = camera_buf_hes,
-            .height = camera_buf_ves,
+            .width = BSP_LCD_H_RES,
+            .height = BSP_LCD_V_RES,
         };
 
         timed_shooting = false;
@@ -289,7 +289,7 @@ static void camera_video_frame_operation(uint8_t *camera_buf, uint8_t camera_buf
         bsp_led_set(BSP_LED_WHITE, 1); // Turn on the white LED
 #endif
 
-        ESP_ERROR_CHECK(jpeg_encoder_process(jpeg_handle, &enc_config, camera_buf, app_video_get_buf_size(), jpg_buf, rx_buffer_size, &jpg_size));
+        ESP_ERROR_CHECK(jpeg_encoder_process(jpeg_handle, &enc_config, canvas_buf[camera_buf_index], BSP_LCD_H_RES * BSP_LCD_V_RES * 2, jpg_buf, rx_buffer_size, &jpg_size));
 
         int image_count = get_next_file_index(BSP_SD_MOUNT_POINT"/pic_save");
         snprintf(file_name, sizeof(file_name), BSP_SD_MOUNT_POINT"/pic_save/OUTJPG_%d.JPG", image_count++);
