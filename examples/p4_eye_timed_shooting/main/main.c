@@ -185,8 +185,8 @@ void app_main(void)
     ESP_ERROR_CHECK(app_video_stream_task_start(video_cam_fd0, 0));
 
     // Initialize the UI
-    screen_index = SCREEN_EYE_CAMERA;
     bsp_display_lock(0);
+    screen_index = SCREEN_EYE_CAMERA;
 
     ui_init();
 
