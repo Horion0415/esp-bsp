@@ -33,8 +33,8 @@
 #define TIMER_SEC_INTERVAL                         (1 * 1000000)
 #define TIMER_MIN_INTERVAL                         (60 * 1000000)
 #define UNIT_TIME                                  (TIMER_SEC_INTERVAL)
-#define LED_LIGHT_ON                               (1)
-#define WIFI_SWITCH_ON                             (1)
+#define LED_LIGHT_ON                               (0)
+#define WIFI_SWITCH_ON                             (0)
 
 enum {
     SCREEN_EYE_CAMERA,
