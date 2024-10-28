@@ -34,8 +34,8 @@
 #define TIMER_MIN_INTERVAL                         (60 * 1000000)
 #define UNIT_TIME                                  (TIMER_SEC_INTERVAL)
 
-#define LED_LIGHT_ON                               (1)
-#define WIFI_SWITCH_ON                             (1)
+#define LED_LIGHT_ON                               (0)
+#define WIFI_SWITCH_ON                             (0)
 
 enum {
     SCREEN_EYE_CAMERA,
@@ -73,7 +73,7 @@ static void increase_btn_handler(void *button_handle, void *usr_data);
 static void decrease_btn_handler(void *button_handle, void *usr_data);
 static void mode_switch_btn_handler(void *button_handle, void *usr_data);
 static void detect_usb_task(void *arg);
-static wifi_connect_task(void *arg);
+static void wifi_connect_task(void *arg);
 
 void app_main(void)
 {
@@ -336,7 +336,7 @@ static void detect_usb_task(void *arg)
     }
 }
 
-static wifi_connect_task(void *arg)
+static void wifi_connect_task(void *arg)
 {
     // Connect to the wifi network
     ESP_ERROR_CHECK(example_connect());
