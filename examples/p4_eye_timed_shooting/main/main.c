@@ -29,10 +29,11 @@
 #include "ui.h"
 
 #define ALIGN_UP(num, align)    (((num) + ((align) - 1)) & ~((align) - 1))
-#define P4_EYE_CAMERA_EN_PIN                       (GPIO_NUM_15)
+
 #define TIMER_SEC_INTERVAL                         (1 * 1000000)
 #define TIMER_MIN_INTERVAL                         (60 * 1000000)
 #define UNIT_TIME                                  (TIMER_SEC_INTERVAL)
+
 #define LED_LIGHT_ON                               (0)
 #define WIFI_SWITCH_ON                             (0)
 
@@ -367,13 +368,17 @@ static void mode_switch_btn_handler(void *button_handle, void *usr_data)
         
         ESP_ERROR_CHECK(esp_timer_stop(periodic_timer));
 
+        bsp_display_lock(0);
         _ui_screen_change(&ui_ScreenSet, LV_SCR_LOAD_ANIM_NONE, 0, 0, &ui_ScreenSet_screen_init);
+        bsp_display_unlock();
     } else {
         screen_index = SCREEN_EYE_CAMERA;
 
         ESP_ERROR_CHECK(esp_timer_start_periodic(periodic_timer, timed_min * UNIT_TIME));
 
+        bsp_display_lock(0);
         _ui_screen_change(&ui_ScreenMain, LV_SCR_LOAD_ANIM_NONE, 0, 0, &ui_ScreenMain_screen_init);
+        bsp_display_unlock();
     }
 }
 
@@ -384,7 +389,10 @@ static void increase_btn_handler(void *button_handle, void *usr_data)
         timed_min = 5;
     }
 
+    bsp_display_lock(0);
     lv_label_set_text_fmt(ui_LabelSet, "Set time: %ld minutes\n\n\n\n\n\n\n", timed_min);
+    bsp_display_unlock();
+    
     ESP_LOGI(TAG, "timed_min: %ld", timed_min);
 
     ESP_ERROR_CHECK(nvs_set_u32(nvs_save_handle, "timed_min", timed_min));
@@ -397,8 +405,10 @@ static void decrease_btn_handler(void *button_handle, void *usr_data)
         timed_min = 120;
     }
 
-
+    bsp_display_lock(0);
     lv_label_set_text_fmt(ui_LabelSet, "Set time: %ld minutes\n\n\n\n\n\n\n", timed_min);
+    bsp_display_unlock();
+
     ESP_LOGI(TAG, "timed_min: %ld", timed_min);
 
     ESP_ERROR_CHECK(nvs_set_u32(nvs_save_handle, "timed_min", timed_min));
