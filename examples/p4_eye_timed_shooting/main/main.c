@@ -275,8 +275,8 @@ static void camera_video_frame_operation(uint8_t *camera_buf, uint8_t camera_buf
     if(timed_shooting) {
         jpeg_encode_cfg_t enc_config = {
             .src_type = JPEG_ENCODE_IN_FORMAT_RGB565,
-            .sub_sample = JPEG_DOWN_SAMPLING_YUV422,
-            .image_quality = 50,
+            .sub_sample = JPEG_DOWN_SAMPLING_YUV420,
+            .image_quality = 70,
             .width = camera_buf_hes,
             .height = camera_buf_ves,
         };
