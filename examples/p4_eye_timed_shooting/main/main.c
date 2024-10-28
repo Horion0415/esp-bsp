@@ -73,6 +73,7 @@ static void increase_btn_handler(void *button_handle, void *usr_data);
 static void decrease_btn_handler(void *button_handle, void *usr_data);
 static void mode_switch_btn_handler(void *button_handle, void *usr_data);
 static void detect_usb_task(void *arg);
+static wifi_connect_task(void *arg);
 
 void app_main(void)
 {
