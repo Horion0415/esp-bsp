@@ -32,6 +32,9 @@
 #define P4_EYE_CAMERA_EN_PIN                       (GPIO_NUM_15)
 #define TIMER_SEC_INTERVAL                         (1 * 1000000)
 #define TIMER_MIN_INTERVAL                         (60 * 1000000)
+#define UNIT_TIME                                  (TIMER_SEC_INTERVAL)
+#define LED_LIGHT_ON                               (1)
+#define WIFI_SWITCH_ON                             (1)
 
 enum {
     SCREEN_EYE_CAMERA,
@@ -100,11 +103,13 @@ void app_main(void)
         }
     }
 
+#if WIFI_SWITCH_ON
     // Connect to the wifi network
     ESP_ERROR_CHECK(example_connect());
     ESP_ERROR_CHECK(app_smtp_tls_init());
     ESP_ERROR_CHECK(app_smtp_connect_server());
     ESP_ERROR_CHECK(app_smtp_perform_authentication());
+#endif
 
     // Initialize the display
     bsp_display_start();
@@ -176,7 +181,7 @@ void app_main(void)
             .name = "periodic"
     };
     ESP_ERROR_CHECK(esp_timer_create(&periodic_timer_args, &periodic_timer));
-    ESP_ERROR_CHECK(esp_timer_start_periodic(periodic_timer, timed_min * TIMER_SEC_INTERVAL));
+    ESP_ERROR_CHECK(esp_timer_start_periodic(periodic_timer, timed_min * UNIT_TIME));
 
     // Register the video frame operation callback
     ESP_ERROR_CHECK(app_video_register_frame_operation_cb(camera_video_frame_operation));
@@ -280,7 +285,9 @@ static void camera_video_frame_operation(uint8_t *camera_buf, uint8_t camera_buf
 
         char file_name[64];
 
+#if LED_LIGHT_ON
         bsp_led_set(BSP_LED_WHITE, 1); // Turn on the white LED
+#endif
 
         ESP_ERROR_CHECK(jpeg_encoder_process(jpeg_handle, &enc_config, camera_buf, app_video_get_buf_size(), jpg_buf, rx_buffer_size, &jpg_size));
 
@@ -295,9 +302,13 @@ static void camera_video_frame_operation(uint8_t *camera_buf, uint8_t camera_buf
         fwrite(jpg_buf, 1, jpg_size, file_jpg);
         fclose(file_jpg);
 
+#if LED_LIGHT_ON
         bsp_led_set(BSP_LED_WHITE, 0);  // Turn off the white LED
+#endif
 
+#if WIFI_SWITCH_ON
         app_smtp_compose_email(jpg_buf, jpg_size, file_name);
+#endif    
     }
 }
 
@@ -360,7 +371,7 @@ static void mode_switch_btn_handler(void *button_handle, void *usr_data)
     } else {
         screen_index = SCREEN_EYE_CAMERA;
 
-        ESP_ERROR_CHECK(esp_timer_start_periodic(periodic_timer, timed_min * TIMER_SEC_INTERVAL));
+        ESP_ERROR_CHECK(esp_timer_start_periodic(periodic_timer, timed_min * UNIT_TIME));
 
         _ui_screen_change(&ui_ScreenMain, LV_SCR_LOAD_ANIM_NONE, 0, 0, &ui_ScreenMain_screen_init);
     }
