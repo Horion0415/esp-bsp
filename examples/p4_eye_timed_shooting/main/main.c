@@ -40,6 +40,7 @@
 enum {
     SCREEN_EYE_CAMERA,
     SCREEN_EYE_SET,
+    SCREEN_EYE_USB,
 } screen_index;
 
 static const char *TAG = "main";
@@ -62,6 +63,8 @@ static size_t rx_buffer_size = 0;
 static esp_timer_handle_t periodic_timer;
 
 static nvs_handle_t nvs_save_handle;
+
+static bool wifi_connected = false;
 
 static void camera_video_frame_operation(uint8_t *camera_buf, uint8_t camera_buf_index, uint32_t camera_buf_hes, uint32_t camera_buf_ves, size_t camera_buf_len);
 static void periodic_timer_callback(void* arg);
@@ -103,14 +106,6 @@ void app_main(void)
                 printf("Error (%s) reading!\n", esp_err_to_name(err));
         }
     }
-
-#if WIFI_SWITCH_ON
-    // Connect to the wifi network
-    ESP_ERROR_CHECK(example_connect());
-    ESP_ERROR_CHECK(app_smtp_tls_init());
-    ESP_ERROR_CHECK(app_smtp_connect_server());
-    ESP_ERROR_CHECK(app_smtp_perform_authentication());
-#endif
 
     // Initialize the display
     bsp_display_start();
@@ -213,6 +208,9 @@ void app_main(void)
     ESP_ERROR_CHECK(iot_button_register_cb(btns[BSP_BUTTON_3], BUTTON_PRESS_DOWN, decrease_btn_handler, (void *) BSP_BUTTON_3));
 
     xTaskCreatePinnedToCore(detect_usb_task, "detect_usb_task", 4096, NULL, 5, NULL, 0);
+#if WIFI_SWITCH_ON
+    xTaskCreatePinnedToCore(wifi_connect_task, "wifi_connect_task", 4096, NULL, 5, NULL, 0);
+#endif
 }
 
 static void camera_video_frame_operation(uint8_t *camera_buf, uint8_t camera_buf_index, uint32_t camera_buf_hes, uint32_t camera_buf_ves, size_t camera_buf_len)
@@ -308,7 +306,9 @@ static void camera_video_frame_operation(uint8_t *camera_buf, uint8_t camera_buf
 #endif
 
 #if WIFI_SWITCH_ON
-        app_smtp_compose_email(jpg_buf, jpg_size, file_name);
+        if(wifi_connected) {
+            app_smtp_compose_email(jpg_buf, jpg_size, file_name);
+        }
 #endif    
     }
 }
@@ -319,15 +319,33 @@ static void detect_usb_task(void *arg)
         if(app_usb_msc_stage()) {
             app_usb_set_exposed(false);
 
-            ESP_ERROR_CHECK(esp_timer_stop(periodic_timer));
-
+            if(esp_timer_is_active(periodic_timer)) {
+                ESP_ERROR_CHECK(esp_timer_stop(periodic_timer));
+            }
+            
             bsp_display_lock(0);
+            screen_index = SCREEN_EYE_USB;
             _ui_screen_change(&ui_ScreenUSB, LV_SCR_LOAD_ANIM_NONE, 0, 0, &ui_ScreenUSB_screen_init);
             bsp_display_unlock();
+
+            vTaskDelete(NULL);
         }
 
-        vTaskDelay(1000 / portTICK_PERIOD_MS);
+        vTaskDelay(500 / portTICK_PERIOD_MS);
     }
+}
+
+static wifi_connect_task(void *arg)
+{
+    // Connect to the wifi network
+    ESP_ERROR_CHECK(example_connect());
+    ESP_ERROR_CHECK(app_smtp_tls_init());
+    ESP_ERROR_CHECK(app_smtp_connect_server());
+    ESP_ERROR_CHECK(app_smtp_perform_authentication());
+
+    wifi_connected = true;
+
+    vTaskDelete(NULL);
 }
 
 static void periodic_timer_callback(void* arg)
@@ -363,6 +381,10 @@ static int get_next_file_index(const char *path)
 
 static void mode_switch_btn_handler(void *button_handle, void *usr_data)
 {
+    if(screen_index == SCREEN_EYE_USB) {
+        return;
+    }
+
     if(screen_index == SCREEN_EYE_CAMERA) {
         screen_index = SCREEN_EYE_SET;
         
