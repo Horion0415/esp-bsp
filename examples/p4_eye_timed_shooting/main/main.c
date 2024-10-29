@@ -32,7 +32,7 @@
 
 #define TIMER_SEC_INTERVAL                         (1 * 1000000)
 #define TIMER_MIN_INTERVAL                         (60 * 1000000)
-#define UNIT_TIME                                  (TIMER_SEC_INTERVAL)
+#define UNIT_TIME                                  (TIMER_MIN_INTERVAL)
 
 #define LED_LIGHT_ON                               (1)
 #define WIFI_SWITCH_ON                             (1)
@@ -315,6 +315,9 @@ static void camera_video_frame_operation(uint8_t *camera_buf, uint8_t camera_buf
 
 #if WIFI_SWITCH_ON
         if(wifi_connected) {
+            ESP_ERROR_CHECK(app_smtp_tls_init());
+            ESP_ERROR_CHECK(app_smtp_connect_server());
+            ESP_ERROR_CHECK(app_smtp_perform_authentication());
             app_smtp_compose_email(jpg_buf, jpg_size, file_name);
         }
 #endif    
