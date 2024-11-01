@@ -22,7 +22,11 @@
 #include "bsp/esp-bsp.h"
 #include "lvgl.h"
 
-#include "protocol_examples_common.h"
+// #include "protocol_examples_common.h"
+#include "esp_wifi.h"
+#include "esp_event.h"
+#include "lwip/err.h"
+#include "lwip/sys.h"
 #include "app_video.h"
 #include "app_usb_msc.h"
 #include "app_smtp.h"
@@ -32,10 +36,16 @@
 
 #define TIMER_SEC_INTERVAL                         (1 * 1000000)
 #define TIMER_MIN_INTERVAL                         (60 * 1000000)
-#define UNIT_TIME                                  (TIMER_MIN_INTERVAL)
+#define UNIT_TIME                                  (TIMER_SEC_INTERVAL)
 
 #define LED_LIGHT_ON                               (1)
 #define WIFI_SWITCH_ON                             (1)
+
+#define WIFI_CONNECTED_BIT BIT0
+#define WIFI_FAIL_BIT      BIT1
+#define EXAMPLE_ESP_MAXIMUM_RETRY                  (5)
+
+#define CONFIG_FILE "info_config.txt"
 
 enum {
     SCREEN_EYE_CAMERA,
@@ -65,6 +75,8 @@ static esp_timer_handle_t periodic_timer;
 static nvs_handle_t nvs_save_handle;
 
 static bool wifi_connected = false;
+static EventGroupHandle_t s_wifi_event_group;
+static int s_retry_num = 0;
 
 static void camera_video_frame_operation(uint8_t *camera_buf, uint8_t camera_buf_index, uint32_t camera_buf_hes, uint32_t camera_buf_ves, size_t camera_buf_len);
 static void periodic_timer_callback(void* arg);
@@ -74,6 +86,8 @@ static void decrease_btn_handler(void *button_handle, void *usr_data);
 static void mode_switch_btn_handler(void *button_handle, void *usr_data);
 static void detect_usb_task(void *arg);
 static void wifi_connect_task(void *arg);
+static bool read_sdcard_config(char *ssid, char *password);
+static void wifi_init_sta(uint8_t *wifi_ssid, uint8_t *wifi_password);
 
 void app_main(void)
 {
@@ -349,7 +363,8 @@ static void detect_usb_task(void *arg)
 static void wifi_connect_task(void *arg)
 {
     // Connect to the wifi network
-    ESP_ERROR_CHECK(example_connect());
+    // ESP_ERROR_CHECK(example_connect());
+    (wifi_init_sta((uint8_t *)"TP-LINK_Liu", (uint8_t *)"11112222"));
     ESP_ERROR_CHECK(app_smtp_tls_init());
     ESP_ERROR_CHECK(app_smtp_connect_server());
     ESP_ERROR_CHECK(app_smtp_perform_authentication());
@@ -445,4 +460,106 @@ static void decrease_btn_handler(void *button_handle, void *usr_data)
     ESP_LOGI(TAG, "timed_min: %ld", timed_min);
 
     ESP_ERROR_CHECK(nvs_set_u32(nvs_save_handle, "timed_min", timed_min));
+}
+
+static bool read_sdcard_config(char *ssid, char *password) 
+{
+    FILE *file = fopen(CONFIG_FILE, "r");
+    if (file == NULL) {
+        ESP_LOGE(TAG, "Failed to open Wi-Fi config file");
+        return false;
+    }
+
+    char buffer[100];
+    while (fgets(buffer, sizeof(buffer), file)) {
+        // 去除行尾换行符
+        buffer[strcspn(buffer, "\r\n")] = 0;
+
+        if (strncmp(buffer, "SSID: ", 6) == 0) {
+            strncpy(ssid, buffer + 6, 32); // 读取 "SSID: " 后的内容
+        } else if (strncmp(buffer, "PASSWORD: ", 10) == 0) {
+            strncpy(password, buffer + 10, 64); // 读取 "PASSWORD: " 后的内容
+        }
+    }
+
+    fclose(file);
+    return (strlen(ssid) > 0 && strlen(password) > 0); // 确保SSID和密码不为空
+}
+
+static void event_handler(void* arg, esp_event_base_t event_base,
+                                int32_t event_id, void* event_data)
+{
+    if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_START) {
+        esp_wifi_connect();
+    } else if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_DISCONNECTED) {
+        if (s_retry_num < EXAMPLE_ESP_MAXIMUM_RETRY) {
+            esp_wifi_connect();
+            s_retry_num++;
+            ESP_LOGI(TAG, "retry to connect to the AP");
+        } else {
+            xEventGroupSetBits(s_wifi_event_group, WIFI_FAIL_BIT);
+        }
+        ESP_LOGI(TAG,"connect to the AP fail");
+    } else if (event_base == IP_EVENT && event_id == IP_EVENT_STA_GOT_IP) {
+        ip_event_got_ip_t* event = (ip_event_got_ip_t*) event_data;
+        ESP_LOGI(TAG, "got ip:" IPSTR, IP2STR(&event->ip_info.ip));
+        s_retry_num = 0;
+        xEventGroupSetBits(s_wifi_event_group, WIFI_CONNECTED_BIT);
+    }
+}
+
+static void wifi_init_sta(uint8_t *wifi_ssid, uint8_t *wifi_password)
+{
+    ESP_LOGI(TAG, "Connecting to AP SSID: %s, PASSWORD: %s", wifi_ssid, wifi_password);
+    s_wifi_event_group = xEventGroupCreate();
+
+    ESP_ERROR_CHECK(esp_netif_init());
+
+    esp_netif_create_default_wifi_sta();
+
+    wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
+    ESP_ERROR_CHECK(esp_wifi_init(&cfg));
+
+    esp_event_handler_instance_t instance_any_id;
+    esp_event_handler_instance_t instance_got_ip;
+    ESP_ERROR_CHECK(esp_event_handler_instance_register(WIFI_EVENT,
+                                                        ESP_EVENT_ANY_ID,
+                                                        &event_handler,
+                                                        NULL,
+                                                        &instance_any_id));
+    ESP_ERROR_CHECK(esp_event_handler_instance_register(IP_EVENT,
+                                                        IP_EVENT_STA_GOT_IP,
+                                                        &event_handler,
+                                                        NULL,
+                                                        &instance_got_ip));
+
+    wifi_config_t wifi_config = {
+        .sta = {
+            .ssid = {0},
+            .password = {0},
+        },
+    };
+
+    strncpy((char *)wifi_config.sta.ssid, (char *)wifi_ssid, sizeof(wifi_config.sta.ssid) - 1);
+    strncpy((char *)wifi_config.sta.password, (char *)wifi_password, sizeof(wifi_config.sta.password) - 1);
+
+    ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA) );
+    ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &wifi_config) );
+    ESP_ERROR_CHECK(esp_wifi_start() );
+
+    EventBits_t bits = xEventGroupWaitBits(s_wifi_event_group,
+            WIFI_CONNECTED_BIT | WIFI_FAIL_BIT,
+            pdFALSE,
+            pdFALSE,
+            portMAX_DELAY);
+
+    if (bits & WIFI_CONNECTED_BIT) {
+        ESP_LOGI(TAG, "connected to ap SSID:%s password:%s",
+                 wifi_ssid, wifi_password);
+    } else if (bits & WIFI_FAIL_BIT) {
+        ESP_LOGI(TAG, "Failed to connect to SSID:%s, password:%s",
+                 wifi_ssid, wifi_password);
+    } else {
+        ESP_LOGE(TAG, "UNEXPECTED EVENT");
+    }
 }
