@@ -8,6 +8,7 @@
 
 #include "esp_log.h"
 
+void app_smtp_set_config(char *server, char *port, char *sender, char *password, char *recipient);
 esp_err_t app_smtp_tls_init(void);
 esp_err_t app_smtp_connect_server(void);
 esp_err_t app_smtp_perform_authentication(void);

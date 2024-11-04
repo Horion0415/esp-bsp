@@ -17,11 +17,17 @@
 #include <sys/param.h>
 
 /* Constants that are configurable in menuconfig */
-#define MAIL_SERVER         CONFIG_SMTP_SERVER
-#define MAIL_PORT           CONFIG_SMTP_PORT_NUMBER
-#define SENDER_MAIL         CONFIG_SMTP_SENDER_MAIL
-#define SENDER_PASSWORD     CONFIG_SMTP_SENDER_PASSWORD
-#define RECIPIENT_MAIL      CONFIG_SMTP_RECIPIENT_MAIL
+// #define MAIL_SERVER         CONFIG_SMTP_SERVER
+// #define MAIL_PORT           CONFIG_SMTP_PORT_NUMBER
+// #define SENDER_MAIL         CONFIG_SMTP_SENDER_MAIL
+// #define SENDER_PASSWORD     CONFIG_SMTP_SENDER_PASSWORD
+// #define RECIPIENT_MAIL      CONFIG_SMTP_RECIPIENT_MAIL
+
+static char* mail_server = NULL;
+static char* mail_port = NULL;
+static char* sender_mail = NULL;
+static char* sender_password = NULL;
+static char* recipient_mail = NULL;
 
 #define SERVER_USES_STARTSSL 1
 
@@ -59,6 +65,15 @@ static mbedtls_ssl_context ssl;
 static mbedtls_x509_crt cacert;
 static mbedtls_ssl_config conf;
 static mbedtls_net_context server_fd;
+
+void app_smtp_set_config(char *server, char *port, char *sender, char *password, char *recipient)
+{
+    mail_server = server;
+    mail_port = port;
+    sender_mail = sender;
+    sender_password = password;
+    recipient_mail = recipient;
+}
 
 static int write_and_get_response(mbedtls_net_context *sock_fd, unsigned char *buf, size_t len)
 {
@@ -264,7 +279,7 @@ esp_err_t app_smtp_tls_init(void)
     ESP_LOGI(TAG, "Setting hostname for TLS session...");
 
     /* Hostname set here should match CN in server certificate */
-    if ((ret = mbedtls_ssl_set_hostname(&ssl, MAIL_SERVER)) != 0) {
+    if ((ret = mbedtls_ssl_set_hostname(&ssl, mail_server)) != 0) {
         ESP_LOGE(TAG, "mbedtls_ssl_set_hostname returned -0x%x", -ret);
     }
 
@@ -296,10 +311,10 @@ esp_err_t app_smtp_tls_init(void)
 esp_err_t app_smtp_connect_server(void)
 {
     int ret = 0;
-    ESP_LOGI(TAG, "Connecting to %s:%s...", MAIL_SERVER, MAIL_PORT);
+    ESP_LOGI(TAG, "Connecting to %s:%s...", mail_server, mail_port);
 
-    if ((ret = mbedtls_net_connect(&server_fd, MAIL_SERVER,
-                                   MAIL_PORT, MBEDTLS_NET_PROTO_TCP)) != 0) {
+    if ((ret = mbedtls_net_connect(&server_fd, mail_server,
+                                   mail_port, MBEDTLS_NET_PROTO_TCP)) != 0) {
         ESP_LOGE(TAG, "mbedtls_net_connect returned -0x%x", -ret);
     }
 
@@ -366,7 +381,7 @@ esp_err_t app_smtp_perform_authentication(void)
 
     ESP_LOGI(TAG, "Write USER NAME");
     ret = mbedtls_base64_encode((unsigned char *) base64_buffer, sizeof(base64_buffer),
-                                &base64_len, (unsigned char *) SENDER_MAIL, strlen(SENDER_MAIL));
+                                &base64_len, (unsigned char *) sender_mail, strlen(sender_mail));
     if (ret != 0) {
         ESP_LOGE(TAG, "Error in mbedtls encode! ret = -0x%x", -ret);
     }
@@ -376,7 +391,7 @@ esp_err_t app_smtp_perform_authentication(void)
 
     ESP_LOGI(TAG, "Write PASSWORD");
     ret = mbedtls_base64_encode((unsigned char *) base64_buffer, sizeof(base64_buffer),
-                                &base64_len, (unsigned char *) SENDER_PASSWORD, strlen(SENDER_PASSWORD));
+                                &base64_len, (unsigned char *) sender_password, strlen(sender_password));
     if (ret != 0) {
         ESP_LOGE(TAG, "Error in mbedtls encode! ret = -0x%x", -ret);
     }
@@ -393,12 +408,12 @@ esp_err_t app_smtp_compose_email(uint8_t *pic_buf, uint32_t pic_size, char* file
 
     /* Compose email */
     ESP_LOGI(TAG, "Write MAIL FROM");
-    len = snprintf((char *) buf, BUF_SIZE, "MAIL FROM:<%s>\r\n", SENDER_MAIL);
+    len = snprintf((char *) buf, BUF_SIZE, "MAIL FROM:<%s>\r\n", sender_mail);
     ret = write_ssl_and_get_response(&ssl, (unsigned char *) buf, len);
     VALIDATE_MBEDTLS_RETURN(ret, 200, 299);
 
     ESP_LOGI(TAG, "Write RCPT");
-    len = snprintf((char *) buf, BUF_SIZE, "RCPT TO:<%s>\r\n", RECIPIENT_MAIL);
+    len = snprintf((char *) buf, BUF_SIZE, "RCPT TO:<%s>\r\n", recipient_mail);
     ret = write_ssl_and_get_response(&ssl, (unsigned char *) buf, len);
     VALIDATE_MBEDTLS_RETURN(ret, 200, 299);
 
@@ -413,7 +428,7 @@ esp_err_t app_smtp_compose_email(uint8_t *pic_buf, uint32_t pic_size, char* file
                    "From: %s\r\nSubject: mbed TLS Test mail\r\n"
                    "To: %s\r\n"
                    "MIME-Version: 1.0 (mime-construct 1.9)\n",
-                   "ESP32 SMTP Client", RECIPIENT_MAIL);
+                   "ESP32 SMTP Client", recipient_mail);
 
     /**
      * Note: We are not validating return for some ssl_writes.
