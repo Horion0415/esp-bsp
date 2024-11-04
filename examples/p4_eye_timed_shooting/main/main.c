@@ -27,6 +27,7 @@
 #include "app_usb_msc.h"
 #include "app_smtp.h"
 #include "app_wifi.h"
+#include "app_sntp.h"
 #include "ui.h"
 
 #define ALIGN_UP(num, align)    (((num) + ((align) - 1)) & ~((align) - 1))
@@ -365,6 +366,8 @@ static void wifi_connect_task(void *arg)
     
     if(app_wifi_get_connected() && email_configured) {
         app_smtp_set_config(we_config.smtp_server, we_config.port, we_config.sender_email, we_config.sender_password, we_config.recipient_email);
+        
+        app_sntp_init();
 
         ESP_ERROR_CHECK(app_smtp_tls_init());
         ESP_ERROR_CHECK(app_smtp_connect_server());
