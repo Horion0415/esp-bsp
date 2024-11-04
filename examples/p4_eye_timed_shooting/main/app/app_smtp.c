@@ -16,19 +16,6 @@
 #include <mbedtls/base64.h>
 #include <sys/param.h>
 
-/* Constants that are configurable in menuconfig */
-// #define MAIL_SERVER         CONFIG_SMTP_SERVER
-// #define MAIL_PORT           CONFIG_SMTP_PORT_NUMBER
-// #define SENDER_MAIL         CONFIG_SMTP_SENDER_MAIL
-// #define SENDER_PASSWORD     CONFIG_SMTP_SENDER_PASSWORD
-// #define RECIPIENT_MAIL      CONFIG_SMTP_RECIPIENT_MAIL
-
-static char* mail_server = NULL;
-static char* mail_port = NULL;
-static char* sender_mail = NULL;
-static char* sender_password = NULL;
-static char* recipient_mail = NULL;
-
 #define SERVER_USES_STARTSSL 1
 
 #define BUF_SIZE            512
@@ -65,6 +52,13 @@ static mbedtls_ssl_context ssl;
 static mbedtls_x509_crt cacert;
 static mbedtls_ssl_config conf;
 static mbedtls_net_context server_fd;
+
+/* Constants that are configurable in menuconfig */
+static char* mail_server = NULL;
+static char* mail_port = NULL;
+static char* sender_mail = NULL;
+static char* sender_password = NULL;
+static char* recipient_mail = NULL;
 
 void app_smtp_set_config(char *server, char *port, char *sender, char *password, char *recipient)
 {
