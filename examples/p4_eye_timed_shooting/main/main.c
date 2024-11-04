@@ -34,7 +34,7 @@
 
 #define TIMER_SEC_INTERVAL                         (1 * 1000000)
 #define TIMER_MIN_INTERVAL                         (60 * 1000000)
-#define UNIT_TIME                                  (TIMER_SEC_INTERVAL)
+#define UNIT_TIME                                  (TIMER_MIN_INTERVAL)
 
 #define LED_LIGHT_ON                               (1)
 #define WIFI_SWITCH_ON                             (1)

@@ -80,7 +80,7 @@ void wifi_init_sta(uint8_t *wifi_ssid, uint8_t *wifi_password)
             WIFI_CONNECTED_BIT | WIFI_FAIL_BIT,
             pdFALSE,
             pdFALSE,
-            5000 / portTICK_PERIOD_MS);
+            10000 / portTICK_PERIOD_MS);
 
     if (bits & WIFI_CONNECTED_BIT) {
         ESP_LOGI(TAG, "connected to ap SSID:%s password:%s",
