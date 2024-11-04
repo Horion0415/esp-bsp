@@ -257,10 +257,10 @@ static void camera_video_frame_operation(uint8_t *camera_buf, uint8_t camera_buf
         .in.buffer = camera_buf,
         .in.pic_w = camera_buf_hes,
         .in.pic_h = camera_buf_ves,
-        .in.block_w = camera_buf_ves,
-        .in.block_h = camera_buf_ves,
-        .in.block_offset_x = (camera_buf_hes - camera_buf_ves) / 2,
-        .in.block_offset_y = 0,
+        .in.block_w = 640,
+        .in.block_h = 640,
+        .in.block_offset_x = (camera_buf_hes - 640) / 2,
+        .in.block_offset_y = (camera_buf_ves - 640) / 2,
         .in.srm_cm = PPA_SRM_COLOR_MODE_RGB565,
         .out.buffer = canvas_buf[camera_buf_index],
         .out.buffer_size = ALIGN_UP(BSP_LCD_H_RES * BSP_LCD_V_RES * 2, data_cache_line_size),
@@ -270,8 +270,8 @@ static void camera_video_frame_operation(uint8_t *camera_buf, uint8_t camera_buf
         .out.block_offset_y = 0,
         .out.srm_cm = PPA_SRM_COLOR_MODE_RGB565,
         .rotation_angle = PPA_SRM_ROTATION_ANGLE_0,
-        .scale_x = 0.3333,
-        .scale_y = 0.3333,
+        .scale_x = 0.375,
+        .scale_y = 0.375,
         .rgb_swap = 0,
         .byte_swap = 0,
         .mode = PPA_TRANS_MODE_BLOCKING,
@@ -300,7 +300,6 @@ static void camera_video_frame_operation(uint8_t *camera_buf, uint8_t camera_buf
         };
 
         timed_shooting = false;
-
         char file_name[64];
 
 #if LED_LIGHT_ON
