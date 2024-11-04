@@ -12,6 +12,7 @@ static const char *TAG = "wifi station";
 
 static EventGroupHandle_t s_wifi_event_group;
 static int s_retry_num = 0;
+static bool wifi_connected = false;
 
 static void event_handler(void* arg, esp_event_base_t event_base,
                                 int32_t event_id, void* event_data)
@@ -79,15 +80,21 @@ void wifi_init_sta(uint8_t *wifi_ssid, uint8_t *wifi_password)
             WIFI_CONNECTED_BIT | WIFI_FAIL_BIT,
             pdFALSE,
             pdFALSE,
-            portMAX_DELAY);
+            5000 / portTICK_PERIOD_MS);
 
     if (bits & WIFI_CONNECTED_BIT) {
         ESP_LOGI(TAG, "connected to ap SSID:%s password:%s",
                  wifi_ssid, wifi_password);
+        wifi_connected = true;
     } else if (bits & WIFI_FAIL_BIT) {
         ESP_LOGI(TAG, "Failed to connect to SSID:%s, password:%s",
                  wifi_ssid, wifi_password);
     } else {
         ESP_LOGE(TAG, "UNEXPECTED EVENT");
     }
+}
+
+bool app_wifi_get_connected(void)
+{
+    return wifi_connected;
 }

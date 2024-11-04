@@ -67,7 +67,8 @@ static esp_timer_handle_t periodic_timer;
 
 static nvs_handle_t nvs_save_handle;
 
-static bool wifi_connected = false;
+static bool wifi_configured = false;
+static bool email_configured = false;
 
 typedef struct {
     char ssid[32];
@@ -143,14 +144,22 @@ void app_main(void)
 
     if(read_sdcard_config(we_config.ssid, we_config.password)) {
         ESP_LOGI(TAG, "Read wifi config from SD card: SSID: %s, Password: %s", we_config.ssid, we_config.password);
+
+        wifi_configured = true;
     } else {
         ESP_LOGE(TAG, "Failed to read wifi config from SD card");
+
+        wifi_configured = false;
     }
 
     if(read_email_config(we_config.smtp_server, we_config.port, we_config.sender_email, we_config.sender_password, we_config.recipient_email)) {
         ESP_LOGI(TAG, "Read email config from SD card: SMTP Server: %s, Port: %s, Sender Email: %s, Sender Password: %s, Recipient Email: %s", we_config.smtp_server, we_config.port, we_config.sender_email, we_config.sender_password, we_config.recipient_email);
+
+        email_configured = true;
     } else {
         ESP_LOGE(TAG, "Failed to read email config from SD card");
+
+        email_configured = false;
     }
 
     // Initialize the USB MSC
@@ -244,7 +253,6 @@ void app_main(void)
 
 static void camera_video_frame_operation(uint8_t *camera_buf, uint8_t camera_buf_index, uint32_t camera_buf_hes, uint32_t camera_buf_ves, size_t camera_buf_len)
 {
-#if 1 // Scale, rotate, and mirror the camera frame
     ppa_srm_oper_config_t srm_config = {
         .in.buffer = camera_buf,
         .in.pic_w = camera_buf_hes,
@@ -268,31 +276,6 @@ static void camera_video_frame_operation(uint8_t *camera_buf, uint8_t camera_buf
         .byte_swap = 0,
         .mode = PPA_TRANS_MODE_BLOCKING,
     };
-#else
-    ppa_srm_oper_config_t srm_config = {
-        .in.buffer = camera_buf,
-        .in.pic_w = camera_buf_hes,
-        .in.pic_h = camera_buf_ves,
-        .in.block_w = BSP_LCD_H_RES,
-        .in.block_h = BSP_LCD_V_RES,
-        .in.block_offset_x = (camera_buf_hes - BSP_LCD_H_RES) / 2,
-        .in.block_offset_y = (camera_buf_ves - BSP_LCD_V_RES) / 2,
-        .in.srm_cm = PPA_SRM_COLOR_MODE_RGB565,
-        .out.buffer = canvas_buf[camera_buf_index],
-        .out.buffer_size = ALIGN_UP(BSP_LCD_H_RES * BSP_LCD_V_RES * 2, data_cache_line_size),
-        .out.pic_w = BSP_LCD_H_RES,
-        .out.pic_h = BSP_LCD_V_RES,
-        .out.block_offset_x = 0,
-        .out.block_offset_y = 0,
-        .out.srm_cm = PPA_SRM_COLOR_MODE_RGB565,
-        .rotation_angle = PPA_SRM_ROTATION_ANGLE_0,
-        .scale_x = 1,
-        .scale_y = 1,
-        .rgb_swap = 0,
-        .byte_swap = 1,
-        .mode = PPA_TRANS_MODE_BLOCKING,
-    };
-#endif
 
     ESP_ERROR_CHECK(ppa_do_scale_rotate_mirror(ppa_srm_handle, &srm_config));
 
@@ -342,7 +325,7 @@ static void camera_video_frame_operation(uint8_t *camera_buf, uint8_t camera_buf
 #endif
 
 #if WIFI_SWITCH_ON
-        if(wifi_connected) {
+        if(app_wifi_get_connected() && email_configured) {
             ESP_ERROR_CHECK(app_smtp_tls_init());
             ESP_ERROR_CHECK(app_smtp_connect_server());
             ESP_ERROR_CHECK(app_smtp_perform_authentication());
@@ -377,13 +360,17 @@ static void detect_usb_task(void *arg)
 static void wifi_connect_task(void *arg)
 {
     // Connect to the wifi network
-    app_smtp_set_config(we_config.smtp_server, we_config.port, we_config.sender_email, we_config.sender_password, we_config.recipient_email);
-    (wifi_init_sta((uint8_t *)we_config.ssid, (uint8_t *)we_config.password));
-    ESP_ERROR_CHECK(app_smtp_tls_init());
-    ESP_ERROR_CHECK(app_smtp_connect_server());
-    ESP_ERROR_CHECK(app_smtp_perform_authentication());
+    if(wifi_configured) {
+        wifi_init_sta((uint8_t *)we_config.ssid, (uint8_t *)we_config.password);
+    }
+    
+    if(app_wifi_get_connected() && email_configured) {
+        app_smtp_set_config(we_config.smtp_server, we_config.port, we_config.sender_email, we_config.sender_password, we_config.recipient_email);
 
-    wifi_connected = true;
+        ESP_ERROR_CHECK(app_smtp_tls_init());
+        ESP_ERROR_CHECK(app_smtp_connect_server());
+        ESP_ERROR_CHECK(app_smtp_perform_authentication());
+    }
 
     vTaskDelete(NULL);
 }

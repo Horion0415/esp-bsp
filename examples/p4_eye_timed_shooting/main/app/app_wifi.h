@@ -7,5 +7,6 @@
 #define APP_WIFI_H
 
 void wifi_init_sta(uint8_t *wifi_ssid, uint8_t *wifi_password);
+bool app_wifi_get_connected(void);
 
 #endif // APP_WIFI_H
