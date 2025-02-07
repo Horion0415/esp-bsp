@@ -6,11 +6,11 @@ dependencies:
     override_path: "../../../bsp/esp32_p4_eye"
 
   esp_video:
-    version: "0.7.*"
+    version: "0.*"
     public: true
 
-  espressif/esp_wifi_remote:
-    version: "*"
+  # espressif/esp_wifi_remote:
+  #   version: "*"
     
-  espressif/esp_hosted:
-    version: "*"
+  # espressif/esp_hosted:
+  #   version: "*"

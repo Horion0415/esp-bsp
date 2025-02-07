@@ -68,6 +68,39 @@ static const audio_codec_data_if_t *i2s_pdm_data_if = NULL;  /* Codec data inter
 sdmmc_card_t *bsp_sdcard = NULL;    // Global uSD card handler
 static bool i2c_initialized = false;
 
+/**
+ * @brief LCD panel initialization commands.
+ *
+ */
+typedef struct {
+    int cmd;                /*<! The specific LCD command */
+    const void *data;       /*<! Buffer that holds the command specific data */
+    size_t data_bytes;      /*<! Size of `data` in memory, in bytes */
+    unsigned int delay_ms;  /*<! Delay in milliseconds after this command */
+} st7789_lcd_init_cmd_t;
+
+static const st7789_lcd_init_cmd_t vendor_specific_init[] = {
+    {0x11, (uint8_t []){0x00}, 1, 120},
+    {0xB2, (uint8_t []){0x0C, 0x0C, 0x00, 0x33, 0x33}, 5, 0},
+    {0x35, (uint8_t []){0x00}, 1, 0},
+    {0x36, (uint8_t []){0x00}, 1, 0},
+    {0x3A, (uint8_t []){0x05}, 1, 0},
+    {0xB7, (uint8_t []){0x35}, 1, 0},
+    {0xBB, (uint8_t []){0x2D}, 1, 0},
+    {0xC0, (uint8_t []){0x2C}, 1, 0},
+    {0xC2, (uint8_t []){0x01}, 1, 0},
+    {0xC3, (uint8_t []){0x15}, 1, 0},
+    {0xC4, (uint8_t []){0x20}, 1, 0},
+    {0xC6, (uint8_t []){0x0F}, 1, 0},
+    {0xD0, (uint8_t []){0xA4, 0xA1}, 2, 0},
+    {0xD6, (uint8_t []){0xA1}, 1, 0},
+    {0xE0, (uint8_t []){0x70, 0x05, 0x0A, 0x0B, 0x0A, 0x27, 0x2F, 0x44, 0x47, 0x37, 0x14, 0x14, 0x29, 0x2F}, 14, 0},
+    {0xE1, (uint8_t []){0x70, 0x07, 0x0C, 0x08, 0x08, 0x04, 0x2F, 0x33, 0x46, 0x18, 0x15, 0x15, 0x2B, 0x2D}, 14, 0},
+    {0x21, (uint8_t []){0x00}, 1, 0},
+    {0x29, (uint8_t []){0x00}, 1, 0},
+    {0x2C, (uint8_t []){0x00}, 1, 0},
+};
+
 static const button_config_t bsp_button_config[BSP_BUTTON_NUM] = {
     {
         .type = BUTTON_TYPE_GPIO,
@@ -84,16 +117,6 @@ static const button_config_t bsp_button_config[BSP_BUTTON_NUM] = {
         .gpio_button_config.active_level = 0,
         .gpio_button_config.gpio_num = BSP_BUTTON_NUM3
     },
-    {
-        .type = BUTTON_TYPE_GPIO,
-        .gpio_button_config.active_level = 0,
-        .gpio_button_config.gpio_num = BSP_BUTTON_NUM4
-    },
-    {
-        .type = BUTTON_TYPE_GPIO,
-        .gpio_button_config.active_level = 0,
-        .gpio_button_config.gpio_num = BSP_BUTTON_NUM5
-    }
 };
 
 esp_err_t bsp_i2c_init(void)
@@ -302,7 +325,7 @@ esp_err_t bsp_display_new(const bsp_display_config_t *config, esp_lcd_panel_hand
         .pclk_hz = BSP_LCD_PIXEL_CLOCK_HZ,
         .lcd_cmd_bits = LCD_CMD_BITS,
         .lcd_param_bits = LCD_PARAM_BITS,
-        .spi_mode = 2,
+        .spi_mode = 3,
         .trans_queue_depth = 10,
     };
     ESP_GOTO_ON_ERROR(esp_lcd_new_panel_io_spi((esp_lcd_spi_bus_handle_t)BSP_LCD_SPI_NUM, &io_config, ret_io), err, TAG, "New panel IO failed");
@@ -314,6 +337,13 @@ esp_err_t bsp_display_new(const bsp_display_config_t *config, esp_lcd_panel_hand
         .bits_per_pixel = BSP_LCD_BITS_PER_PIXEL,
     };
     ESP_GOTO_ON_ERROR(esp_lcd_new_panel_st7789(*ret_io, &panel_config, ret_panel), err, TAG, "New panel failed");
+
+    const st7789_lcd_init_cmd_t *cmd = vendor_specific_init;
+    uint16_t cmd_size = sizeof(vendor_specific_init) / sizeof(st7789_lcd_init_cmd_t);
+    for (uint16_t i = 0; i < cmd_size; i++) {
+        ESP_RETURN_ON_ERROR(esp_lcd_panel_io_tx_param(*ret_io, cmd[i].cmd, cmd[i].data, cmd[i].data_bytes), TAG, "send command failed");
+        vTaskDelay(pdMS_TO_TICKS(cmd[i].delay_ms));
+    }
 
     esp_lcd_panel_reset(*ret_panel);
     esp_lcd_panel_init(*ret_panel);

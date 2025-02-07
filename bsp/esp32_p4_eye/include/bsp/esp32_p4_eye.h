@@ -49,24 +49,24 @@
  **************************************************************************************************/
 
 /* I2C */
-#define BSP_I2C_SCL           (GPIO_NUM_28)
-#define BSP_I2C_SDA           (GPIO_NUM_29)
+#define BSP_I2C_SCL           (GPIO_NUM_13)
+#define BSP_I2C_SDA           (GPIO_NUM_14)
 
 /* Audio */
 #define BSP_I2S_SCLK          (GPIO_NUM_41)
 #define BSP_I2S_LCLK          (GPIO_NUM_42)
 #define BSP_I2S_DIN           (GPIO_NUM_2)
 
-#define BSP_I2S_DAT           (GPIO_NUM_30)
-#define BSP_I2S_CLK           (GPIO_NUM_31)
+#define BSP_I2S_DAT           (GPIO_NUM_21)
+#define BSP_I2S_CLK           (GPIO_NUM_22)
 
 /* Display */
-#define BSP_LCD_SPI_MOSI      (GPIO_NUM_0)
-#define BSP_LCD_SPI_CLK       (GPIO_NUM_1)
-#define BSP_LCD_SPI_CS        (GPIO_NUM_2)
-#define BSP_LCD_DC            (GPIO_NUM_3)
-#define BSP_LCD_RST           (GPIO_NUM_NC)
-#define BSP_LCD_BACKLIGHT     (GPIO_NUM_4)
+#define BSP_LCD_SPI_MOSI      (GPIO_NUM_16)
+#define BSP_LCD_SPI_CLK       (GPIO_NUM_17)
+#define BSP_LCD_SPI_CS        (GPIO_NUM_18)
+#define BSP_LCD_DC            (GPIO_NUM_19)
+#define BSP_LCD_RST           (GPIO_NUM_15)
+#define BSP_LCD_BACKLIGHT     (GPIO_NUM_20)
 
 // /* Camera */
 #define BSP_CAMERA_XCLK      (GPIO_NUM_15)
@@ -96,14 +96,12 @@
     .d7  = 0
 
 /* Buttons */
-#define BSP_BUTTON_NUM1      (GPIO_NUM_50)
-#define BSP_BUTTON_NUM2      (GPIO_NUM_51)
-#define BSP_BUTTON_NUM3      (GPIO_NUM_52)
-#define BSP_BUTTON_NUM4      (GPIO_NUM_53)
-#define BSP_BUTTON_NUM5      (GPIO_NUM_54)
+#define BSP_BUTTON_NUM1      (GPIO_NUM_3)
+#define BSP_BUTTON_NUM2      (GPIO_NUM_4)
+#define BSP_BUTTON_NUM3      (GPIO_NUM_5)
 
 typedef enum bsp_led_t {
-    BSP_LED_WHITE = GPIO_NUM_49,
+    BSP_LED_WHITE = GPIO_NUM_23,
 } bsp_led_t;
 
 #ifdef __cplusplus
@@ -125,8 +123,6 @@ typedef enum {
     BSP_BUTTON_1 = 0,
     BSP_BUTTON_2,
     BSP_BUTTON_3,
-    BSP_BUTTON_4,
-    BSP_BUTTON_5,
     BSP_BUTTON_NUM
 } bsp_button_t;
 

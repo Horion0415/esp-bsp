@@ -16,10 +16,16 @@
 #include "esp_timer.h"
 #include "driver/ppa.h"
 #include "driver/jpeg_encode.h"
+#include "esp_cam_sensor_xclk.h"
 #include "app_video.h"
 #include "app_audio.h"
 
+#include "lv_demos.h"
+
 #define ALIGN_UP(num, align)    (((num) + ((align) - 1)) & ~((align) - 1))
+
+#define XCLK_OUTPUT_FREQUENCY   (24000000) // Frequency in Hertz. Set frequency at 10MHz
+#define XCLK_OUTPUT_IO          (11) // Define the output GPIO
 
 static ppa_client_handle_t ppa_srm_handle = NULL;
 static size_t data_cache_line_size = 0;
@@ -58,15 +64,15 @@ static void btn_handler(void *button_handle, void *usr_data)
 
 void app_main(void)
 {
+    ESP_LOGI(TAG, "LEDs initialized");
+    ESP_ERROR_CHECK(bsp_leds_init());
+
     /* Init Buttons */
     button_handle_t btns[BSP_BUTTON_NUM];
     ESP_ERROR_CHECK(bsp_iot_button_create(btns, NULL, BSP_BUTTON_NUM));
     for (int i = 0; i < BSP_BUTTON_NUM; i++) {
         ESP_ERROR_CHECK(iot_button_register_cb(btns[i], BUTTON_PRESS_DOWN, btn_handler, (void *) i));
     }
-    
-    ESP_LOGI(TAG, "LEDs initialized");
-    ESP_ERROR_CHECK(bsp_leds_init());
 
     ESP_ERROR_CHECK(bsp_sdcard_mount());
     ESP_LOGI(TAG, "SD card mounted");
@@ -91,6 +97,16 @@ void app_main(void)
 
     jpg_buf_240p = (uint8_t*)jpeg_alloc_encoder_mem(640 * 480 * 2 / 10, &rx_mem_cfg, &rx_buffer_size); // Assume that compression ratio of 10 to 1
     assert(jpg_buf_240p != NULL);
+
+    esp_cam_sensor_xclk_handle_t xclk_handle = NULL;
+    esp_cam_sensor_xclk_config_t cam_xclk_config = {
+        .esp_clock_router_cfg = {
+            .xclk_pin = XCLK_OUTPUT_IO,
+            .xclk_freq_hz = XCLK_OUTPUT_FREQUENCY,
+        }
+    };
+    ESP_ERROR_CHECK(esp_cam_sensor_xclk_allocate(ESP_CAM_SENSOR_XCLK_ESP_CLOCK_ROUTER, &xclk_handle));
+    ESP_ERROR_CHECK(esp_cam_sensor_xclk_start(xclk_handle, &cam_xclk_config));
 
     // Initialize the video camera
     ESP_ERROR_CHECK(bsp_i2c_init());
