@@ -33,11 +33,14 @@
 #include "lvgl.h"
 #include "bsp/esp-bsp.h"
 
+#include "driver/gpio.h"
+
 #include "app_video.h"
 #include "app_usb_msc.h"
 
 #define P4_EYE_C6_EN_PIN                           (GPIO_NUM_34)
 #define P4_EYE_CAMERA_EN_PIN                       (GPIO_NUM_26)
+#define P4_EYE_SDCARD_EN_PIN                       (GPIO_NUM_46)
 #define CAPTURE_INDEX                              (5)
 
 #define XCLK_OUTPUT_FREQUENCY   (24000000) // Frequency in Hertz. Set frequency at 10MHz
@@ -108,6 +111,11 @@ static void set_camera_power(bool on)
     gpio_set_level(P4_EYE_CAMERA_EN_PIN, on);
 }
 
+static void set_sdcard_power(bool on)
+{
+    gpio_set_level(P4_EYE_SDCARD_EN_PIN, on);
+}
+
 static void video_capture_task(void *arg)
 {
     int video_fd = *((int *)arg);
@@ -173,6 +181,9 @@ static void video_capture_task(void *arg)
 
             set_camera_power(false);
             ESP_ERROR_CHECK(esp_cam_sensor_xclk_stop(xclk_handle));
+
+            gpio_hold_en(P4_EYE_CAMERA_EN_PIN);
+            gpio_deep_sleep_hold_en();
 
             // enter deep sleep
             esp_deep_sleep_start();
@@ -260,6 +271,7 @@ void app_main(void)
     // Initialize the led
     ESP_ERROR_CHECK(bsp_leds_init());
 
+    // Initialize the xclk
     esp_cam_sensor_xclk_config_t cam_xclk_config = {
         .esp_clock_router_cfg = {
             .xclk_pin = XCLK_OUTPUT_IO,
@@ -269,14 +281,14 @@ void app_main(void)
     ESP_ERROR_CHECK(esp_cam_sensor_xclk_allocate(ESP_CAM_SENSOR_XCLK_ESP_CLOCK_ROUTER, &xclk_handle));
 
     // Initialize the power control
-    const gpio_config_t led_io_config = {
+    const gpio_config_t c6_io_config = {
         .pin_bit_mask = BIT64(P4_EYE_C6_EN_PIN),
         .mode = GPIO_MODE_OUTPUT, 
         .pull_up_en = GPIO_PULLUP_DISABLE,
         .pull_down_en = GPIO_PULLDOWN_DISABLE,
         .intr_type = GPIO_INTR_DISABLE
     };
-    ESP_ERROR_CHECK(gpio_config(&led_io_config));
+    ESP_ERROR_CHECK(gpio_config(&c6_io_config));
     set_slave_power(false);
 
     const gpio_config_t camera_io_config = {
@@ -289,6 +301,16 @@ void app_main(void)
     ESP_ERROR_CHECK(gpio_config(&camera_io_config));
     ESP_ERROR_CHECK(esp_cam_sensor_xclk_start(xclk_handle, &cam_xclk_config));
     set_camera_power(true);
+
+    const gpio_config_t sdcard_io_config = {
+        .pin_bit_mask = BIT64(P4_EYE_SDCARD_EN_PIN),
+        .mode = GPIO_MODE_OUTPUT, 
+        .pull_up_en = GPIO_PULLUP_DISABLE,
+        .pull_down_en = GPIO_PULLDOWN_DISABLE,
+        .intr_type = GPIO_INTR_DISABLE
+    };
+    ESP_ERROR_CHECK(gpio_config(&sdcard_io_config));
+    set_sdcard_power(false);
 
     // Initialize the SD card
     ESP_ERROR_CHECK(bsp_sdcard_mount());
