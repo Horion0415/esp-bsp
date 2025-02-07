@@ -28,15 +28,20 @@
 #include <sys/errno.h>
 #include "linux/videodev2.h"
 
+#include "esp_cam_sensor_xclk.h"
+
 #include "lvgl.h"
 #include "bsp/esp-bsp.h"
 
 #include "app_video.h"
 #include "app_usb_msc.h"
 
-#define P4_EYE_C6_EN_PIN                           (GPIO_NUM_5)
-#define P4_EYE_CAMERA_EN_PIN                       (GPIO_NUM_15)
+#define P4_EYE_C6_EN_PIN                           (GPIO_NUM_34)
+#define P4_EYE_CAMERA_EN_PIN                       (GPIO_NUM_26)
 #define CAPTURE_INDEX                              (5)
+
+#define XCLK_OUTPUT_FREQUENCY   (24000000) // Frequency in Hertz. Set frequency at 10MHz
+#define XCLK_OUTPUT_IO          (11) // Define the output GPIO
 
 static nvs_handle_t nvs_save_handle;
 
@@ -56,6 +61,8 @@ lv_obj_t *time_label;
 static uint8_t wakeup_time_sec;
 static int count_down = 4;
 static uint8_t shoot_flag = false;
+
+static esp_cam_sensor_xclk_handle_t xclk_handle = NULL;
 
 static const char *TAG = "main";
 
@@ -165,6 +172,7 @@ static void video_capture_task(void *arg)
             bsp_led_set(BSP_LED_WHITE, 0);
 
             set_camera_power(false);
+            ESP_ERROR_CHECK(esp_cam_sensor_xclk_stop(xclk_handle));
 
             // enter deep sleep
             esp_deep_sleep_start();
@@ -252,6 +260,14 @@ void app_main(void)
     // Initialize the led
     ESP_ERROR_CHECK(bsp_leds_init());
 
+    esp_cam_sensor_xclk_config_t cam_xclk_config = {
+        .esp_clock_router_cfg = {
+            .xclk_pin = XCLK_OUTPUT_IO,
+            .xclk_freq_hz = XCLK_OUTPUT_FREQUENCY,
+        }
+    };
+    ESP_ERROR_CHECK(esp_cam_sensor_xclk_allocate(ESP_CAM_SENSOR_XCLK_ESP_CLOCK_ROUTER, &xclk_handle));
+
     // Initialize the power control
     const gpio_config_t led_io_config = {
         .pin_bit_mask = BIT64(P4_EYE_C6_EN_PIN),
@@ -271,6 +287,7 @@ void app_main(void)
         .intr_type = GPIO_INTR_DISABLE
     };
     ESP_ERROR_CHECK(gpio_config(&camera_io_config));
+    ESP_ERROR_CHECK(esp_cam_sensor_xclk_start(xclk_handle, &cam_xclk_config));
     set_camera_power(true);
 
     // Initialize the SD card
