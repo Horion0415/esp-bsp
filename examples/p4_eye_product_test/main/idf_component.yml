@@ -9,6 +9,8 @@ dependencies:
     version: "0.*"
     public: true
 
+  espressif/knob: "^1.0.0"
+
   # espressif/esp_wifi_remote:
   #   version: "*"
     

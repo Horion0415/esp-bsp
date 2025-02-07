@@ -68,6 +68,9 @@
 #define BSP_LCD_RST           (GPIO_NUM_15)
 #define BSP_LCD_BACKLIGHT     (GPIO_NUM_20)
 
+#define BSP_KNOB_A            (GPIO_NUM_48)
+#define BSP_KNOB_B            (GPIO_NUM_47)
+
 // /* Camera */
 #define BSP_CAMERA_XCLK      (GPIO_NUM_15)
 #define BSP_CAMERA_PCLK      (GPIO_NUM_13)

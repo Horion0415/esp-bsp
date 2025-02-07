@@ -17,6 +17,7 @@
 #include "driver/ppa.h"
 #include "driver/jpeg_encode.h"
 #include "esp_cam_sensor_xclk.h"
+#include "iot_knob.h"
 #include "app_video.h"
 #include "app_audio.h"
 
@@ -26,6 +27,9 @@
 
 #define XCLK_OUTPUT_FREQUENCY   (24000000) // Frequency in Hertz. Set frequency at 10MHz
 #define XCLK_OUTPUT_IO          (11) // Define the output GPIO
+
+#define SCALE_LEVELS 15                   // 总档位数
+#define STEPS_PER_LEVEL 6                 // Steps needed for each level
 
 static ppa_client_handle_t ppa_srm_handle = NULL;
 static size_t data_cache_line_size = 0;
@@ -45,6 +49,10 @@ static int fps_count;
 static int64_t start_time;
 #endif
 
+static int scale_levels = SCALE_LEVELS;
+static int scale_level_res[SCALE_LEVELS] = {1, 2, 4, 5, 8, 10, 16, 20, 40, 60, 80, 120, 240, 480, 960};
+static int knob_count = (SCALE_LEVELS - 1) * STEPS_PER_LEVEL;
+
 extern void example_lvgl_demo_ui(lv_obj_t *scr);
 static void camera_video_frame_operation(uint8_t *camera_buf, uint8_t camera_buf_index, uint32_t camera_buf_hes, uint32_t camera_buf_ves, size_t camera_buf_len);
 
@@ -62,8 +70,36 @@ static void btn_handler(void *button_handle, void *usr_data)
     }
 }
 
+static int get_current_level(int count)
+{
+    return (count / STEPS_PER_LEVEL) + 1;
+}
+
+static void knob_left_cb(void *arg, void *data)
+{
+    knob_handle_t knob = (knob_handle_t)arg;
+    knob_count--;
+    if (knob_count < 0) {
+        knob_count = 0;
+    }
+    scale_levels = get_current_level(knob_count);
+    ESP_LOGI(TAG, "Current level: %d", scale_levels);
+}
+
+static void knob_right_cb(void *arg, void *data)
+{
+    knob_handle_t knob = (knob_handle_t)arg;
+    knob_count++;
+    if (knob_count > (SCALE_LEVELS * STEPS_PER_LEVEL - 1)) {
+        knob_count = SCALE_LEVELS * STEPS_PER_LEVEL - 1;
+    }
+    scale_levels = get_current_level(knob_count);
+    ESP_LOGI(TAG, "Current level: %d", scale_levels);
+}
+
 void app_main(void)
 {
+    // Initialize the LEDs
     ESP_LOGI(TAG, "LEDs initialized");
     ESP_ERROR_CHECK(bsp_leds_init());
 
@@ -97,6 +133,24 @@ void app_main(void)
 
     jpg_buf_240p = (uint8_t*)jpeg_alloc_encoder_mem(640 * 480 * 2 / 10, &rx_mem_cfg, &rx_buffer_size); // Assume that compression ratio of 10 to 1
     assert(jpg_buf_240p != NULL);
+
+    // Initialize knob
+    knob_config_t cfg = {
+        .default_direction = 0,
+        .gpio_encoder_a = BSP_KNOB_A,
+        .gpio_encoder_b = BSP_KNOB_B,
+    };
+
+    // Create knob instance
+     knob_handle_t knob = iot_knob_create(&cfg);
+    if (knob == NULL) {
+        ESP_LOGE(TAG, "Failed to create knob");
+        return;
+    }
+
+    // Register callback functions
+    iot_knob_register_cb(knob, KNOB_LEFT, knob_left_cb, NULL);
+    iot_knob_register_cb(knob, KNOB_RIGHT, knob_right_cb, NULL);
 
     esp_cam_sensor_xclk_handle_t xclk_handle = NULL;
     esp_cam_sensor_xclk_config_t cam_xclk_config = {
@@ -183,44 +237,19 @@ static void camera_video_frame_operation(uint8_t *camera_buf, uint8_t camera_buf
     }
 #endif
 
-#if 0
-    ppa_srm_oper_config_t srm_config = {
-        .in.buffer = camera_buf,
-        .in.pic_w = camera_buf_hes,
-        .in.pic_h = camera_buf_ves,
-        .in.block_w = BSP_LCD_H_RES * 2,
-        .in.block_h = BSP_LCD_V_RES * 2,
-        .in.block_offset_x = 0,
-        .in.block_offset_y = 0,
-        .in.srm_cm = APP_VIDEO_FMT == APP_VIDEO_FMT_RGB565 ? PPA_SRM_COLOR_MODE_RGB565 : PPA_SRM_COLOR_MODE_RGB888,
-        .out.buffer = canvas_buf[camera_buf_index],
-        // .out.buffer_size = ALIGN_UP(BSP_LCD_H_RES * BSP_LCD_V_RES * (APP_VIDEO_FMT == APP_VIDEO_FMT_RGB565 ? 2 : 3), data_cache_line_size),
-        .out.buffer_size = BSP_LCD_H_RES * BSP_LCD_V_RES * (APP_VIDEO_FMT == APP_VIDEO_FMT_RGB565 ? 2 : 3),
-        .out.pic_w = BSP_LCD_H_RES,
-        .out.pic_h = BSP_LCD_V_RES,
-        .out.block_offset_x = 0,
-        .out.block_offset_y = 0,
-        .out.srm_cm = APP_VIDEO_FMT == APP_VIDEO_FMT_RGB565 ? PPA_SRM_COLOR_MODE_RGB565 : PPA_SRM_COLOR_MODE_RGB888,
-        .rotation_angle = PPA_SRM_ROTATION_ANGLE_0,
-        .scale_x = 0.5, 
-        .scale_y = 0.5,
-        .rgb_swap = 1,
-        .byte_swap = 1,
-        .mode = PPA_TRANS_MODE_BLOCKING,
-    };
+    uint16_t block_w = scale_level_res[scale_levels - 1];
+    uint16_t block_h = scale_level_res[scale_levels - 1];
+    float scale_x = (float)BSP_LCD_H_RES / block_w;
+    float scale_y = (float)BSP_LCD_V_RES / block_h;
 
-    ESP_ERROR_CHECK(ppa_do_scale_rotate_mirror(ppa_srm_handle, &srm_config));
-    
-    lv_canvas_set_buffer(cam_canvas, canvas_buf[camera_buf_index], BSP_LCD_H_RES, BSP_LCD_V_RES, LV_IMG_CF_TRUE_COLOR);
-#else
     ppa_srm_oper_config_t srm_config = {
         .in.buffer = camera_buf,
         .in.pic_w = camera_buf_hes,
         .in.pic_h = camera_buf_ves,
-        .in.block_w = camera_buf_hes,
-        .in.block_h = camera_buf_ves,
-        .in.block_offset_x = 0,
-        .in.block_offset_y = 0,
+        .in.block_w = block_w,
+        .in.block_h = block_h,
+        .in.block_offset_x = (camera_buf_hes - block_w) / 2,
+        .in.block_offset_y = (camera_buf_ves - block_h) / 2,
         .in.srm_cm = APP_VIDEO_FMT == APP_VIDEO_FMT_RGB565 ? PPA_SRM_COLOR_MODE_RGB565 : PPA_SRM_COLOR_MODE_RGB888,
         .out.buffer = canvas_buf[camera_buf_index],
         .out.buffer_size = ALIGN_UP(BSP_LCD_H_RES * BSP_LCD_V_RES * (APP_VIDEO_FMT == APP_VIDEO_FMT_RGB565 ? 2 : 3), data_cache_line_size),
@@ -230,21 +259,21 @@ static void camera_video_frame_operation(uint8_t *camera_buf, uint8_t camera_buf
         .out.block_offset_y = 0,
         .out.srm_cm = APP_VIDEO_FMT == APP_VIDEO_FMT_RGB565 ? PPA_SRM_COLOR_MODE_RGB565 : PPA_SRM_COLOR_MODE_RGB888,
         .rotation_angle = PPA_SRM_ROTATION_ANGLE_0,
-        .scale_x = 1, 
-        .scale_y = 1,
-        .rgb_swap = 0,
-        .byte_swap = 1,
+        .scale_x = scale_x, 
+        .scale_y = scale_y,
         .mode = PPA_TRANS_MODE_BLOCKING,
     };
 
-    srm_config.in.block_w = (camera_buf_hes > BSP_LCD_H_RES) ? BSP_LCD_H_RES : camera_buf_hes;
-    srm_config.in.block_h = (camera_buf_ves > BSP_LCD_V_RES) ? BSP_LCD_V_RES : camera_buf_ves;
-
     ESP_ERROR_CHECK(ppa_do_scale_rotate_mirror(ppa_srm_handle, &srm_config));
+    
+    uint16_t *canvas_buf_ptr = (uint16_t *)canvas_buf[camera_buf_index];
+    for(int i =0 ;i< BSP_LCD_H_RES * BSP_LCD_V_RES; i++) {
+        uint16_t swap16 = *(canvas_buf_ptr + i);
+        swap16 = (swap16 >> 8) | (swap16 << 8);
+        *(canvas_buf_ptr + i) = swap16;
+    }
 
-    lv_canvas_set_buffer(cam_canvas, canvas_buf[camera_buf_index], srm_config.in.block_w, srm_config.in.block_h, LV_IMG_CF_TRUE_COLOR);
-
-#endif
+    lv_canvas_set_buffer(cam_canvas, canvas_buf[camera_buf_index], BSP_LCD_H_RES, BSP_LCD_V_RES, LV_IMG_CF_TRUE_COLOR);
 
     if(!jpg_save_flag) {
         jpg_save_flag = !jpg_save_flag;
