@@ -393,6 +393,8 @@ esp_err_t app_smtp_perform_authentication(void)
     ret = write_ssl_and_get_response(&ssl, (unsigned char *) buf, len);
     VALIDATE_MBEDTLS_RETURN(ret, 200, 399);
 
+    ESP_LOGI(TAG, "Write QUIT");
+
     return ESP_OK;
 }
 
