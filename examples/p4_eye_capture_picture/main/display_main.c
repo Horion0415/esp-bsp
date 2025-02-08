@@ -274,6 +274,7 @@ void app_main(void)
     //     }
     // }
 
+#if 1
     // Initialize the led
     ESP_ERROR_CHECK(bsp_leds_init());
 
@@ -316,14 +317,14 @@ void app_main(void)
     };
     ESP_ERROR_CHECK(gpio_config(&sdcard_io_config));
     set_sdcard_power(true);
+#endif
 
     // Initialize the SD card
-    ESP_LOGI(TAG, "Mounting SD card");
-    ESP_ERROR_CHECK(bsp_sdcard_mount());
-    ESP_LOGI(TAG, "SD card mounted");
+    // ESP_ERROR_CHECK(bsp_sdcard_mount());
+    // ESP_LOGI(TAG, "SD card mounted");
 
-    // Initialize the USB MSC
-    app_usb_msc_init();
+    // // Initialize the USB MSC
+    // app_usb_msc_init();
 
     // Initialize the display
     ESP_LOGI(TAG, "Initializing display");
@@ -352,6 +353,7 @@ void app_main(void)
     button_handle_t btns[BSP_BUTTON_NUM];
     ESP_ERROR_CHECK(bsp_iot_button_create(btns, NULL, BSP_BUTTON_NUM));
     
+#if 1
     // Initialize the I2C
     ESP_ERROR_CHECK(bsp_i2c_init());
     bsp_get_i2c_bus_handle(&i2c_handle);
@@ -369,6 +371,7 @@ void app_main(void)
         ESP_LOGE(TAG, "video cam open failed");
         return;
     }
+#endif
 
     // ESP_ERROR_CHECK(esp_cache_get_alignment(MALLOC_CAP_SPIRAM, &data_cache_line_size));
     // for (int i = 0; i < EXAMPLE_CAM_BUF_NUM; i++) {
@@ -443,22 +446,24 @@ void app_main(void)
     //     esp_deep_sleep_start();
     // }
 #if 1
-    wakeup_time_sec = 5;
-    deep_sleep_register_rtc_timer_wakeup();
-    
-    // // enter deep sleep
+    // enter deep sleep
     set_slave_power(false);
     
     ESP_ERROR_CHECK(esp_cam_sensor_xclk_stop(xclk_handle));
     set_camera_power(false);
 
-    bsp_sdcard_unmount();
-    set_sdcard_power(false);
+    // bsp_sdcard_unmount();
+    // set_sdcard_power(false);
     
     bsp_display_backlight_off();
     esp_lcd_panel_disp_sleep(panel_handle, true);
 
+    // esp_sleep_config_gpio_isolate();
     esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_PERIPH, ESP_PD_OPTION_ON);
+    // esp_sleep_pd_config(ESP_PD_DOMAIN_VDDSDIO, ESP_PD_OPTION_ON);
+    wakeup_time_sec = 5;
+    deep_sleep_register_rtc_timer_wakeup();
+
     esp_deep_sleep_start();
 #endif
 }
