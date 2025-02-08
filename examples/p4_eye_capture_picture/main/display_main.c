@@ -18,7 +18,6 @@
 #include "esp_sleep.h"
 
 #include "driver/jpeg_encode.h"
-#include "driver/jpeg_encode.h"
 
 #include <dirent.h> 
 #include <fcntl.h>
@@ -38,7 +37,7 @@
 #include "app_video.h"
 #include "app_usb_msc.h"
 
-#define P4_EYE_C6_EN_PIN                           (GPIO_NUM_34)
+#define P4_EYE_C6_EN_PIN                           (GPIO_NUM_9)
 #define P4_EYE_CAMERA_EN_PIN                       (GPIO_NUM_26)
 #define P4_EYE_SDCARD_EN_PIN                       (GPIO_NUM_46)
 #define CAPTURE_INDEX                              (5)
@@ -72,7 +71,6 @@ static const char *TAG = "main";
 static void deep_sleep_register_rtc_timer_wakeup(void)
 {
     printf("Enabling timer wakeup, %ds\n", wakeup_time_sec);
-
     ESP_ERROR_CHECK(esp_sleep_enable_timer_wakeup(wakeup_time_sec * 1000000));
 }
 
@@ -113,77 +111,77 @@ static void set_camera_power(bool on)
 
 static void set_sdcard_power(bool on)
 {
-    gpio_set_level(P4_EYE_SDCARD_EN_PIN, on);
+    gpio_set_level(P4_EYE_SDCARD_EN_PIN, !on);
+    vTaskDelay(1000);
 }
 
 static void video_capture_task(void *arg)
 {
-    int video_fd = *((int *)arg);
+    // int video_fd = *((int *)arg);
 
-    struct v4l2_buffer v4l2_buf;
+    // struct v4l2_buffer v4l2_buf;
 
-    char file_name[64];
-    uint32_t camera_buf_hes = 0;
-    uint32_t camera_buf_ves = 0;
+    // char file_name[64];
+    // uint32_t camera_buf_hes = 0;
+    // uint32_t camera_buf_ves = 0;
 
-    int image_count = get_next_file_index("/sdcard/pic_save");
+    // int image_count = get_next_file_index("/sdcard/pic_save");
 
-    video_get_hes_ves(&camera_buf_hes, &camera_buf_ves);
+    // video_get_hes_ves(&camera_buf_hes, &camera_buf_ves);
 
-    jpeg_encode_cfg_t enc_config = {
-        .src_type = JPEG_ENCODE_IN_FORMAT_YUV422,
-        .sub_sample = JPEG_DOWN_SAMPLING_YUV422,
-        .image_quality = 50,
-        .width = camera_buf_hes,
-        .height = camera_buf_ves,
-    };
+    // jpeg_encode_cfg_t enc_config = {
+    //     .src_type = JPEG_ENCODE_IN_FORMAT_YUV422,
+    //     .sub_sample = JPEG_DOWN_SAMPLING_YUV422,
+    //     .image_quality = 50,
+    //     .width = camera_buf_hes,
+    //     .height = camera_buf_ves,
+    // };
 
     uint8_t capture_index = 0;
 
     while(1) {
         capture_index++;
 
-        memset(&v4l2_buf, 0, sizeof(v4l2_buf));
-        v4l2_buf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-        v4l2_buf.memory = V4L2_MEMORY_USERPTR;
+        // memset(&v4l2_buf, 0, sizeof(v4l2_buf));
+        // v4l2_buf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+        // v4l2_buf.memory = V4L2_MEMORY_USERPTR;
 
-        int res = ioctl(video_fd, VIDIOC_DQBUF, &v4l2_buf);
-        if (res != 0) {
-            ESP_LOGE(TAG, "failed to receive video frame");
-        }
+        // int res = ioctl(video_fd, VIDIOC_DQBUF, &v4l2_buf);
+        // if (res != 0) {
+        //     ESP_LOGE(TAG, "failed to receive video frame");
+        // }
 
-        v4l2_buf.m.userptr = (unsigned long)camera_buf[v4l2_buf.index];
-        v4l2_buf.length = app_video_get_buf_size();
+        // v4l2_buf.m.userptr = (unsigned long)camera_buf[v4l2_buf.index];
+        // v4l2_buf.length = app_video_get_buf_size();
 
         if (capture_index == CAPTURE_INDEX) {
             bsp_led_set(BSP_LED_WHITE, 1);
 
-            ESP_ERROR_CHECK(jpeg_encoder_process(jpeg_handle, &enc_config, camera_buf[v4l2_buf.index], app_video_get_buf_size(), jpg_buf, rx_buffer_size, &jpg_size));
+            // ESP_ERROR_CHECK(jpeg_encoder_process(jpeg_handle, &enc_config, camera_buf[v4l2_buf.index], app_video_get_buf_size(), jpg_buf, rx_buffer_size, &jpg_size));
 
-            snprintf(file_name, sizeof(file_name), "/sdcard/pic_save/OUTJPG_%d.JPG", image_count++);        
+            // snprintf(file_name, sizeof(file_name), "/sdcard/pic_save/OUTJPG_%d.JPG", image_count++);        
 
-            FILE *file_jpg = fopen(file_name, "wb");
-            ESP_LOGI(TAG, "Writing jpg to %s", file_name);
-            if (file_jpg == NULL) {
-                ESP_LOGE(TAG, "fopen file_jpg error");
-            }
+            // FILE *file_jpg = fopen(file_name, "wb");
+            // ESP_LOGI(TAG, "Writing jpg to %s", file_name);
+            // if (file_jpg == NULL) {
+            //     ESP_LOGE(TAG, "fopen file_jpg error");
+            // }
 
-            fwrite(jpg_buf, 1, jpg_size, file_jpg);
-            fclose(file_jpg);
+            // fwrite(jpg_buf, 1, jpg_size, file_jpg);
+            // fclose(file_jpg);
+            vTaskDelay(1000);
         }
 
-        if (ioctl(video_fd, VIDIOC_QBUF, &v4l2_buf) != 0) {
-            ESP_LOGE(TAG, "failed to free video frame");
-        }
+        // if (ioctl(video_fd, VIDIOC_QBUF, &v4l2_buf) != 0) {
+        //     ESP_LOGE(TAG, "failed to free video frame");
+        // }
 
         if(capture_index == CAPTURE_INDEX) {
             bsp_led_set(BSP_LED_WHITE, 0);
-
-            set_camera_power(false);
-            ESP_ERROR_CHECK(esp_cam_sensor_xclk_stop(xclk_handle));
-
-            gpio_hold_en(P4_EYE_CAMERA_EN_PIN);
-            gpio_deep_sleep_hold_en();
+    
+            // set_camera_poweer(false);
+            // ESP_ERROR_CHECK(esp_cam_sensor_xclk_stop(xclk_handle));
+            // vTaskDelay(1000);
 
             // enter deep sleep
             esp_deep_sleep_start();
@@ -202,18 +200,25 @@ static void count_down_timer(lv_timer_t * timer)
         
         lv_timer_del(timer);
 
-        bsp_display_backlight_off();
+        // bsp_display_backlight_off();
 
         esp_restart();
     } else {
-        lv_label_set_text_fmt(file_label, "Starting shoot");
-        lv_label_set_text_fmt(time_label, "%d", count_down);
+        // lv_label_set_text_fmt(file_label, "Starting shoot");
+        // lv_label_set_text_fmt(time_label, "%d", count_down);
     }
 }
 
 static void shutter_btn_handler(void *button_handle, void *usr_data)
 {
-    lv_timer_create(count_down_timer, 1000, NULL);
+    // // lv_timer_create(count_down_timer, 1000, NULL);
+    // shoot_flag = true;
+    // nvs_set_i8(nvs_save_handle, "shoot_flag", shoot_flag);
+
+    // wakeup_time_sec = 5;
+    // nvs_set_i8(nvs_save_handle, "wakeup_time_sec", wakeup_time_sec);
+    
+    // esp_restart();
 }
 
 static void increase_btn_handler(void *button_handle, void *usr_data)
@@ -222,7 +227,7 @@ static void increase_btn_handler(void *button_handle, void *usr_data)
     if(wakeup_time_sec > 60) {
         wakeup_time_sec = 60;
     }
-    lv_label_set_text_fmt(time_label, "Timer set to: %d", wakeup_time_sec);
+    // lv_label_set_text_fmt(time_label, "Timer set to: %d", wakeup_time_sec);
     nvs_set_i8(nvs_save_handle, "wakeup_time_sec", wakeup_time_sec);
 }
 
@@ -232,41 +237,42 @@ static void decrease_btn_handler(void *button_handle, void *usr_data)
     if(wakeup_time_sec < 5) {
         wakeup_time_sec = 5;
     }
-    lv_label_set_text_fmt(time_label, "Timer set to: %d", wakeup_time_sec);
+    // lv_label_set_text_fmt(time_label, "Timer set to: %d", wakeup_time_sec);
     nvs_set_i8(nvs_save_handle, "wakeup_time_sec", wakeup_time_sec);
 }
 
 void app_main(void)
 {   
-    // Initialize NVS
-    esp_err_t err = nvs_flash_init();
-    if (err == ESP_ERR_NVS_NO_FREE_PAGES || err == ESP_ERR_NVS_NEW_VERSION_FOUND) {
-        ESP_ERROR_CHECK(nvs_flash_erase());
-        err = nvs_flash_init();
-    }
-    ESP_ERROR_CHECK(err);
+    ESP_LOGW(TAG, "app_main");
+    // // Initialize NVS
+    // esp_err_t err = nvs_flash_init();
+    // if (err == ESP_ERR_NVS_NO_FREE_PAGES || err == ESP_ERR_NVS_NEW_VERSION_FOUND) {
+    //     ESP_ERROR_CHECK(nvs_flash_erase());
+    //     err = nvs_flash_init();
+    // }
+    // ESP_ERROR_CHECK(err);
 
-    err = nvs_open("storage", NVS_READWRITE, &nvs_save_handle);
-    if (err != ESP_OK) {
-        printf("Error (%s) opening NVS handle!\n", esp_err_to_name(err));
-    } else {
-        printf("Done\n");
+    // err = nvs_open("storage", NVS_READWRITE, &nvs_save_handle);
+    // if (err != ESP_OK) {
+    //     printf("Error (%s) opening NVS handle!\n", esp_err_to_name(err));
+    // } else {
+    //     printf("Done\n");
 
-        // Read
-        printf("Reading shutter flag from NVS ... ");
-        err |= nvs_get_i8(nvs_save_handle, "wakeup_time_sec", (int8_t *)&wakeup_time_sec);
-        err |= nvs_get_i8(nvs_save_handle, "shoot_flag", (int8_t *)&shoot_flag);
-        switch (err) {
-            case ESP_OK:
-                ESP_LOGI(TAG, "Done\n");
-                break;
-            case ESP_ERR_NVS_NOT_FOUND:
-                printf("The value is not initialized yet!\n");
-                break;
-            default :
-                printf("Error (%s) reading!\n", esp_err_to_name(err));
-        }
-    }
+    //     // Read
+    //     printf("Reading shutter flag from NVS ... ");
+    //     err |= nvs_get_i8(nvs_save_handle, "wakeup_time_sec", (int8_t *)&wakeup_time_sec);
+    //     err |= nvs_get_i8(nvs_save_handle, "shoot_flag", (int8_t *)&shoot_flag);
+    //     switch (err) {
+    //         case ESP_OK:
+    //             ESP_LOGI(TAG, "Done\n");
+    //             break;
+    //         case ESP_ERR_NVS_NOT_FOUND:
+    //             printf("The value is not initialized yet!\n");
+    //             break;
+    //         default :
+    //             printf("Error (%s) reading!\n", esp_err_to_name(err));
+    //     }
+    // }
 
     // Initialize the led
     ESP_ERROR_CHECK(bsp_leds_init());
@@ -279,6 +285,7 @@ void app_main(void)
         }
     };
     ESP_ERROR_CHECK(esp_cam_sensor_xclk_allocate(ESP_CAM_SENSOR_XCLK_ESP_CLOCK_ROUTER, &xclk_handle));
+    ESP_ERROR_CHECK(esp_cam_sensor_xclk_start(xclk_handle, &cam_xclk_config));
 
     // Initialize the power control
     const gpio_config_t c6_io_config = {
@@ -289,7 +296,6 @@ void app_main(void)
         .intr_type = GPIO_INTR_DISABLE
     };
     ESP_ERROR_CHECK(gpio_config(&c6_io_config));
-    set_slave_power(false);
 
     const gpio_config_t camera_io_config = {
         .pin_bit_mask = BIT64(P4_EYE_CAMERA_EN_PIN),
@@ -299,7 +305,6 @@ void app_main(void)
         .intr_type = GPIO_INTR_DISABLE
     };
     ESP_ERROR_CHECK(gpio_config(&camera_io_config));
-    ESP_ERROR_CHECK(esp_cam_sensor_xclk_start(xclk_handle, &cam_xclk_config));
     set_camera_power(true);
 
     const gpio_config_t sdcard_io_config = {
@@ -310,9 +315,10 @@ void app_main(void)
         .intr_type = GPIO_INTR_DISABLE
     };
     ESP_ERROR_CHECK(gpio_config(&sdcard_io_config));
-    set_sdcard_power(false);
+    set_sdcard_power(true);
 
     // Initialize the SD card
+    ESP_LOGI(TAG, "Mounting SD card");
     ESP_ERROR_CHECK(bsp_sdcard_mount());
     ESP_LOGI(TAG, "SD card mounted");
 
@@ -321,20 +327,26 @@ void app_main(void)
 
     // Initialize the display
     ESP_LOGI(TAG, "Initializing display");
-    bsp_display_start();
-    bsp_display_backlight_off();
+    // bsp_display_start();
+    esp_lcd_panel_handle_t panel_handle;
+    esp_lcd_panel_io_handle_t panel_io_handle;
+    const bsp_display_config_t bsp_disp_cfg = {
+        .max_transfer_sz = BSP_LCD_DRAW_BUFF_SIZE * sizeof(uint16_t),
+    };
+    bsp_display_new(&bsp_disp_cfg, &panel_handle, &panel_io_handle);
+    bsp_display_backlight_on();
 
-    bsp_display_lock(0);
+    // bsp_display_lock(0);
 
-    time_label = lv_label_create(lv_scr_act());
-    lv_obj_align(time_label, LV_ALIGN_CENTER, 0, 0);
-    lv_obj_set_style_text_font(time_label, &lv_font_montserrat_24, 0);
+    // time_label = lv_label_create(lv_scr_act());
+    // lv_obj_align(time_label, LV_ALIGN_CENTER, 0, 0);
+    // lv_obj_set_style_text_font(time_label, &lv_font_montserrat_24, 0);
 
-    file_label = lv_label_create(lv_scr_act());
-    lv_obj_align(file_label, LV_ALIGN_CENTER, 0, -50);
-    lv_obj_set_style_text_font(file_label, &lv_font_montserrat_24, 0);
+    // file_label = lv_label_create(lv_scr_act());
+    // lv_obj_align(file_label, LV_ALIGN_CENTER, 0, -50);
+    // lv_obj_set_style_text_font(file_label, &lv_font_montserrat_24, 0);
 
-    bsp_display_unlock();
+    // bsp_display_unlock();
 
     /* Init Buttons */
     button_handle_t btns[BSP_BUTTON_NUM];
@@ -358,52 +370,95 @@ void app_main(void)
         return;
     }
 
-    ESP_ERROR_CHECK(esp_cache_get_alignment(MALLOC_CAP_SPIRAM, &data_cache_line_size));
-    for (int i = 0; i < EXAMPLE_CAM_BUF_NUM; i++) {
-        camera_buf[i] = heap_caps_aligned_calloc(data_cache_line_size, 1, app_video_get_buf_size(), MALLOC_CAP_SPIRAM);
-        if (camera_buf[i] == NULL) {
-            ESP_LOGE(TAG, "Failed to allocate canvas buffer");
-            return;
-        }
-    }
+    // ESP_ERROR_CHECK(esp_cache_get_alignment(MALLOC_CAP_SPIRAM, &data_cache_line_size));
+    // for (int i = 0; i < EXAMPLE_CAM_BUF_NUM; i++) {
+    //     camera_buf[i] = heap_caps_aligned_calloc(data_cache_line_size, 1, app_video_get_buf_size(), MALLOC_CAP_SPIRAM);
+    //     if (camera_buf[i] == NULL) {
+    //         ESP_LOGE(TAG, "Failed to allocate canvas buffer");
+    //         return;
+    //     }
+    // }
 
-    ESP_LOGI(TAG, "Using user buffer");
-    ESP_ERROR_CHECK(app_video_set_bufs(video_cam_fd0, EXAMPLE_CAM_BUF_NUM, (void*)camera_buf));
+    // ESP_LOGI(TAG, "Using user buffer");
+    // ESP_ERROR_CHECK(app_video_set_bufs(video_cam_fd0, EXAMPLE_CAM_BUF_NUM, (void*)camera_buf));
 
-    ESP_ERROR_CHECK(video_stream_start(video_cam_fd0));
+    // ESP_ERROR_CHECK(video_stream_start(video_cam_fd0));
 
-    // Initialize the JPEG encoder
-    jpeg_encode_engine_cfg_t encode_eng_cfg = {
-        .timeout_ms = 70,
-    };
+    // // Initialize the JPEG encoder
+    // jpeg_encode_engine_cfg_t encode_eng_cfg = {
+    //     .timeout_ms = 70,
+    // };
 
-    ESP_ERROR_CHECK(jpeg_new_encoder_engine(&encode_eng_cfg, &jpeg_handle));
+    // ESP_ERROR_CHECK(jpeg_new_encoder_engine(&encode_eng_cfg, &jpeg_handle));
 
-    jpeg_encode_memory_alloc_cfg_t rx_mem_cfg = {
-        .buffer_direction = JPEG_DEC_ALLOC_OUTPUT_BUFFER,
-    };
+    // jpeg_encode_memory_alloc_cfg_t rx_mem_cfg = {
+    //     .buffer_direction = JPEG_DEC_ALLOC_OUTPUT_BUFFER,
+    // };
 
-    jpg_buf = (uint8_t*)jpeg_alloc_encoder_mem(app_video_get_buf_size() / 10, &rx_mem_cfg, &rx_buffer_size); // Assume that compression ratio of 10 to 1
-    assert(jpg_buf != NULL);
+    // jpg_buf = (uint8_t*)jpeg_alloc_encoder_mem(app_video_get_buf_size() / 10, &rx_mem_cfg, &rx_buffer_size); // Assume that compression ratio of 10 to 1
+    // assert(jpg_buf != NULL);
 
     //register button handlers
     ESP_ERROR_CHECK(iot_button_register_cb(btns[BSP_BUTTON_1], BUTTON_PRESS_DOWN, shutter_btn_handler, NULL));
-    ESP_ERROR_CHECK(iot_button_register_cb(btns[BSP_BUTTON_2], BUTTON_PRESS_DOWN, increase_btn_handler, NULL));
-    ESP_ERROR_CHECK(iot_button_register_cb(btns[BSP_BUTTON_3], BUTTON_PRESS_DOWN, decrease_btn_handler, NULL));
+    // ESP_ERROR_CHECK(iot_button_register_cb(btns[BSP_BUTTON_2], BUTTON_PRESS_DOWN, increase_btn_handler, NULL));
+    // ESP_ERROR_CHECK(iot_button_register_cb(btns[BSP_BUTTON_3], BUTTON_PRESS_DOWN, decrease_btn_handler, NULL));
 
-    if(!app_usb_msc_stage() && shoot_flag) {
-        deep_sleep_register_rtc_timer_wakeup();
+    // if(!app_usb_msc_stage() && shoot_flag) {
+    //     ESP_LOGW(TAG, "Starting video capture task");
+    //     deep_sleep_register_rtc_timer_wakeup();
         
-        xTaskCreatePinnedToCore(video_capture_task, "video capture task", 4 * 1024, &video_cam_fd0, 4, NULL, 0);
-    } else {
-        bsp_display_backlight_on();
+    //     xTaskCreatePinnedToCore(video_capture_task, "video capture task", 8 * 1024, NULL, 4, NULL, 0);
+    // } else {
+    //     // bsp_display_backlight_on();
 
-        shoot_flag = false;
-        nvs_set_i8(nvs_save_handle, "shoot_flag", shoot_flag);
+    //     shoot_flag = false;
+    //     nvs_set_i8(nvs_save_handle, "shoot_flag", shoot_flag);
 
-        bsp_display_lock(0);
-        lv_label_set_text_fmt(file_label, "Set shooting timer");
-        lv_label_set_text_fmt(time_label, "Timer set to: %d", wakeup_time_sec);
-        bsp_display_unlock();
-    }
+    //     // bsp_display_lock(0);
+    //     // lv_label_set_text_fmt(file_label, "Set shooting timer");
+    //     // lv_label_set_text_fmt(time_label, "Timer set to: %d", wakeup_time_sec);
+    //     // bsp_display_unlock();
+    // }
+
+    // if(!shoot_flag) {
+    //     ESP_LOGI(TAG, "restarting");
+
+    //     shoot_flag = true;
+    //     nvs_set_i8(nvs_save_handle, "shoot_flag", shoot_flag);
+        
+    //     wakeup_time_sec = 15;
+    //     nvs_set_i8(nvs_save_handle, "wakeup_time_sec", wakeup_time_sec);
+
+    //     deep_sleep_register_rtc_timer_wakeup();
+
+    //     vTaskDelay(1000);
+        
+    //     esp_restart();
+    // } else {
+    //     ESP_LOGI(TAG, "deep sleep");
+
+    //     bsp_led_set(BSP_LED_WHITE, 0);
+
+    //     // enter deep sleep
+    //     esp_deep_sleep_start();
+    // }
+#if 1
+    wakeup_time_sec = 5;
+    deep_sleep_register_rtc_timer_wakeup();
+    
+    // // enter deep sleep
+    set_slave_power(false);
+    
+    ESP_ERROR_CHECK(esp_cam_sensor_xclk_stop(xclk_handle));
+    set_camera_power(false);
+
+    bsp_sdcard_unmount();
+    set_sdcard_power(false);
+    
+    bsp_display_backlight_off();
+    esp_lcd_panel_disp_sleep(panel_handle, true);
+
+    esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_PERIPH, ESP_PD_OPTION_ON);
+    esp_deep_sleep_start();
+#endif
 }

@@ -10,3 +10,9 @@ dependencies:
     public: true
 
   espressif/esp_tinyusb: "^1.4.2"
+
+  espressif/esp_wifi_remote:
+    version: "*"
+    
+  espressif/esp_hosted:
+    version: "*"

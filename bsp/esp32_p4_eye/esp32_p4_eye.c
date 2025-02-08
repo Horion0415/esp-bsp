@@ -68,6 +68,8 @@ static const audio_codec_data_if_t *i2s_pdm_data_if = NULL;  /* Codec data inter
 sdmmc_card_t *bsp_sdcard = NULL;    // Global uSD card handler
 static bool i2c_initialized = false;
 
+static sd_pwr_ctrl_handle_t pwr_ctrl_handle = NULL;
+
 /**
  * @brief LCD panel initialization commands.
  *
@@ -207,7 +209,7 @@ esp_err_t bsp_sdcard_mount(void)
     sd_pwr_ctrl_ldo_config_t ldo_config = {
         .ldo_chan_id = 4,
     };
-    sd_pwr_ctrl_handle_t pwr_ctrl_handle = NULL;
+
     esp_err_t ret = sd_pwr_ctrl_new_on_chip_ldo(&ldo_config, &pwr_ctrl_handle);
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "Failed to create a new on-chip LDO power control driver");
@@ -228,7 +230,14 @@ esp_err_t bsp_sdcard_mount(void)
 
 esp_err_t bsp_sdcard_unmount(void)
 {
-    return esp_vfs_fat_sdcard_unmount(BSP_SD_MOUNT_POINT, bsp_sdcard);
+    esp_vfs_fat_sdcard_unmount(BSP_SD_MOUNT_POINT, bsp_sdcard);
+    
+    esp_err_t ret = sd_pwr_ctrl_del_on_chip_ldo(pwr_ctrl_handle);
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to delete the on-chip LDO power control driver");
+    }
+
+    return ret;
 }
 
 esp_err_t bsp_get_sdcard_handle(sdmmc_card_t **card)
