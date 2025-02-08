@@ -142,12 +142,10 @@ static void gpio_init(void)
     rtc_gpio_hold_dis(P4_EYE_C6_EN_PIN);
     rtc_gpio_hold_dis(P4_EYE_CAMERA_EN_PIN);
 
-    gpio_set_level(P4_EYE_SDCARD_EN_PIN, 1);
+    gpio_set_level(P4_EYE_SDCARD_EN_PIN, 0);
 
-    rtc_gpio_set_level(P4_EYE_C6_EN_PIN, 1);
     rtc_gpio_set_level(P4_EYE_CAMERA_EN_PIN, 1);
 
-    rtc_gpio_hold_en(P4_EYE_C6_EN_PIN);
     rtc_gpio_hold_en(P4_EYE_CAMERA_EN_PIN);
 
     gpio_set_level(P4_EYE_RST_PIN, 1);
