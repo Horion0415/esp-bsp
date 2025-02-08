@@ -160,8 +160,6 @@ bool app_usb_msc_stage(void)
     return usb_msc_exposed;
 }
 
-
-
 void app_usb_msc_init(void)
 {
     ESP_LOGI(TAG, "Initializing storage...");

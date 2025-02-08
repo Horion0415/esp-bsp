@@ -33,12 +33,13 @@
 #include "bsp/esp-bsp.h"
 
 #include "driver/gpio.h"
+#include "driver/rtc_io.h"
 
 #include "app_video.h"
 #include "app_usb_msc.h"
 
 #define P4_EYE_C6_EN_PIN                           (GPIO_NUM_9)
-#define P4_EYE_CAMERA_EN_PIN                       (GPIO_NUM_26)
+#define P4_EYE_CAMERA_EN_PIN                       (GPIO_NUM_26 | GPIO_NUM_12)
 #define P4_EYE_SDCARD_EN_PIN                       (GPIO_NUM_46)
 #define CAPTURE_INDEX                              (5)
 
@@ -289,14 +290,14 @@ void app_main(void)
     ESP_ERROR_CHECK(esp_cam_sensor_xclk_start(xclk_handle, &cam_xclk_config));
 
     // Initialize the power control
-    const gpio_config_t c6_io_config = {
-        .pin_bit_mask = BIT64(P4_EYE_C6_EN_PIN),
-        .mode = GPIO_MODE_OUTPUT, 
-        .pull_up_en = GPIO_PULLUP_DISABLE,
-        .pull_down_en = GPIO_PULLDOWN_DISABLE,
-        .intr_type = GPIO_INTR_DISABLE
-    };
-    ESP_ERROR_CHECK(gpio_config(&c6_io_config));
+    // const gpio_config_t c6_io_config = {
+    //     .pin_bit_mask = BIT64(P4_EYE_C6_EN_PIN),
+    //     .mode = GPIO_MODE_OUTPUT, 
+    //     .pull_up_en = GPIO_PULLUP_DISABLE,
+    //     .pull_down_en = GPIO_PULLDOWN_DISABLE,
+    //     .intr_type = GPIO_INTR_DISABLE
+    // };
+    // ESP_ERROR_CHECK(gpio_config(&c6_io_config));
 
     const gpio_config_t camera_io_config = {
         .pin_bit_mask = BIT64(P4_EYE_CAMERA_EN_PIN),
@@ -320,10 +321,10 @@ void app_main(void)
 #endif
 
     // Initialize the SD card
-    // ESP_ERROR_CHECK(bsp_sdcard_mount());
-    // ESP_LOGI(TAG, "SD card mounted");
+    ESP_ERROR_CHECK(bsp_sdcard_mount());
+    ESP_LOGI(TAG, "SD card mounted");
 
-    // // Initialize the USB MSC
+    // Initialize the USB MSC
     // app_usb_msc_init();
 
     // Initialize the display
@@ -371,21 +372,21 @@ void app_main(void)
         ESP_LOGE(TAG, "video cam open failed");
         return;
     }
+
+    ESP_ERROR_CHECK(esp_cache_get_alignment(MALLOC_CAP_SPIRAM, &data_cache_line_size));
+    for (int i = 0; i < EXAMPLE_CAM_BUF_NUM; i++) {
+        camera_buf[i] = heap_caps_aligned_calloc(data_cache_line_size, 1, app_video_get_buf_size(), MALLOC_CAP_SPIRAM);
+        if (camera_buf[i] == NULL) {
+            ESP_LOGE(TAG, "Failed to allocate canvas buffer");
+            return;
+        }
+    }
+
+    ESP_LOGI(TAG, "Using user buffer");
+    ESP_ERROR_CHECK(app_video_set_bufs(video_cam_fd0, EXAMPLE_CAM_BUF_NUM, (void*)camera_buf));
+
+    ESP_ERROR_CHECK(video_stream_start(video_cam_fd0));
 #endif
-
-    // ESP_ERROR_CHECK(esp_cache_get_alignment(MALLOC_CAP_SPIRAM, &data_cache_line_size));
-    // for (int i = 0; i < EXAMPLE_CAM_BUF_NUM; i++) {
-    //     camera_buf[i] = heap_caps_aligned_calloc(data_cache_line_size, 1, app_video_get_buf_size(), MALLOC_CAP_SPIRAM);
-    //     if (camera_buf[i] == NULL) {
-    //         ESP_LOGE(TAG, "Failed to allocate canvas buffer");
-    //         return;
-    //     }
-    // }
-
-    // ESP_LOGI(TAG, "Using user buffer");
-    // ESP_ERROR_CHECK(app_video_set_bufs(video_cam_fd0, EXAMPLE_CAM_BUF_NUM, (void*)camera_buf));
-
-    // ESP_ERROR_CHECK(video_stream_start(video_cam_fd0));
 
     // // Initialize the JPEG encoder
     // jpeg_encode_engine_cfg_t encode_eng_cfg = {
@@ -446,24 +447,47 @@ void app_main(void)
     //     esp_deep_sleep_start();
     // }
 #if 1
-    // enter deep sleep
-    set_slave_power(false);
+    // // enter deep sleep
+    // set_slave_power(false);
     
-    ESP_ERROR_CHECK(esp_cam_sensor_xclk_stop(xclk_handle));
-    set_camera_power(false);
+    // 
+    // set_camera_power(false);
 
-    // bsp_sdcard_unmount();
+    bsp_sdcard_unmount();
     // set_sdcard_power(false);
     
     bsp_display_backlight_off();
     esp_lcd_panel_disp_sleep(panel_handle, true);
 
     // esp_sleep_config_gpio_isolate();
-    esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_PERIPH, ESP_PD_OPTION_ON);
+    // esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_PERIPH, ESP_PD_OPTION_ON);
     // esp_sleep_pd_config(ESP_PD_DOMAIN_VDDSDIO, ESP_PD_OPTION_ON);
+
     wakeup_time_sec = 5;
     deep_sleep_register_rtc_timer_wakeup();
 
+    ESP_ERROR_CHECK(esp_cam_sensor_xclk_stop(xclk_handle));
+    // enable power domain
+    esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_PERIPH, ESP_PD_OPTION_ON);
+    esp_sleep_pd_config(ESP_PD_DOMAIN_VDDSDIO, ESP_PD_OPTION_ON);
+    
+    rtc_gpio_init(GPIO_NUM_12);
+    rtc_gpio_init(P4_EYE_C6_EN_PIN);
+
+    rtc_gpio_set_direction(P4_EYE_C6_EN_PIN, RTC_GPIO_MODE_OUTPUT_ONLY);
+    rtc_gpio_pulldown_dis(P4_EYE_C6_EN_PIN);
+    rtc_gpio_pullup_dis(P4_EYE_C6_EN_PIN);
+    rtc_gpio_set_direction(GPIO_NUM_12, RTC_GPIO_MODE_OUTPUT_ONLY);
+    rtc_gpio_pulldown_dis(GPIO_NUM_12);
+    rtc_gpio_pullup_dis(GPIO_NUM_12);
+
+    rtc_gpio_set_level(P4_EYE_C6_EN_PIN, 0);
+    rtc_gpio_set_level(GPIO_NUM_12, 0);
+
+    rtc_gpio_hold_en(P4_EYE_C6_EN_PIN);
+    rtc_gpio_hold_en(GPIO_NUM_12);
+    
+    // enter deep sleep
     esp_deep_sleep_start();
 #endif
 }
