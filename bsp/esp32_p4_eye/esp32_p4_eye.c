@@ -70,6 +70,9 @@ static bool i2c_initialized = false;
 
 static sd_pwr_ctrl_handle_t pwr_ctrl_handle = NULL;
 
+static esp_lcd_panel_io_handle_t io_handle = NULL;
+static esp_lcd_panel_handle_t panel_handle = NULL;
+
 /**
  * @brief LCD panel initialization commands.
  *
@@ -374,8 +377,6 @@ err:
 static lv_disp_t *bsp_display_lcd_init(const bsp_display_cfg_t *cfg)
 {
     assert(cfg != NULL);
-    esp_lcd_panel_io_handle_t io_handle = NULL;
-    esp_lcd_panel_handle_t panel_handle = NULL;
     const bsp_display_config_t bsp_disp_cfg = {
         .max_transfer_sz = BSP_LCD_DRAW_BUFF_SIZE * sizeof(uint16_t),
     };
@@ -430,6 +431,13 @@ lv_disp_t *bsp_display_start(void)
         }
     };
     return bsp_display_start_with_config(&cfg);
+}
+
+esp_err_t bsp_display_enter_sleep(void)
+{
+    esp_lcd_panel_disp_sleep(panel_handle, true);
+    
+    return ESP_OK;
 }
 
 lv_disp_t *bsp_display_start_with_config(const bsp_display_cfg_t *cfg)

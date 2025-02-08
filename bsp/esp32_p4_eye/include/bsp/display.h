@@ -105,6 +105,8 @@ esp_err_t bsp_display_backlight_on(void);
  */
 esp_err_t bsp_display_backlight_off(void);
 
+esp_err_t bsp_display_enter_sleep(void);
+
 #ifdef __cplusplus
 }
 #endif
