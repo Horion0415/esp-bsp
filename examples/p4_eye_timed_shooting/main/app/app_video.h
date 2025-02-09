@@ -143,6 +143,16 @@ esp_err_t app_video_register_frame_operation_cb(app_video_frame_operation_cb_t o
  */
 esp_err_t app_video_wait_video_stop(void);
 
+/**
+ * @brief Close the video device.
+ *
+ * Closes the video device and releases associated resources.
+ *
+ * @param video_fd File descriptor for the video device.
+ * @return ESP_OK on success.
+ */
+esp_err_t app_video_close(int video_fd);
+
 #ifdef __cplusplus
 }
 #endif

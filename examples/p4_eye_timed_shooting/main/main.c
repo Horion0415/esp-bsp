@@ -273,32 +273,32 @@ void app_main(void)
     ESP_ERROR_CHECK(ppa_register_client(&ppa_srm_config, &ppa_srm_handle));
     ESP_ERROR_CHECK(esp_cache_get_alignment(MALLOC_CAP_SPIRAM, &data_cache_line_size));
 
-    // // Initialize the SD card
-    ESP_ERROR_CHECK(bsp_sdcard_mount());
-    ESP_LOGI(TAG, "SD card mounted");
+    // // // // Initialize the SD card
+    // ESP_ERROR_CHECK(bsp_sdcard_mount());
+    // ESP_LOGI(TAG, "SD card mounted");
 
-    if(read_sdcard_config(we_config.ssid, we_config.password)) {
-        ESP_LOGI(TAG, "Read wifi config from SD card: SSID: %s, Password: %s", we_config.ssid, we_config.password);
+    // if(read_sdcard_config(we_config.ssid, we_config.password)) {
+    //     ESP_LOGI(TAG, "Read wifi config from SD card: SSID: %s, Password: %s", we_config.ssid, we_config.password);
 
-        wifi_configured = true;
-    } else {
-        ESP_LOGE(TAG, "Failed to read wifi config from SD card");
+    //     wifi_configured = true;
+    // } else {
+    //     ESP_LOGE(TAG, "Failed to read wifi config from SD card");
 
-        wifi_configured = false;
-    }
+    //     wifi_configured = false;
+    // }
 
-    if(read_email_config(we_config.smtp_server, we_config.port, we_config.sender_email, we_config.sender_password, we_config.recipient_email)) {
-        ESP_LOGI(TAG, "Read email config from SD card: SMTP Server: %s, Port: %s, Sender Email: %s, Sender Password: %s, Recipient Email: %s", we_config.smtp_server, we_config.port, we_config.sender_email, we_config.sender_password, we_config.recipient_email);
+    // if(read_email_config(we_config.smtp_server, we_config.port, we_config.sender_email, we_config.sender_password, we_config.recipient_email)) {
+    //     ESP_LOGI(TAG, "Read email config from SD card: SMTP Server: %s, Port: %s, Sender Email: %s, Sender Password: %s, Recipient Email: %s", we_config.smtp_server, we_config.port, we_config.sender_email, we_config.sender_password, we_config.recipient_email);
 
-        email_configured = true;
-    } else {
-        ESP_LOGE(TAG, "Failed to read email config from SD card");
+    //     email_configured = true;
+    // } else {
+    //     ESP_LOGE(TAG, "Failed to read email config from SD card");
 
-        email_configured = false;
-    }
+    //     email_configured = false;
+    // }
 
-    // // Initialize the USB MSC
-    app_usb_msc_init();
+    // // // Initialize the USB MSC
+    // app_usb_msc_init();
 
     // // Initialize the I2C
     ESP_ERROR_CHECK(bsp_i2c_init());
@@ -311,44 +311,44 @@ void app_main(void)
         return;
     }
 
-    // Open the video device
-    video_cam_fd0 = app_video_open(EXAMPLE_CAM_DEV_PATH, APP_VIDEO_FMT);
-    if (video_cam_fd0 < 0) {
-        ESP_LOGE(TAG, "video cam open failed");
-        return;
-    }
+    // // Open the video device
+    // video_cam_fd0 = app_video_open(EXAMPLE_CAM_DEV_PATH, APP_VIDEO_FMT);
+    // if (video_cam_fd0 < 0) {
+    //     ESP_LOGE(TAG, "video cam open failed");
+    //     return;
+    // }
 
-    // Initialize video capture device
-    ESP_ERROR_CHECK(app_video_set_bufs(video_cam_fd0, EXAMPLE_CAM_BUF_NUM, NULL));
+    // // // Initialize video capture device
+    // ESP_ERROR_CHECK(app_video_set_bufs(video_cam_fd0, EXAMPLE_CAM_BUF_NUM, NULL));
     
-    ESP_ERROR_CHECK(esp_cache_get_alignment(MALLOC_CAP_SPIRAM, &data_cache_line_size));
-    for (int i = 0; i < EXAMPLE_CAM_BUF_NUM; i++) {
-        canvas_buf[i] = heap_caps_aligned_calloc(data_cache_line_size, 1, app_video_get_buf_size(), MALLOC_CAP_SPIRAM);
-        if (canvas_buf[i] == NULL) {
-            ESP_LOGE(TAG, "Failed to allocate canvas buffer");
-            return;
-        }
-    }
+    // ESP_ERROR_CHECK(esp_cache_get_alignment(MALLOC_CAP_SPIRAM, &data_cache_line_size));
+    // for (int i = 0; i < EXAMPLE_CAM_BUF_NUM; i++) {
+    //     canvas_buf[i] = heap_caps_aligned_calloc(data_cache_line_size, 1, app_video_get_buf_size(), MALLOC_CAP_SPIRAM);
+    //     if (canvas_buf[i] == NULL) {
+    //         ESP_LOGE(TAG, "Failed to allocate canvas buffer");
+    //         return;
+    //     }
+    // }
 
-    // Initialize the JPEG encoder
-    jpeg_encode_engine_cfg_t encode_eng_cfg = {
-        .timeout_ms = 70,
-    };
+    // // Initialize the JPEG encoder
+    // jpeg_encode_engine_cfg_t encode_eng_cfg = {
+    //     .timeout_ms = 70,
+    // };
 
-    ESP_ERROR_CHECK(jpeg_new_encoder_engine(&encode_eng_cfg, &jpeg_handle));
+    // ESP_ERROR_CHECK(jpeg_new_encoder_engine(&encode_eng_cfg, &jpeg_handle));
 
-    jpeg_encode_memory_alloc_cfg_t rx_mem_cfg = {
-        .buffer_direction = JPEG_DEC_ALLOC_OUTPUT_BUFFER,
-    };
+    // jpeg_encode_memory_alloc_cfg_t rx_mem_cfg = {
+    //     .buffer_direction = JPEG_DEC_ALLOC_OUTPUT_BUFFER,
+    // };
 
-    jpg_buf = (uint8_t*)jpeg_alloc_encoder_mem(app_video_get_buf_size() / 10, &rx_mem_cfg, &rx_buffer_size); // Assume that compression ratio of 10 to 1
-    assert(jpg_buf != NULL);
+    // jpg_buf = (uint8_t*)jpeg_alloc_encoder_mem(app_video_get_buf_size() / 10, &rx_mem_cfg, &rx_buffer_size); // Assume that compression ratio of 10 to 1
+    // assert(jpg_buf != NULL);
 
-    // Register the video frame operation callback
-    ESP_ERROR_CHECK(app_video_register_frame_operation_cb(camera_video_frame_operation));
+    // // Register the video frame operation callback
+    // ESP_ERROR_CHECK(app_video_register_frame_operation_cb(camera_video_frame_operation));
 
-    // Start the camera stream task
-    ESP_ERROR_CHECK(app_video_stream_task_start(video_cam_fd0, 0));
+    // // Start the camera stream task
+    // ESP_ERROR_CHECK(app_video_stream_task_start(video_cam_fd0, 0));
 
     // Initialize the UI
     bsp_display_lock(0);
@@ -705,13 +705,14 @@ static void gpio_init(void)
 
 static void sleep_init(void)
 {
-    app_video_stream_task_stop(video_cam_fd0);
-    app_video_wait_video_stop();
-    ESP_LOGI(TAG, "Video stream stop");
+    // app_video_stream_task_stop(video_cam_fd0);
+    // app_video_wait_video_stop();
+    // ESP_LOGI(TAG, "Video stream stop");
 
     esp_cam_sensor_xclk_stop(xclk_handle);
+    // app_video_close(video_cam_fd0);
 
-    bsp_sdcard_unmount();
+    // bsp_sdcard_unmount();
 
     bsp_display_backlight_off();
     bsp_display_enter_sleep();

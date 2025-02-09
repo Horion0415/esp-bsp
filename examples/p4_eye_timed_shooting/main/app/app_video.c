@@ -396,3 +396,9 @@ esp_err_t app_video_register_frame_operation_cb(app_video_frame_operation_cb_t o
 
     return ESP_OK;
 }
+
+esp_err_t app_video_close(int video_fd)
+{
+    close(video_fd);
+    return ESP_OK;
+}
