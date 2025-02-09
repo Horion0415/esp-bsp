@@ -16,3 +16,5 @@ dependencies:
     version: "*"
 
   espressif/esp_tinyusb: "^1.4.2"
+
+  espressif/knob: "^1.0.0"

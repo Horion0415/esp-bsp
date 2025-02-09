@@ -27,6 +27,8 @@
 #include "driver/gpio.h"
 #include "esp_sleep.h"
 
+#include "iot_knob.h"
+
 #include "lvgl.h"
 
 #include "app_video.h"
@@ -54,6 +56,9 @@
 
 #define XCLK_OUTPUT_FREQUENCY                      (24000000)       // Frequency in Hertz. Set frequency at 10MHz
 #define XCLK_OUTPUT_IO                             (11)             // Define the output GPIO
+
+#define SCALE_LEVELS 15                             // 总档位数
+#define STEPS_PER_LEVEL 6                           // Steps needed for each level
 
 enum {
     SCREEN_EYE_CAMERA,
@@ -87,6 +92,10 @@ static bool email_configured = false;
 
 static esp_cam_sensor_xclk_handle_t xclk_handle = NULL;
 
+static int scale_levels = SCALE_LEVELS;
+static int scale_level_res[SCALE_LEVELS] = {1, 2, 4, 5, 8, 10, 16, 20, 40, 60, 80, 120, 240, 480, 960};
+static int knob_count = (SCALE_LEVELS - 1) * STEPS_PER_LEVEL;
+
 typedef struct {
     char ssid[32];
     char password[64];
@@ -108,47 +117,33 @@ static void detect_usb_task(void *arg);
 static void wifi_connect_task(void *arg);
 static bool read_sdcard_config(char *ssid, char *password);
 static bool read_email_config(char *smtp_server, char *port, char *sender_email, char *sender_password, char *recipient_email); 
+static void gpio_init(void);
 
-static void gpio_init(void)
+static int get_current_level(int count)
 {
-    const gpio_config_t sdcard_io_config = {
-        .pin_bit_mask = BIT64(P4_EYE_SDCARD_EN_PIN),
-        .mode = GPIO_MODE_OUTPUT, 
-        .pull_up_en = GPIO_PULLUP_DISABLE,
-        .pull_down_en = GPIO_PULLDOWN_DISABLE,
-        .intr_type = GPIO_INTR_DISABLE
-    };
-    ESP_ERROR_CHECK(gpio_config(&sdcard_io_config));
+    return (count / STEPS_PER_LEVEL) + 1;
+}
 
-    const gpio_config_t rst_io_config = {
-        .pin_bit_mask = BIT64(P4_EYE_RST_PIN),
-        .mode = GPIO_MODE_OUTPUT, 
-        .pull_up_en = GPIO_PULLUP_DISABLE,
-        .pull_down_en = GPIO_PULLDOWN_DISABLE,
-        .intr_type = GPIO_INTR_DISABLE
-    };
-    ESP_ERROR_CHECK(gpio_config(&rst_io_config));
+static void knob_left_cb(void *arg, void *data)
+{
+    knob_handle_t knob = (knob_handle_t)arg;
+    knob_count--;
+    if (knob_count < 0) {
+        knob_count = 0;
+    }
+    scale_levels = get_current_level(knob_count);
+    ESP_LOGD(TAG, "Current level: %d", scale_levels);
+}
 
-    esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_PERIPH, ESP_PD_OPTION_ON);
-    esp_sleep_pd_config(ESP_PD_DOMAIN_VDDSDIO, ESP_PD_OPTION_ON);
-    rtc_gpio_init(P4_EYE_CAMERA_EN_PIN);
-    rtc_gpio_init(P4_EYE_C6_EN_PIN);
-    rtc_gpio_set_direction(P4_EYE_C6_EN_PIN, RTC_GPIO_MODE_OUTPUT_ONLY);
-    rtc_gpio_pulldown_dis(P4_EYE_C6_EN_PIN);
-    rtc_gpio_pullup_dis(P4_EYE_C6_EN_PIN);
-    rtc_gpio_set_direction(P4_EYE_CAMERA_EN_PIN, RTC_GPIO_MODE_OUTPUT_ONLY);
-    rtc_gpio_pulldown_dis(P4_EYE_CAMERA_EN_PIN);
-    rtc_gpio_pullup_dis(P4_EYE_CAMERA_EN_PIN);
-    rtc_gpio_hold_dis(P4_EYE_C6_EN_PIN);
-    rtc_gpio_hold_dis(P4_EYE_CAMERA_EN_PIN);
-
-    gpio_set_level(P4_EYE_SDCARD_EN_PIN, 0);
-
-    rtc_gpio_set_level(P4_EYE_CAMERA_EN_PIN, 1);
-
-    rtc_gpio_hold_en(P4_EYE_CAMERA_EN_PIN);
-
-    gpio_set_level(P4_EYE_RST_PIN, 1);
+static void knob_right_cb(void *arg, void *data)
+{
+    knob_handle_t knob = (knob_handle_t)arg;
+    knob_count++;
+    if (knob_count > (SCALE_LEVELS * STEPS_PER_LEVEL - 1)) {
+        knob_count = SCALE_LEVELS * STEPS_PER_LEVEL - 1;
+    }
+    scale_levels = get_current_level(knob_count);
+    ESP_LOGD(TAG, "Current level: %d", scale_levels);
 }
 
 void app_main(void)
@@ -183,6 +178,24 @@ void app_main(void)
                 printf("Error (%s) reading!\n", esp_err_to_name(err));
         }
     }
+
+    // Initialize knob
+    knob_config_t cfg = {
+        .default_direction = 0,
+        .gpio_encoder_a = BSP_KNOB_A,
+        .gpio_encoder_b = BSP_KNOB_B,
+    };
+
+    // Create knob instance
+     knob_handle_t knob = iot_knob_create(&cfg);
+    if (knob == NULL) {
+        ESP_LOGE(TAG, "Failed to create knob");
+        return;
+    }
+
+    // Register callback functions
+    iot_knob_register_cb(knob, KNOB_LEFT, knob_left_cb, NULL);
+    iot_knob_register_cb(knob, KNOB_RIGHT, knob_right_cb, NULL);
 
     // Initialize the xclk
     esp_cam_sensor_xclk_config_t cam_xclk_config = {
@@ -324,14 +337,19 @@ void app_main(void)
 
 static void camera_video_frame_operation(uint8_t *camera_buf, uint8_t camera_buf_index, uint32_t camera_buf_hes, uint32_t camera_buf_ves, size_t camera_buf_len)
 {
+    uint16_t block_w = scale_level_res[scale_levels - 1];
+    uint16_t block_h = scale_level_res[scale_levels - 1];
+    float scale_x = (float)BSP_LCD_H_RES / block_w;
+    float scale_y = (float)BSP_LCD_V_RES / block_h;
+
     ppa_srm_oper_config_t srm_config = {
         .in.buffer = camera_buf,
         .in.pic_w = camera_buf_hes,
         .in.pic_h = camera_buf_ves,
-        .in.block_w = 640,
-        .in.block_h = 640,
-        .in.block_offset_x = (camera_buf_hes - 640) / 2,
-        .in.block_offset_y = (camera_buf_ves - 640) / 2,
+        .in.block_w = block_w,
+        .in.block_h = block_h,
+        .in.block_offset_x = (camera_buf_hes - block_w) / 2,
+        .in.block_offset_y = (camera_buf_ves - block_h) / 2,
         .in.srm_cm = PPA_SRM_COLOR_MODE_RGB565,
         .out.buffer = canvas_buf[camera_buf_index],
         .out.buffer_size = ALIGN_UP(BSP_LCD_H_RES * BSP_LCD_V_RES * 2, data_cache_line_size),
@@ -341,8 +359,8 @@ static void camera_video_frame_operation(uint8_t *camera_buf, uint8_t camera_buf
         .out.block_offset_y = 0,
         .out.srm_cm = PPA_SRM_COLOR_MODE_RGB565,
         .rotation_angle = PPA_SRM_ROTATION_ANGLE_0,
-        .scale_x = 0.375,
-        .scale_y = 0.375,
+        .scale_x = scale_x,
+        .scale_y = scale_y,
         .rgb_swap = 0,
         .byte_swap = 0,
         .mode = PPA_TRANS_MODE_BLOCKING,
@@ -444,6 +462,7 @@ static void wifi_connect_task(void *arg)
         ESP_ERROR_CHECK(app_smtp_perform_authentication());
     }
 
+    ESP_LOGI(TAG, "wifi_connect_task end");
     vTaskDelete(NULL);
 }
 
@@ -586,4 +605,46 @@ bool read_email_config(char *smtp_server, char *port, char *sender_email, char *
 
     fclose(file);
     return (strlen(smtp_server) > 0 && strlen(port) > 0 && strlen(sender_email) > 0 && strlen(sender_password) > 0 && strlen(recipient_email) > 0); // 确保所有配置项不为空
+}
+
+static void gpio_init(void)
+{
+    const gpio_config_t sdcard_io_config = {
+        .pin_bit_mask = BIT64(P4_EYE_SDCARD_EN_PIN),
+        .mode = GPIO_MODE_OUTPUT, 
+        .pull_up_en = GPIO_PULLUP_DISABLE,
+        .pull_down_en = GPIO_PULLDOWN_DISABLE,
+        .intr_type = GPIO_INTR_DISABLE
+    };
+    ESP_ERROR_CHECK(gpio_config(&sdcard_io_config));
+
+    const gpio_config_t rst_io_config = {
+        .pin_bit_mask = BIT64(P4_EYE_RST_PIN),
+        .mode = GPIO_MODE_OUTPUT, 
+        .pull_up_en = GPIO_PULLUP_DISABLE,
+        .pull_down_en = GPIO_PULLDOWN_DISABLE,
+        .intr_type = GPIO_INTR_DISABLE
+    };
+    ESP_ERROR_CHECK(gpio_config(&rst_io_config));
+
+    esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_PERIPH, ESP_PD_OPTION_ON);
+    esp_sleep_pd_config(ESP_PD_DOMAIN_VDDSDIO, ESP_PD_OPTION_ON);
+    rtc_gpio_init(P4_EYE_CAMERA_EN_PIN);
+    rtc_gpio_init(P4_EYE_C6_EN_PIN);
+    rtc_gpio_set_direction(P4_EYE_C6_EN_PIN, RTC_GPIO_MODE_OUTPUT_ONLY);
+    rtc_gpio_pulldown_dis(P4_EYE_C6_EN_PIN);
+    rtc_gpio_pullup_dis(P4_EYE_C6_EN_PIN);
+    rtc_gpio_set_direction(P4_EYE_CAMERA_EN_PIN, RTC_GPIO_MODE_OUTPUT_ONLY);
+    rtc_gpio_pulldown_dis(P4_EYE_CAMERA_EN_PIN);
+    rtc_gpio_pullup_dis(P4_EYE_CAMERA_EN_PIN);
+    rtc_gpio_hold_dis(P4_EYE_C6_EN_PIN);
+    rtc_gpio_hold_dis(P4_EYE_CAMERA_EN_PIN);
+
+    gpio_set_level(P4_EYE_SDCARD_EN_PIN, 0);
+
+    rtc_gpio_set_level(P4_EYE_CAMERA_EN_PIN, 1);
+
+    rtc_gpio_hold_en(P4_EYE_CAMERA_EN_PIN);
+
+    gpio_set_level(P4_EYE_RST_PIN, 1);
 }
