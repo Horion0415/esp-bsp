@@ -102,6 +102,8 @@
 #define BSP_BUTTON_NUM1      (GPIO_NUM_3)
 #define BSP_BUTTON_NUM2      (GPIO_NUM_4)
 #define BSP_BUTTON_NUM3      (GPIO_NUM_5)
+#define BSP_BUTTON_ENCODER   (GPIO_NUM_2)
+
 
 typedef enum bsp_led_t {
     BSP_LED_WHITE = GPIO_NUM_23,
@@ -126,6 +128,7 @@ typedef enum {
     BSP_BUTTON_1 = 0,
     BSP_BUTTON_2,
     BSP_BUTTON_3,
+    BSP_BUTTON_ED,
     BSP_BUTTON_NUM
 } bsp_button_t;
 

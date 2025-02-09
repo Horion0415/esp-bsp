@@ -134,6 +134,15 @@ esp_err_t app_video_stream_task_stop(int video_fd);
  */
 esp_err_t app_video_register_frame_operation_cb(app_video_frame_operation_cb_t operation_cb);
 
+/**
+ * @brief Wait for the video stream task to stop.
+ *
+ * Blocks the calling task until the video stream task has stopped.
+ *
+ * @return ESP_OK on success.
+ */
+esp_err_t app_video_wait_video_stop(void);
+
 #ifdef __cplusplus
 }
 #endif

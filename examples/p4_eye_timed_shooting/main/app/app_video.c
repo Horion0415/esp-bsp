@@ -23,7 +23,7 @@ static const char *TAG = "app_video";
 #define MAX_BUFFER_COUNT                (3)
 #define MIN_BUFFER_COUNT                (2)
 #define VIDEO_TASK_STACK_SIZE           (4 * 1024)
-#define VIDEO_TASK_PRIORITY             (4)
+#define VIDEO_TASK_PRIORITY             (6)
 
 typedef struct {
     uint8_t *camera_buffer[MAX_BUFFER_COUNT];
@@ -35,6 +35,7 @@ typedef struct {
     app_video_frame_operation_cb_t user_camera_video_frame_operation_cb;
     TaskHandle_t video_stream_task_handle;
     bool video_task_delete;
+    SemaphoreHandle_t video_stop_sem;
 } app_video_t;
 
 static app_video_t app_camera_video;
@@ -127,6 +128,8 @@ int app_video_open(char *dev, video_fmt_t init_fmt)
             goto exit_0;
         }
     }
+
+    app_camera_video.video_stop_sem = xSemaphoreCreateBinary();
 
 #if CONFIG_EXAMPLE_ENABLE_CAM_SENSOR_PIC_VFLIP
     controls.ctrl_class = V4L2_CTRL_CLASS_USER;
@@ -350,6 +353,7 @@ static void video_stream_task(void *arg)
         if(app_camera_video.video_task_delete) {
             app_camera_video.video_task_delete = false;
             ESP_ERROR_CHECK(video_stream_stop(video_fd));
+            xSemaphoreGive(app_camera_video.video_stop_sem);
             vTaskDelete(NULL);
         }
     }
@@ -379,6 +383,11 @@ esp_err_t app_video_stream_task_stop(int video_fd)
     app_camera_video.video_task_delete = true;
 
     return ESP_OK;
+}
+
+esp_err_t app_video_wait_video_stop(void)
+{
+    return xSemaphoreTake(app_camera_video.video_stop_sem, portMAX_DELAY);
 }
 
 esp_err_t app_video_register_frame_operation_cb(app_video_frame_operation_cb_t operation_cb)

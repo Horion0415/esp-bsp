@@ -17,6 +17,7 @@
 #include "esp_timer.h"
 #include "esp_event.h"
 #include "esp_wifi.h"
+#include "esp_memory_utils.h"
 
 #include "driver/jpeg_encode.h"
 #include "driver/ppa.h"
@@ -26,6 +27,7 @@
 #include "driver/rtc_io.h"
 #include "driver/gpio.h"
 #include "esp_sleep.h"
+#include "esp_ipc_isr.h"
 
 #include "iot_knob.h"
 
@@ -38,6 +40,11 @@
 #include "app_sntp.h"
 #include "ui.h"
 
+#define LOG_MEMORY_SYSTEM_INFO         (1)
+#define LOG_TASK_SYSTEM_INFO           (1)
+#define LOG_TIME_INTERVAL_MS           (2000)
+#define SYS_TASKS_ELAPSED_TIME_MS      (2000)   // Period of stats measurement
+
 #define ALIGN_UP(num, align)    (((num) + ((align) - 1)) & ~((align) - 1))
 
 #define TIMER_SEC_INTERVAL                         (1 * 1000000)
@@ -45,7 +52,7 @@
 #define UNIT_TIME                                  (TIMER_MIN_INTERVAL)
 
 #define LED_LIGHT_ON                               (1)
-#define WIFI_SWITCH_ON                             (1)
+#define WIFI_SWITCH_ON                             (0)
 
 #define CONFIG_FILE                                BSP_SD_MOUNT_POINT"/info_config.txt"
 
@@ -83,8 +90,6 @@ static uint32_t jpg_size;
 static uint8_t *jpg_buf;
 static size_t rx_buffer_size = 0;
 
-static esp_timer_handle_t periodic_timer;
-
 static nvs_handle_t nvs_save_handle;
 
 static bool wifi_configured = false;
@@ -95,6 +100,8 @@ static esp_cam_sensor_xclk_handle_t xclk_handle = NULL;
 static int scale_levels = SCALE_LEVELS;
 static int scale_level_res[SCALE_LEVELS] = {1, 2, 4, 5, 8, 10, 16, 20, 40, 60, 80, 120, 240, 480, 960};
 static int knob_count = (SCALE_LEVELS - 1) * STEPS_PER_LEVEL;
+
+static int video_cam_fd0 = -1;
 
 typedef struct {
     char ssid[32];
@@ -118,6 +125,16 @@ static void wifi_connect_task(void *arg);
 static bool read_sdcard_config(char *ssid, char *password);
 static bool read_email_config(char *smtp_server, char *port, char *sender_email, char *sender_password, char *recipient_email); 
 static void gpio_init(void);
+static void sleep_init(void);
+
+esp_err_t print_real_time_mem_stats(void);
+
+static void deep_sleep_register_rtc_timer_wakeup(void)
+{
+    printf("Enabling timer wakeup, %ldmin\n", timed_min);
+    // ESP_ERROR_CHECK(esp_sleep_enable_timer_wakeup(timed_min * 60 * 1000000));
+    ESP_ERROR_CHECK(esp_sleep_enable_timer_wakeup(timed_min * 1000000));
+}
 
 static int get_current_level(int count)
 {
@@ -146,6 +163,19 @@ static void knob_right_cb(void *arg, void *data)
     ESP_LOGD(TAG, "Current level: %d", scale_levels);
 }
 
+static void encoder_btn_handler(void *arg, void *data)
+{
+    ESP_LOGI(TAG, "Encoder button pressed");
+    nvs_set_i8(nvs_save_handle, "timed_shooting", 1);
+
+    sleep_init();
+
+    ESP_LOGI(TAG, "Deep sleep start");
+    // esp_ipc_isr_stall_pause();
+    esp_deep_sleep_start();
+
+}
+
 void app_main(void)
 {
     // Initialize NVS
@@ -167,6 +197,7 @@ void app_main(void)
         // Read
         printf("Reading shutter flag from NVS ... ");
         err |= nvs_get_u32(nvs_save_handle, "timed_min", &timed_min);
+        err |= nvs_get_i8(nvs_save_handle, "timed_shooting", (int8_t *)&timed_shooting);
         switch (err) {
             case ESP_OK:
                 ESP_LOGI(TAG, "Done\n");
@@ -177,6 +208,26 @@ void app_main(void)
             default :
                 printf("Error (%s) reading!\n", esp_err_to_name(err));
         }
+    }
+
+    if(esp_sleep_get_wakeup_cause() == ESP_SLEEP_WAKEUP_TIMER) {
+        ESP_LOGI(TAG, "Wakeup by timer");
+        timed_shooting = true;
+    } else {
+        ESP_LOGI(TAG, "Wakeup by other");
+        timed_shooting = false;
+    }
+
+    if(timed_min) {
+        deep_sleep_register_rtc_timer_wakeup();
+
+        const gpio_config_t config = {
+            .pin_bit_mask = BIT(GPIO_NUM_3) | BIT(GPIO_NUM_4) | BIT(GPIO_NUM_5),
+            .mode = GPIO_MODE_INPUT,
+        };
+
+        ESP_ERROR_CHECK(gpio_config(&config));
+        ESP_ERROR_CHECK(esp_deep_sleep_enable_gpio_wakeup(BIT(GPIO_NUM_3) | BIT(GPIO_NUM_4) | BIT(GPIO_NUM_5), 0));
     }
 
     // Initialize knob
@@ -197,7 +248,7 @@ void app_main(void)
     iot_knob_register_cb(knob, KNOB_LEFT, knob_left_cb, NULL);
     iot_knob_register_cb(knob, KNOB_RIGHT, knob_right_cb, NULL);
 
-    // Initialize the xclk
+    // // Initialize the xclk
     esp_cam_sensor_xclk_config_t cam_xclk_config = {
         .esp_clock_router_cfg = {
             .xclk_pin = XCLK_OUTPUT_IO,
@@ -222,7 +273,7 @@ void app_main(void)
     ESP_ERROR_CHECK(ppa_register_client(&ppa_srm_config, &ppa_srm_handle));
     ESP_ERROR_CHECK(esp_cache_get_alignment(MALLOC_CAP_SPIRAM, &data_cache_line_size));
 
-    // Initialize the SD card
+    // // Initialize the SD card
     ESP_ERROR_CHECK(bsp_sdcard_mount());
     ESP_LOGI(TAG, "SD card mounted");
 
@@ -246,10 +297,10 @@ void app_main(void)
         email_configured = false;
     }
 
-    // Initialize the USB MSC
+    // // Initialize the USB MSC
     app_usb_msc_init();
 
-    // Initialize the I2C
+    // // Initialize the I2C
     ESP_ERROR_CHECK(bsp_i2c_init());
     bsp_get_i2c_bus_handle(&i2c_handle);
 
@@ -261,7 +312,7 @@ void app_main(void)
     }
 
     // Open the video device
-    int video_cam_fd0 = app_video_open(EXAMPLE_CAM_DEV_PATH, APP_VIDEO_FMT);
+    video_cam_fd0 = app_video_open(EXAMPLE_CAM_DEV_PATH, APP_VIDEO_FMT);
     if (video_cam_fd0 < 0) {
         ESP_LOGE(TAG, "video cam open failed");
         return;
@@ -293,14 +344,6 @@ void app_main(void)
     jpg_buf = (uint8_t*)jpeg_alloc_encoder_mem(app_video_get_buf_size() / 10, &rx_mem_cfg, &rx_buffer_size); // Assume that compression ratio of 10 to 1
     assert(jpg_buf != NULL);
 
-    // Initialize the timer
-    const esp_timer_create_args_t periodic_timer_args = {
-            .callback = &periodic_timer_callback,
-            .name = "periodic"
-    };
-    ESP_ERROR_CHECK(esp_timer_create(&periodic_timer_args, &periodic_timer));
-    ESP_ERROR_CHECK(esp_timer_start_periodic(periodic_timer, timed_min * UNIT_TIME));
-
     // Register the video frame operation callback
     ESP_ERROR_CHECK(app_video_register_frame_operation_cb(camera_video_frame_operation));
 
@@ -328,10 +371,33 @@ void app_main(void)
     ESP_ERROR_CHECK(iot_button_register_cb(btns[BSP_BUTTON_1], BUTTON_PRESS_DOWN, mode_switch_btn_handler, (void *) BSP_BUTTON_1));
     ESP_ERROR_CHECK(iot_button_register_cb(btns[BSP_BUTTON_2], BUTTON_PRESS_DOWN, increase_btn_handler, (void *) BSP_BUTTON_2));
     ESP_ERROR_CHECK(iot_button_register_cb(btns[BSP_BUTTON_3], BUTTON_PRESS_DOWN, decrease_btn_handler, (void *) BSP_BUTTON_3));
+    ESP_ERROR_CHECK(iot_button_register_cb(btns[BSP_BUTTON_ED], BUTTON_PRESS_DOWN, encoder_btn_handler, (void *) BSP_BUTTON_ED));
 
     xTaskCreatePinnedToCore(detect_usb_task, "detect_usb_task", 4096, NULL, 5, NULL, 0);
 #if WIFI_SWITCH_ON
     xTaskCreatePinnedToCore(wifi_connect_task, "wifi_connect_task", 4096, NULL, 5, NULL, 0);
+#endif
+
+#if LOG_MEMORY_SYSTEM_INFO
+    static char buffer[2048];
+    while (1) {
+        sprintf(buffer, "\t  Biggest /     Free /    Total\n"
+                " SRAM : [%8d / %8d / %8d]\n"
+                "PSRAM : [%8d / %8d / %8d]\n",
+                heap_caps_get_largest_free_block(MALLOC_CAP_INTERNAL),
+                heap_caps_get_free_size(MALLOC_CAP_INTERNAL),
+                heap_caps_get_total_size(MALLOC_CAP_INTERNAL),
+                heap_caps_get_largest_free_block(MALLOC_CAP_SPIRAM),
+                heap_caps_get_free_size(MALLOC_CAP_SPIRAM),
+                heap_caps_get_total_size(MALLOC_CAP_SPIRAM));
+        printf("------------ Memory ------------\n");
+        printf("%s\n", buffer);
+
+        ESP_ERROR_CHECK(print_real_time_mem_stats());
+        printf("\n");
+
+        vTaskDelay(pdMS_TO_TICKS(LOG_TIME_INTERVAL_MS));
+    }
 #endif
 }
 
@@ -428,10 +494,6 @@ static void detect_usb_task(void *arg)
     while (1) {
         if(app_usb_msc_stage()) {
             app_usb_set_exposed(false);
-
-            if(esp_timer_is_active(periodic_timer)) {
-                ESP_ERROR_CHECK(esp_timer_stop(periodic_timer));
-            }
             
             bsp_display_lock(0);
             screen_index = SCREEN_EYE_USB;
@@ -466,11 +528,6 @@ static void wifi_connect_task(void *arg)
     vTaskDelete(NULL);
 }
 
-static void periodic_timer_callback(void* arg)
-{
-    timed_shooting = true;
-}
-
 static int get_next_file_index(const char *path) 
 {
     DIR *dir = opendir(path);
@@ -497,7 +554,7 @@ static int get_next_file_index(const char *path)
     return max_index + 1;  
 }
 
-static void mode_switch_btn_handler(void *button_handle, void *usr_data)
+    static void mode_switch_btn_handler(void *button_handle, void *usr_data)
 {
     if(screen_index == SCREEN_EYE_USB) {
         return;
@@ -505,8 +562,6 @@ static void mode_switch_btn_handler(void *button_handle, void *usr_data)
 
     if(screen_index == SCREEN_EYE_CAMERA) {
         screen_index = SCREEN_EYE_SET;
-        
-        ESP_ERROR_CHECK(esp_timer_stop(periodic_timer));
 
         bsp_display_lock(0);
         _ui_screen_change(&ui_ScreenSet, LV_SCR_LOAD_ANIM_NONE, 0, 0, &ui_ScreenSet_screen_init);
@@ -514,7 +569,7 @@ static void mode_switch_btn_handler(void *button_handle, void *usr_data)
     } else {
         screen_index = SCREEN_EYE_CAMERA;
 
-        ESP_ERROR_CHECK(esp_timer_start_periodic(periodic_timer, timed_min * UNIT_TIME));
+        deep_sleep_register_rtc_timer_wakeup();
 
         bsp_display_lock(0);
         _ui_screen_change(&ui_ScreenMain, LV_SCR_LOAD_ANIM_NONE, 0, 0, &ui_ScreenMain_screen_init);
@@ -643,8 +698,160 @@ static void gpio_init(void)
     gpio_set_level(P4_EYE_SDCARD_EN_PIN, 0);
 
     rtc_gpio_set_level(P4_EYE_CAMERA_EN_PIN, 1);
-
     rtc_gpio_hold_en(P4_EYE_CAMERA_EN_PIN);
 
     gpio_set_level(P4_EYE_RST_PIN, 1);
 }
+
+static void sleep_init(void)
+{
+    app_video_stream_task_stop(video_cam_fd0);
+    app_video_wait_video_stop();
+    ESP_LOGI(TAG, "Video stream stop");
+
+    esp_cam_sensor_xclk_stop(xclk_handle);
+
+    bsp_sdcard_unmount();
+
+    bsp_display_backlight_off();
+    bsp_display_enter_sleep();
+    ESP_LOGI(TAG, "Display enter sleep");
+
+    rtc_gpio_hold_dis(P4_EYE_C6_EN_PIN);
+    rtc_gpio_hold_dis(P4_EYE_CAMERA_EN_PIN);
+
+    rtc_gpio_set_level(P4_EYE_C6_EN_PIN, 0);
+    rtc_gpio_set_level(P4_EYE_CAMERA_EN_PIN, 0);
+
+    rtc_gpio_hold_en(P4_EYE_C6_EN_PIN);
+    rtc_gpio_hold_en(P4_EYE_CAMERA_EN_PIN);
+}
+
+
+#if LOG_TASK_SYSTEM_INFO
+#define ARRAY_SIZE_OFFSET                   8   // Increase this if audio_sys_get_real_time_stats returns ESP_ERR_INVALID_SIZE
+
+#define audio_malloc    malloc
+#define audio_calloc    calloc
+#define audio_free      free
+#define AUDIO_MEM_CHECK(tag, x, action) if (x == NULL) { \
+        ESP_LOGE(tag, "Memory exhausted (%s:%d)", __FILE__, __LINE__); \
+        action; \
+    }
+
+const char *task_state[] = {
+    "Running",
+    "Ready",
+    "Blocked",
+    "Suspended",
+    "Deleted"
+};
+
+/** @brief
+ * "Extr": Allocated task stack from psram, "Intr": Allocated task stack from internel
+ */
+const char *task_stack[] = {"Extr", "Intr"};
+
+esp_err_t print_real_time_mem_stats(void)
+{
+#if (CONFIG_FREERTOS_VTASKLIST_INCLUDE_COREID && CONFIG_FREERTOS_GENERATE_RUN_TIME_STATS)
+    TaskStatus_t *start_array = NULL, *end_array = NULL;
+    UBaseType_t start_array_size, end_array_size;
+    uint32_t start_run_time, end_run_time;
+    uint32_t total_elapsed_time;
+    uint32_t task_elapsed_time, percentage_time;
+    esp_err_t ret;
+
+    // Allocate array to store current task states
+    start_array_size = uxTaskGetNumberOfTasks() + ARRAY_SIZE_OFFSET;
+    start_array = (TaskStatus_t *)audio_malloc(sizeof(TaskStatus_t) * start_array_size);
+    AUDIO_MEM_CHECK(TAG, start_array, {
+        ret = ESP_FAIL;
+        goto exit;
+    });
+    // Get current task states
+    start_array_size = uxTaskGetSystemState(start_array, start_array_size, &start_run_time);
+    if (start_array_size == 0) {
+        ESP_LOGE(TAG, "Insufficient array size for uxTaskGetSystemState. Trying increasing ARRAY_SIZE_OFFSET");
+        ret = ESP_FAIL;
+        goto exit;
+    }
+
+    vTaskDelay(pdMS_TO_TICKS(SYS_TASKS_ELAPSED_TIME_MS));
+
+    // Allocate array to store tasks states post delay
+    end_array_size = uxTaskGetNumberOfTasks() + ARRAY_SIZE_OFFSET;
+    end_array = (TaskStatus_t *)audio_malloc(sizeof(TaskStatus_t) * end_array_size);
+    AUDIO_MEM_CHECK(TAG, start_array, {
+        ret = ESP_FAIL;
+        goto exit;
+    });
+
+    // Get post delay task states
+    end_array_size = uxTaskGetSystemState(end_array, end_array_size, &end_run_time);
+    if (end_array_size == 0) {
+        ESP_LOGE(TAG, "Insufficient array size for uxTaskGetSystemState. Trying increasing ARRAY_SIZE_OFFSET");
+        ret = ESP_FAIL;
+        goto exit;
+    }
+
+    // Calculate total_elapsed_time in units of run time stats clock period.
+    total_elapsed_time = (end_run_time - start_run_time);
+    if (total_elapsed_time == 0) {
+        ESP_LOGE(TAG, "Delay duration too short. Trying increasing SYS_TASKS_ELAPSED_TIME_MS");
+        ret = ESP_FAIL;
+        goto exit;
+    }
+
+    ESP_LOGI(TAG, "| Task              | Run Time    | Per | Prio | HWM       | State   | CoreId   | Stack ");
+
+    // Match each task in start_array to those in the end_array
+    for (int i = 0; i < start_array_size; i++) {
+        for (int j = 0; j < end_array_size; j++) {
+            if (start_array[i].xHandle == end_array[j].xHandle) {
+
+                task_elapsed_time = end_array[j].ulRunTimeCounter - start_array[i].ulRunTimeCounter;
+                percentage_time = (task_elapsed_time * 100UL) / (total_elapsed_time * portNUM_PROCESSORS);
+                ESP_LOGI(TAG, "| %-17s | %-11d |%2d%%  | %-4u | %-9u | %-7s | %-8x | %s",
+                                start_array[i].pcTaskName, (int)task_elapsed_time, (int)percentage_time, start_array[i].uxCurrentPriority,
+                                (int)start_array[i].usStackHighWaterMark, task_state[(start_array[i].eCurrentState)],
+                                start_array[i].xCoreID, task_stack[esp_ptr_internal(pxTaskGetStackStart(start_array[i].xHandle))]);
+
+                // Mark that task have been matched by overwriting their handles
+                start_array[i].xHandle = NULL;
+                end_array[j].xHandle = NULL;
+                break;
+            }
+        }
+    }
+
+    // Print unmatched tasks
+    for (int i = 0; i < start_array_size; i++) {
+        if (start_array[i].xHandle != NULL) {
+            ESP_LOGI(TAG, "| %s | Deleted", start_array[i].pcTaskName);
+        }
+    }
+    for (int i = 0; i < end_array_size; i++) {
+        if (end_array[i].xHandle != NULL) {
+            ESP_LOGI(TAG, "| %s | Created", end_array[i].pcTaskName);
+        }
+    }
+    printf("\n");
+    ret = ESP_OK;
+
+exit:    // Common return path
+    if (start_array) {
+        audio_free(start_array);
+        start_array = NULL;
+    }
+    if (end_array) {
+        audio_free(end_array);
+        end_array = NULL;
+    }
+    return ret;
+#else
+    ESP_LOGW(TAG, "Please enbale `CONFIG_FREERTOS_VTASKLIST_INCLUDE_COREID` and `CONFIG_FREERTOS_GENERATE_RUN_TIME_STATS` in menuconfig");
+    return ESP_FAIL;
+#endif
+}
+#endif

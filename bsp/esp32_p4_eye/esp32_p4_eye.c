@@ -122,6 +122,11 @@ static const button_config_t bsp_button_config[BSP_BUTTON_NUM] = {
         .gpio_button_config.active_level = 0,
         .gpio_button_config.gpio_num = BSP_BUTTON_NUM3
     },
+    {
+        .type = BUTTON_TYPE_GPIO,
+        .gpio_button_config.active_level = 0,
+        .gpio_button_config.gpio_num = BSP_BUTTON_ENCODER
+    },
 };
 
 esp_err_t bsp_i2c_init(void)
@@ -419,7 +424,7 @@ lv_disp_t *bsp_display_start(void)
         .lvgl_port_cfg = {
             .task_priority = CONFIG_BSP_DISPLAY_LVGL_TASK_PRIORITY,
             .task_stack = 4096,
-            .task_affinity = 1,
+            .task_affinity = 0,
             .timer_period_ms = LVGL_TICK_PERIOD_MS,
             .task_max_sleep_ms = LVGL_MAX_SLEEP_MS,
         },
