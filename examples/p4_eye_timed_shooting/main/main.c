@@ -23,13 +23,7 @@
 #include "driver/ppa.h"
 #include "bsp/esp-bsp.h"
 
-#include "esp_cam_sensor_xclk.h"
-#include "driver/rtc_io.h"
-#include "driver/gpio.h"
 #include "esp_sleep.h"
-#include "esp_ipc_isr.h"
-
-#include "iot_knob.h"
 
 #include "lvgl.h"
 
@@ -45,33 +39,21 @@
 #define LOG_TIME_INTERVAL_MS           (2000)
 #define SYS_TASKS_ELAPSED_TIME_MS      (2000)   // Period of stats measurement
 
+#define LED_LIGHT_ON                               (1)
+#define WIFI_SWITCH_ON                             (1)
+
 #define ALIGN_UP(num, align)    (((num) + ((align) - 1)) & ~((align) - 1))
 
 #define TIMER_SEC_INTERVAL                         (1 * 1000000)
 #define TIMER_MIN_INTERVAL                         (60 * 1000000)
-#define UNIT_TIME                                  (TIMER_MIN_INTERVAL)
-
-#define LED_LIGHT_ON                               (1)
-#define WIFI_SWITCH_ON                             (1)
+#define UNIT_TIME                                  (TIMER_SEC_INTERVAL)
 
 #define CONFIG_FILE                                BSP_SD_MOUNT_POINT"/info_config.txt"
 
-#define P4_EYE_C6_EN_PIN                           (GPIO_NUM_9)
-#define P4_EYE_CAMERA_EN_PIN                       (GPIO_NUM_12)
-#define P4_EYE_RST_PIN                             (GPIO_NUM_26)
-#define P4_EYE_SDCARD_EN_PIN                       (GPIO_NUM_46)
-
 #define CAPTURE_INDEX                              (10)
-
-#define XCLK_OUTPUT_FREQUENCY                      (24000000)       // Frequency in Hertz. Set frequency at 10MHz
-#define XCLK_OUTPUT_IO                             (11)             // Define the output GPIO
 
 #define SCALE_LEVELS 15                             // 总档位数
 #define STEPS_PER_LEVEL 6                           // Steps needed for each level
-
-#define DEEP_SLEEP_EVENT_BIT BIT0
-
-static EventGroupHandle_t deep_sleep_event_group;
 
 enum {
     SCREEN_EYE_CAMERA,
@@ -91,6 +73,21 @@ static lv_obj_t* cam_canvas;
 static uint32_t timed_min = 5;
 static bool timed_shooting = false;
 
+// #define DEEP_SLEEP_EVENT_BIT BIT0
+// static bool wifi_configured = false;
+// static bool email_configured = false;
+// static bool smtp_connected = false;
+
+typedef enum {
+    WIFI_CONFIGURED_BIT   = BIT1,
+    EMAIL_CONFIGURED_BIT  = BIT2,
+    SMTP_CONNECTED_BIT    = BIT3,
+    DEEP_SLEEP_BIT        = BIT4,
+} AppEventBits;
+
+// static EventGroupHandle_t deep_sleep_event_group;
+static EventGroupHandle_t app_event_group;
+
 static jpeg_encoder_handle_t jpeg_handle;
 static uint32_t jpg_size;
 static uint8_t *jpg_buf;
@@ -98,18 +95,11 @@ static size_t rx_buffer_size = 0;
 
 static nvs_handle_t nvs_save_handle;
 
-static bool wifi_configured = false;
-static bool email_configured = false;
-
-static esp_cam_sensor_xclk_handle_t xclk_handle = NULL;
-
 static int scale_levels = SCALE_LEVELS;
 static int scale_level_res[SCALE_LEVELS] = {1, 2, 4, 5, 8, 10, 16, 20, 40, 60, 80, 120, 240, 480, 960};
 static int knob_count = (SCALE_LEVELS - 1) * STEPS_PER_LEVEL;
 
 static int video_cam_fd0 = -1;
-
-static bool smtp_connected = false;
 
 typedef struct {
     char ssid[32];
@@ -123,75 +113,21 @@ typedef struct {
 static wifi_email_config we_config;
 
 static void camera_video_frame_operation(uint8_t *camera_buf, uint8_t camera_buf_index, uint32_t camera_buf_hes, uint32_t camera_buf_ves, size_t camera_buf_len);
-static void periodic_timer_callback(void* arg);
 static int get_next_file_index(const char *path);
 static void increase_btn_handler(void *button_handle, void *usr_data);
 static void decrease_btn_handler(void *button_handle, void *usr_data);
 static void mode_switch_btn_handler(void *button_handle, void *usr_data);
 static void detect_usb_task(void *arg);
 static void wifi_connect_task(void *arg);
+static void deep_sleep_task(void *arg);
 static bool read_sdcard_config(char *ssid, char *password);
 static bool read_email_config(char *smtp_server, char *port, char *sender_email, char *sender_password, char *recipient_email); 
-static void gpio_init(void);
-static void sleep_init(void);
+static void deep_sleep_register_rtc_timer_wakeup(void);
+static void knob_left_cb(void *arg, void *data);
+static void knob_right_cb(void *arg, void *data);
+static void encoder_btn_handler(void *arg, void *data);
 
 esp_err_t print_real_time_mem_stats(void);
-
-static void deep_sleep_register_rtc_timer_wakeup(void)
-{
-    printf("Enabling timer wakeup, %ldmin\n", timed_min);
-    // ESP_ERROR_CHECK(esp_sleep_enable_timer_wakeup(timed_min * 60 * 1000000));
-    ESP_ERROR_CHECK(esp_sleep_enable_timer_wakeup(timed_min * 1000000));
-}
-
-static int get_current_level(int count)
-{
-    return (count / STEPS_PER_LEVEL) + 1;
-}
-
-static void knob_left_cb(void *arg, void *data)
-{
-    knob_handle_t knob = (knob_handle_t)arg;
-    knob_count--;
-    if (knob_count < 0) {
-        knob_count = 0;
-    }
-    scale_levels = get_current_level(knob_count);
-    ESP_LOGD(TAG, "Current level: %d", scale_levels);
-}
-
-static void knob_right_cb(void *arg, void *data)
-{
-    knob_handle_t knob = (knob_handle_t)arg;
-    knob_count++;
-    if (knob_count > (SCALE_LEVELS * STEPS_PER_LEVEL - 1)) {
-        knob_count = SCALE_LEVELS * STEPS_PER_LEVEL - 1;
-    }
-    scale_levels = get_current_level(knob_count);
-    ESP_LOGD(TAG, "Current level: %d", scale_levels);
-}
-
-static void encoder_btn_handler(void *arg, void *data)
-{
-    ESP_LOGI(TAG, "Encoder button pressed");
-    
-    xEventGroupSetBits(deep_sleep_event_group, DEEP_SLEEP_EVENT_BIT);
-}
-
-// Deep sleep task
-static void deep_sleep_task(void *arg)
-{
-    while (1) {
-        // Wait for the deep sleep event
-        xEventGroupWaitBits(deep_sleep_event_group, DEEP_SLEEP_EVENT_BIT, pdTRUE, pdFALSE, portMAX_DELAY);
-
-        nvs_set_i8(nvs_save_handle, "timed_shooting", 1);
-        sleep_init();
-
-        ESP_LOGI(TAG, "Deep sleep event triggered");
-        esp_deep_sleep_start();
-    }
-}
 
 void app_main(void)
 {
@@ -229,8 +165,6 @@ void app_main(void)
     ESP_ERROR_CHECK(esp_event_loop_create_default());
 #endif
 
-    gpio_init();
-
     if(esp_sleep_get_wakeup_cause() == ESP_SLEEP_WAKEUP_TIMER) {
         ESP_LOGI(TAG, "Wakeup by timer");
         timed_shooting = true;
@@ -238,6 +172,10 @@ void app_main(void)
         ESP_LOGI(TAG, "Wakeup by other");
         timed_shooting = false;
     }
+
+    ESP_ERROR_CHECK(bsp_p4_eye_init());
+
+    app_event_group = xEventGroupCreate();
 
     if(timed_min) {
         const gpio_config_t config = {
@@ -251,33 +189,11 @@ void app_main(void)
         deep_sleep_register_rtc_timer_wakeup();
     }
 
-    // Initialize knob
-    knob_config_t cfg = {
-        .default_direction = 0,
-        .gpio_encoder_a = BSP_KNOB_A,
-        .gpio_encoder_b = BSP_KNOB_B,
-    };
-
-    // Create knob instance
-    knob_handle_t knob = iot_knob_create(&cfg);
-    if (knob == NULL) {
-        ESP_LOGE(TAG, "Failed to create knob");
-        return;
-    }
-
+    // Initialize the knob
+    ESP_ERROR_CHECK(bsp_knob_init());
     // Register callback functions
-    iot_knob_register_cb(knob, KNOB_LEFT, knob_left_cb, NULL);
-    iot_knob_register_cb(knob, KNOB_RIGHT, knob_right_cb, NULL);
-
-    // // Initialize the xclk
-    esp_cam_sensor_xclk_config_t cam_xclk_config = {
-        .esp_clock_router_cfg = {
-            .xclk_pin = XCLK_OUTPUT_IO,
-            .xclk_freq_hz = XCLK_OUTPUT_FREQUENCY,
-        }
-    };
-    ESP_ERROR_CHECK(esp_cam_sensor_xclk_allocate(ESP_CAM_SENSOR_XCLK_ESP_CLOCK_ROUTER, &xclk_handle));
-    ESP_ERROR_CHECK(esp_cam_sensor_xclk_start(xclk_handle, &cam_xclk_config));
+    ESP_ERROR_CHECK(bsp_knob_register_cb(KNOB_LEFT, knob_left_cb, NULL));
+    ESP_ERROR_CHECK(bsp_knob_register_cb(KNOB_RIGHT, knob_right_cb, NULL));
 
     // Initialize the display
     bsp_display_start();
@@ -299,21 +215,25 @@ void app_main(void)
     if(read_sdcard_config(we_config.ssid, we_config.password)) {
         ESP_LOGI(TAG, "Read wifi config from SD card: SSID: %s, Password: %s", we_config.ssid, we_config.password);
 
-        wifi_configured = true;
+        // wifi_configured = true;
+        xEventGroupSetBits(app_event_group, WIFI_CONFIGURED_BIT);
     } else {
         ESP_LOGE(TAG, "Failed to read wifi config from SD card");
 
-        wifi_configured = false;
+        // wifi_configured = false;
+        xEventGroupClearBits(app_event_group, WIFI_CONFIGURED_BIT);
     }
 
     if(read_email_config(we_config.smtp_server, we_config.port, we_config.sender_email, we_config.sender_password, we_config.recipient_email)) {
         ESP_LOGI(TAG, "Read email config from SD card: SMTP Server: %s, Port: %s, Sender Email: %s, Sender Password: %s, Recipient Email: %s", we_config.smtp_server, we_config.port, we_config.sender_email, we_config.sender_password, we_config.recipient_email);
 
-        email_configured = true;
+        // email_configured = true;
+        xEventGroupSetBits(app_event_group, EMAIL_CONFIGURED_BIT);
     } else {
         ESP_LOGE(TAG, "Failed to read email config from SD card");
 
-        email_configured = false;
+        // email_configured = false;
+        xEventGroupClearBits(app_event_group, EMAIL_CONFIGURED_BIT);
     }
 
     // Initialize the USB MSC
@@ -384,7 +304,7 @@ void app_main(void)
     bsp_display_unlock();
     bsp_display_backlight_on();
 
-    deep_sleep_event_group = xEventGroupCreate();
+    // deep_sleep_event_group = xEventGroupCreate();
     xTaskCreatePinnedToCore(deep_sleep_task, "deep_sleep_task", 4096, NULL, 5, NULL, 0);
 
     /* Init Buttons */
@@ -470,11 +390,7 @@ static void camera_video_frame_operation(uint8_t *camera_buf, uint8_t camera_buf
     lv_canvas_set_buffer(cam_canvas, canvas_buf[camera_buf_index], BSP_LCD_H_RES, BSP_LCD_V_RES, LV_IMG_CF_TRUE_COLOR);
     bsp_display_unlock();
 
-#if WIFI_SWITCH_ON
-    if(timed_shooting && capture_index > CAPTURE_INDEX && smtp_connected) {
-#else
     if(timed_shooting && capture_index > CAPTURE_INDEX) {
-#endif
         jpeg_encode_cfg_t enc_config = {
             .src_type = JPEG_ENCODE_IN_FORMAT_RGB565,
             .sub_sample = JPEG_DOWN_SAMPLING_YUV420,
@@ -508,7 +424,7 @@ static void camera_video_frame_operation(uint8_t *camera_buf, uint8_t camera_buf
 #endif
 
 #if WIFI_SWITCH_ON
-        if(app_wifi_get_connected() && email_configured) {
+        if(xEventGroupGetBits(app_event_group) & SMTP_CONNECTED_BIT) {
             ESP_ERROR_CHECK(app_smtp_tls_init());
             ESP_ERROR_CHECK(app_smtp_connect_server());
             ESP_ERROR_CHECK(app_smtp_perform_authentication());
@@ -516,7 +432,7 @@ static void camera_video_frame_operation(uint8_t *camera_buf, uint8_t camera_buf
         }
 #endif  
         vTaskDelay(300 / portTICK_PERIOD_MS);
-        xEventGroupSetBits(deep_sleep_event_group, DEEP_SLEEP_EVENT_BIT);
+        xEventGroupSetBits(app_event_group, DEEP_SLEEP_BIT);
     }
 }
 
@@ -541,11 +457,11 @@ static void detect_usb_task(void *arg)
 static void wifi_connect_task(void *arg)
 {
     // Connect to the wifi network
-    if(wifi_configured) {
+    if(xEventGroupGetBits(app_event_group) & WIFI_CONFIGURED_BIT) {
         wifi_init_sta((uint8_t *)we_config.ssid, (uint8_t *)we_config.password);
     }
     
-    if(app_wifi_get_connected() && email_configured) {
+    if(app_wifi_get_connected() && (xEventGroupGetBits(app_event_group) & EMAIL_CONFIGURED_BIT)) {
         app_smtp_set_config(we_config.smtp_server, we_config.port, we_config.sender_email, we_config.sender_password, we_config.recipient_email);
         
         app_sntp_init();
@@ -554,11 +470,35 @@ static void wifi_connect_task(void *arg)
         ESP_ERROR_CHECK(app_smtp_connect_server());
         ESP_ERROR_CHECK(app_smtp_perform_authentication());
 
-        smtp_connected = true;
+        xEventGroupSetBits(app_event_group, SMTP_CONNECTED_BIT);
     }
 
     ESP_LOGI(TAG, "wifi_connect_task end");
     vTaskDelete(NULL);
+}
+
+// Deep sleep task
+static void deep_sleep_task(void *arg)
+{
+    while (1) {
+        // Wait for the deep sleep event
+        xEventGroupWaitBits(app_event_group, DEEP_SLEEP_BIT, pdTRUE, pdFALSE, portMAX_DELAY);
+
+        nvs_set_i8(nvs_save_handle, "timed_shooting", 1);
+
+        app_video_stream_task_stop(video_cam_fd0);
+        app_video_wait_video_stop();
+        app_video_close(video_cam_fd0);
+
+        bsp_sdcard_unmount();
+
+        bsp_display_enter_sleep();
+
+        bsp_sleep_io_init();
+
+        ESP_LOGI(TAG, "Deep sleep event triggered");
+        esp_deep_sleep_start();
+    }
 }
 
 static int get_next_file_index(const char *path) 
@@ -695,72 +635,46 @@ bool read_email_config(char *smtp_server, char *port, char *sender_email, char *
     return (strlen(smtp_server) > 0 && strlen(port) > 0 && strlen(sender_email) > 0 && strlen(sender_password) > 0 && strlen(recipient_email) > 0); // 确保所有配置项不为空
 }
 
-static void gpio_init(void)
+static void deep_sleep_register_rtc_timer_wakeup(void)
 {
-    const gpio_config_t sdcard_io_config = {
-        .pin_bit_mask = BIT64(P4_EYE_SDCARD_EN_PIN),
-        .mode = GPIO_MODE_OUTPUT, 
-        .pull_up_en = GPIO_PULLUP_DISABLE,
-        .pull_down_en = GPIO_PULLDOWN_DISABLE,
-        .intr_type = GPIO_INTR_DISABLE
-    };
-    ESP_ERROR_CHECK(gpio_config(&sdcard_io_config));
-
-    const gpio_config_t rst_io_config = {
-        .pin_bit_mask = BIT64(P4_EYE_RST_PIN),
-        .mode = GPIO_MODE_OUTPUT, 
-        .pull_up_en = GPIO_PULLUP_DISABLE,
-        .pull_down_en = GPIO_PULLDOWN_DISABLE,
-        .intr_type = GPIO_INTR_DISABLE
-    };
-    ESP_ERROR_CHECK(gpio_config(&rst_io_config));
-
-    esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_PERIPH, ESP_PD_OPTION_ON);
-    esp_sleep_pd_config(ESP_PD_DOMAIN_VDDSDIO, ESP_PD_OPTION_ON);
-    rtc_gpio_init(P4_EYE_CAMERA_EN_PIN);
-    rtc_gpio_init(P4_EYE_C6_EN_PIN);
-    rtc_gpio_set_direction(P4_EYE_C6_EN_PIN, RTC_GPIO_MODE_OUTPUT_ONLY);
-    rtc_gpio_pulldown_dis(P4_EYE_C6_EN_PIN);
-    rtc_gpio_pullup_dis(P4_EYE_C6_EN_PIN);
-    rtc_gpio_set_direction(P4_EYE_CAMERA_EN_PIN, RTC_GPIO_MODE_OUTPUT_ONLY);
-    rtc_gpio_pulldown_dis(P4_EYE_CAMERA_EN_PIN);
-    rtc_gpio_pullup_dis(P4_EYE_CAMERA_EN_PIN);
-    rtc_gpio_hold_dis(P4_EYE_C6_EN_PIN);
-    rtc_gpio_hold_dis(P4_EYE_CAMERA_EN_PIN);
-
-    gpio_set_level(P4_EYE_SDCARD_EN_PIN, 0);
-
-    rtc_gpio_set_level(P4_EYE_CAMERA_EN_PIN, 1);
-    rtc_gpio_hold_en(P4_EYE_CAMERA_EN_PIN);
-
-    gpio_set_level(P4_EYE_RST_PIN, 1);
+    printf("Enabling timer wakeup, %ldmin\n", timed_min);
+    // ESP_ERROR_CHECK(esp_sleep_enable_timer_wakeup(timed_min * 60 * 1000000));
+    ESP_ERROR_CHECK(esp_sleep_enable_timer_wakeup(timed_min * UNIT_TIME));
 }
 
-static void sleep_init(void)
+static int get_current_level(int count)
 {
-    app_video_stream_task_stop(video_cam_fd0);
-    app_video_wait_video_stop();
-    ESP_LOGI(TAG, "Video stream stop");
-
-    esp_cam_sensor_xclk_stop(xclk_handle);
-    app_video_close(video_cam_fd0);
-
-    bsp_sdcard_unmount();
-
-    bsp_display_backlight_off();
-    bsp_display_enter_sleep();
-    ESP_LOGI(TAG, "Display enter sleep");
-
-    rtc_gpio_hold_dis(P4_EYE_C6_EN_PIN);
-    rtc_gpio_hold_dis(P4_EYE_CAMERA_EN_PIN);
-
-    rtc_gpio_set_level(P4_EYE_C6_EN_PIN, 0);
-    rtc_gpio_set_level(P4_EYE_CAMERA_EN_PIN, 0);
-
-    rtc_gpio_hold_en(P4_EYE_C6_EN_PIN);
-    rtc_gpio_hold_en(P4_EYE_CAMERA_EN_PIN);
+    return (count / STEPS_PER_LEVEL) + 1;
 }
 
+static void knob_left_cb(void *arg, void *data)
+{
+    //knob_handle_t knob = (knob_handle_t)arg;
+    knob_count--;
+    if (knob_count < 0) {
+        knob_count = 0;
+    }
+    scale_levels = get_current_level(knob_count);
+    ESP_LOGD(TAG, "Current level: %d", scale_levels);
+}
+
+static void knob_right_cb(void *arg, void *data)
+{
+    //knob_handle_t knob = (knob_handle_t)arg;
+    knob_count++;
+    if (knob_count > (SCALE_LEVELS * STEPS_PER_LEVEL - 1)) {
+        knob_count = SCALE_LEVELS * STEPS_PER_LEVEL - 1;
+    }
+    scale_levels = get_current_level(knob_count);
+    ESP_LOGD(TAG, "Current level: %d", scale_levels);
+}
+
+static void encoder_btn_handler(void *arg, void *data)
+{
+    ESP_LOGI(TAG, "Encoder button pressed");
+    
+    xEventGroupSetBits(app_event_group, DEEP_SLEEP_BIT);
+}
 
 #if LOG_TASK_SYSTEM_INFO
 #define ARRAY_SIZE_OFFSET                   8   // Increase this if audio_sys_get_real_time_stats returns ESP_ERR_INVALID_SIZE

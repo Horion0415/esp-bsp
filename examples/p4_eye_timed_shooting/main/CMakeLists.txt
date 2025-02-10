@@ -5,5 +5,5 @@ file(GLOB_RECURSE LV_UI_SOURCES ${LV_UI_DIR}/*.c)
 
 idf_component_register(SRCS "main.c" ${APP_SOURCES} ${LV_UI_SOURCES}
                     INCLUDE_DIRS "." ${APP_DIR} ${LV_UI_DIR}
-                    REQUIRES esp_driver_ppa nvs_flash mbedtls esp_wifi
+                    REQUIRES esp_driver_ppa nvs_flash mbedtls esp_wifi espressif__knob
                     EMBED_TXTFILES server_root_cert.pem esp_logo.png)

@@ -15,6 +15,7 @@
 #include "esp_spiffs.h"
 #include "esp_ldo_regulator.h"
 #include "sd_pwr_ctrl_by_on_chip_ldo.h"
+#include "esp_sleep.h"
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -24,10 +25,14 @@
 #include "driver/i2c_master.h"
 #include "driver/i2s_std.h"
 
+#include "driver/rtc_io.h"
+#include "driver/gpio.h"
+
 #include "bsp/esp32_p4_eye.h"
 #include "bsp_err_check.h"
 #include "bsp/display.h"
 
+#include "esp_cam_sensor_xclk.h"
 #include "esp_codec_dev_defaults.h"
 
 static const char *TAG = "p4-eye";
@@ -72,6 +77,10 @@ static sd_pwr_ctrl_handle_t pwr_ctrl_handle = NULL;
 
 static esp_lcd_panel_io_handle_t io_handle = NULL;
 static esp_lcd_panel_handle_t panel_handle = NULL;
+
+static esp_cam_sensor_xclk_handle_t xclk_handle = NULL;
+
+static knob_handle_t knob = NULL;
 
 /**
  * @brief LCD panel initialization commands.
@@ -257,6 +266,102 @@ esp_err_t bsp_get_sdcard_handle(sdmmc_card_t **card)
     return ESP_OK;
 }
 
+esp_err_t bsp_p4_eye_init(void)
+{
+    esp_cam_sensor_xclk_config_t cam_xclk_config = {
+        .esp_clock_router_cfg = {
+            .xclk_pin = BSP_CAMERA_XCLK_PIN,
+            .xclk_freq_hz = BSP_CAMERA_XCLK_FREQUENCY,
+        }
+    };
+    ESP_ERROR_CHECK(esp_cam_sensor_xclk_allocate(ESP_CAM_SENSOR_XCLK_ESP_CLOCK_ROUTER, &xclk_handle));
+    ESP_ERROR_CHECK(esp_cam_sensor_xclk_start(xclk_handle, &cam_xclk_config));
+
+    const gpio_config_t sdcard_io_config = {
+        .pin_bit_mask = BIT64(BSP_SD_EN_PIN),
+        .mode = GPIO_MODE_OUTPUT, 
+        .pull_up_en = GPIO_PULLUP_DISABLE,
+        .pull_down_en = GPIO_PULLDOWN_DISABLE,
+        .intr_type = GPIO_INTR_DISABLE
+    };
+    ESP_ERROR_CHECK(gpio_config(&sdcard_io_config));
+
+    const gpio_config_t rst_io_config = {
+        .pin_bit_mask = BIT64(BSP_CAMERA_RST_PIN),
+        .mode = GPIO_MODE_OUTPUT, 
+        .pull_up_en = GPIO_PULLUP_DISABLE,
+        .pull_down_en = GPIO_PULLDOWN_DISABLE,
+        .intr_type = GPIO_INTR_DISABLE
+    };
+    ESP_ERROR_CHECK(gpio_config(&rst_io_config));
+
+    esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_PERIPH, ESP_PD_OPTION_ON);
+    esp_sleep_pd_config(ESP_PD_DOMAIN_VDDSDIO, ESP_PD_OPTION_ON);
+    rtc_gpio_init(BSP_CAMERA_EN_PIN);
+    rtc_gpio_init(BSP_C6_EN_PIN);
+    rtc_gpio_set_direction(BSP_C6_EN_PIN, RTC_GPIO_MODE_OUTPUT_ONLY);
+    rtc_gpio_pulldown_dis(BSP_C6_EN_PIN);
+    rtc_gpio_pullup_dis(BSP_C6_EN_PIN);
+    rtc_gpio_set_direction(BSP_CAMERA_EN_PIN, RTC_GPIO_MODE_OUTPUT_ONLY);
+    rtc_gpio_pulldown_dis(BSP_CAMERA_EN_PIN);
+    rtc_gpio_pullup_dis(BSP_CAMERA_EN_PIN);
+    rtc_gpio_hold_dis(BSP_C6_EN_PIN);
+    rtc_gpio_hold_dis(BSP_CAMERA_EN_PIN);
+
+    gpio_set_level(BSP_SD_EN_PIN, 0);
+
+    rtc_gpio_set_level(BSP_CAMERA_EN_PIN, 1);
+    rtc_gpio_hold_en(BSP_CAMERA_EN_PIN);
+
+    gpio_set_level(BSP_CAMERA_RST_PIN, 1);
+
+    return ESP_OK;
+}
+
+esp_err_t bsp_sleep_io_init(void)
+{
+    rtc_gpio_hold_dis(BSP_C6_EN_PIN);
+    rtc_gpio_hold_dis(BSP_CAMERA_EN_PIN);
+
+    rtc_gpio_set_level(BSP_C6_EN_PIN, 0);
+    rtc_gpio_set_level(BSP_CAMERA_EN_PIN, 0);
+
+    rtc_gpio_hold_en(BSP_C6_EN_PIN);
+    rtc_gpio_hold_en(BSP_CAMERA_EN_PIN);
+
+    ESP_ERROR_CHECK(esp_cam_sensor_xclk_stop(xclk_handle));
+
+    return ESP_OK;
+}
+
+esp_err_t bsp_knob_init(void)
+{
+    // Initialize knob
+    knob_config_t cfg = {
+        .default_direction = 0,
+        .gpio_encoder_a = BSP_KNOB_A,
+        .gpio_encoder_b = BSP_KNOB_B,
+    };
+
+    // Create knob instance
+    knob = iot_knob_create(&cfg);
+    if (knob == NULL) {
+        ESP_LOGE(TAG, "Failed to create knob");
+    }
+
+    return ESP_OK;
+}
+
+esp_err_t bsp_knob_register_cb(knob_event_t event, knob_cb_t cb, void *usr_data)
+{
+    if (knob == NULL) {
+        ESP_LOGE(TAG, "Knob not initialized");
+        return ESP_ERR_INVALID_STATE;
+    }
+
+    return iot_knob_register_cb(knob, event, cb, usr_data);
+}
+
 #define LCD_CMD_BITS         (8)
 #define LCD_PARAM_BITS       (8)
 #define LCD_LEDC_CH          (CONFIG_BSP_DISPLAY_BRIGHTNESS_LEDC_CH)
@@ -440,6 +545,7 @@ lv_disp_t *bsp_display_start(void)
 
 esp_err_t bsp_display_enter_sleep(void)
 {
+    bsp_display_backlight_off();
     esp_lcd_panel_disp_sleep(panel_handle, true);
     
     return ESP_OK;

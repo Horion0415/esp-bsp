@@ -20,6 +20,8 @@
 #include "bsp/display.h"
 #include "driver/i2s_pdm.h"
 
+#include "iot_knob.h"
+
 #if ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(5, 0, 0)
 #include "driver/i2s.h"
 #else
@@ -71,19 +73,27 @@
 #define BSP_KNOB_A            (GPIO_NUM_48)
 #define BSP_KNOB_B            (GPIO_NUM_47)
 
-// /* Camera */
-#define BSP_CAMERA_XCLK      (GPIO_NUM_15)
-#define BSP_CAMERA_PCLK      (GPIO_NUM_13)
-#define BSP_CAMERA_VSYNC     (GPIO_NUM_6)
-#define BSP_CAMERA_HSYNC     (GPIO_NUM_7)
-#define BSP_CAMERA_D0        (GPIO_NUM_11)
-#define BSP_CAMERA_D1        (GPIO_NUM_9)
-#define BSP_CAMERA_D2        (GPIO_NUM_8)
-#define BSP_CAMERA_D3        (GPIO_NUM_10)
-#define BSP_CAMERA_D4        (GPIO_NUM_12)
-#define BSP_CAMERA_D5        (GPIO_NUM_18)
-#define BSP_CAMERA_D6        (GPIO_NUM_17)
-#define BSP_CAMERA_D7        (GPIO_NUM_16)
+// // /* Camera */
+// #define BSP_CAMERA_XCLK      (GPIO_NUM_15)
+// #define BSP_CAMERA_PCLK      (GPIO_NUM_13)
+// #define BSP_CAMERA_VSYNC     (GPIO_NUM_6)
+// #define BSP_CAMERA_HSYNC     (GPIO_NUM_7)
+// #define BSP_CAMERA_D0        (GPIO_NUM_11)
+// #define BSP_CAMERA_D1        (GPIO_NUM_9)
+// #define BSP_CAMERA_D2        (GPIO_NUM_8)
+// #define BSP_CAMERA_D3        (GPIO_NUM_10)
+// #define BSP_CAMERA_D4        (GPIO_NUM_12)
+// #define BSP_CAMERA_D5        (GPIO_NUM_18)
+// #define BSP_CAMERA_D6        (GPIO_NUM_17)
+// #define BSP_CAMERA_D7        (GPIO_NUM_16)
+#define BSP_CAMERA_XCLK_FREQUENCY              (24000000)       // Frequency in Hertz. Set frequency at 10MHz
+#define BSP_CAMERA_EN_PIN       (GPIO_NUM_12)
+#define BSP_CAMERA_RST_PIN      (GPIO_NUM_26)
+#define BSP_CAMERA_XCLK_PIN     (GPIO_NUM_11)
+
+/* C6 */
+#define BSP_C6_EN_PIN           (GPIO_NUM_9)
+
 
 /* uSD card */
 #define BSP_SD_SLOT_0_DEFAULT_INIT     \
@@ -97,6 +107,8 @@
     .d5  = 0,                          \
     .d6  = 0,                          \
     .d7  = 0
+#define BSP_SD_EN_PIN         (GPIO_NUM_46)
+
 
 /* Buttons */
 #define BSP_BUTTON_NUM1      (GPIO_NUM_3)
@@ -295,6 +307,8 @@ extern sdmmc_card_t *bsp_sdcard;
  */
 esp_err_t bsp_sdcard_mount(void);
 
+esp_err_t bsp_sleep_io_init(void);
+
 /**
  * @brief Unmount microSD card from virtual file system
  *
@@ -309,6 +323,12 @@ esp_err_t bsp_sdcard_mount(void);
 esp_err_t bsp_sdcard_unmount(void);
 
 esp_err_t bsp_get_sdcard_handle(sdmmc_card_t **card);
+
+esp_err_t bsp_p4_eye_init(void);
+
+esp_err_t bsp_knob_init(void);
+
+esp_err_t bsp_knob_register_cb(knob_event_t event, knob_cb_t cb, void *usr_data);
 
 /**************************************************************************************************
  *
