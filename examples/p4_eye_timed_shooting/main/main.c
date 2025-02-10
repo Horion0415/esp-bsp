@@ -160,18 +160,6 @@ void app_main(void)
         }
     }
 
-    if(esp_sleep_get_wakeup_cause() == ESP_SLEEP_WAKEUP_TIMER) {
-        ESP_LOGI(TAG, "Wakeup by timer");
-        timed_shooting = true;
-    } else {
-        ESP_LOGI(TAG, "Wakeup by other");
-        timed_shooting = false;
-    }
-
-    ESP_ERROR_CHECK(bsp_p4_eye_init());
-
-    app_event_group = xEventGroupCreate();
-
     if(timed_min) {
         const gpio_config_t config = {
             .pin_bit_mask = BIT(BSP_BUTTON_NUM1) | BIT(BSP_BUTTON_NUM2) | BIT(BSP_BUTTON_NUM3) | BIT(BSP_BUTTON_ENCODER),
@@ -183,6 +171,13 @@ void app_main(void)
 
         deep_sleep_register_rtc_timer_wakeup();
     }
+
+    timed_shooting = (esp_sleep_get_wakeup_cause() == ESP_SLEEP_WAKEUP_TIMER);
+    ESP_LOGI(TAG, "Wakeup by %s", timed_shooting ? "timer" : "other");
+
+    ESP_ERROR_CHECK(bsp_p4_eye_init());
+
+    app_event_group = xEventGroupCreate();
 
     // Initialize the knob
     ESP_ERROR_CHECK(bsp_knob_init());
