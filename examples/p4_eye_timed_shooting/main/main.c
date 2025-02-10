@@ -638,7 +638,7 @@ bool read_email_config(char *smtp_server, char *port, char *sender_email, char *
 static void deep_sleep_register_rtc_timer_wakeup(void)
 {
     printf("Enabling timer wakeup, %ldmin\n", timed_min);
-    // ESP_ERROR_CHECK(esp_sleep_enable_timer_wakeup(timed_min * 60 * 1000000));
+
     ESP_ERROR_CHECK(esp_sleep_enable_timer_wakeup(timed_min * UNIT_TIME));
 }
 
