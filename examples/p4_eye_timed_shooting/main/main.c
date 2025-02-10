@@ -52,7 +52,7 @@
 #define UNIT_TIME                                  (TIMER_MIN_INTERVAL)
 
 #define LED_LIGHT_ON                               (1)
-#define WIFI_SWITCH_ON                             (0)
+#define WIFI_SWITCH_ON                             (1)
 
 #define CONFIG_FILE                                BSP_SD_MOUNT_POINT"/info_config.txt"
 
@@ -61,7 +61,7 @@
 #define P4_EYE_RST_PIN                             (GPIO_NUM_26)
 #define P4_EYE_SDCARD_EN_PIN                       (GPIO_NUM_46)
 
-#define CAPTURE_INDEX                              (5)
+#define CAPTURE_INDEX                              (10)
 
 #define XCLK_OUTPUT_FREQUENCY                      (24000000)       // Frequency in Hertz. Set frequency at 10MHz
 #define XCLK_OUTPUT_IO                             (11)             // Define the output GPIO
@@ -108,6 +108,8 @@ static int scale_level_res[SCALE_LEVELS] = {1, 2, 4, 5, 8, 10, 16, 20, 40, 60, 8
 static int knob_count = (SCALE_LEVELS - 1) * STEPS_PER_LEVEL;
 
 static int video_cam_fd0 = -1;
+
+static bool smtp_connected = false;
 
 typedef struct {
     char ssid[32];
@@ -226,8 +228,6 @@ void app_main(void)
     ESP_ERROR_CHECK(esp_netif_init());
     ESP_ERROR_CHECK(esp_event_loop_create_default());
 #endif
-
-    timed_min = 5;
 
     gpio_init();
 
@@ -470,7 +470,11 @@ static void camera_video_frame_operation(uint8_t *camera_buf, uint8_t camera_buf
     lv_canvas_set_buffer(cam_canvas, canvas_buf[camera_buf_index], BSP_LCD_H_RES, BSP_LCD_V_RES, LV_IMG_CF_TRUE_COLOR);
     bsp_display_unlock();
 
-    if(timed_shooting && capture_index == CAPTURE_INDEX) {
+#if WIFI_SWITCH_ON
+    if(timed_shooting && capture_index > CAPTURE_INDEX && smtp_connected) {
+#else
+    if(timed_shooting && capture_index > CAPTURE_INDEX) {
+#endif
         jpeg_encode_cfg_t enc_config = {
             .src_type = JPEG_ENCODE_IN_FORMAT_RGB565,
             .sub_sample = JPEG_DOWN_SAMPLING_YUV420,
@@ -510,7 +514,9 @@ static void camera_video_frame_operation(uint8_t *camera_buf, uint8_t camera_buf
             ESP_ERROR_CHECK(app_smtp_perform_authentication());
             app_smtp_compose_email(jpg_buf, jpg_size, file_name);
         }
-#endif    
+#endif  
+        vTaskDelay(300 / portTICK_PERIOD_MS);
+        xEventGroupSetBits(deep_sleep_event_group, DEEP_SLEEP_EVENT_BIT);
     }
 }
 
@@ -547,6 +553,8 @@ static void wifi_connect_task(void *arg)
         ESP_ERROR_CHECK(app_smtp_tls_init());
         ESP_ERROR_CHECK(app_smtp_connect_server());
         ESP_ERROR_CHECK(app_smtp_perform_authentication());
+
+        smtp_connected = true;
     }
 
     ESP_LOGI(TAG, "wifi_connect_task end");
