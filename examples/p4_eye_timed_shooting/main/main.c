@@ -397,7 +397,6 @@ static void camera_video_frame_operation(uint8_t *camera_buf, uint8_t camera_buf
             .height = camera_buf_ves,
         };
 
-
         char file_name[64];
 
 #if LED_LIGHT_ON
@@ -656,6 +655,10 @@ static int get_current_level(int count)
 static void knob_left_cb(void *arg, void *data)
 {
     //knob_handle_t knob = (knob_handle_t)arg;
+    if(screen_index != SCREEN_EYE_CAMERA) {
+        return;
+    }
+
     knob_count--;
     if (knob_count < 0) {
         knob_count = 0;
@@ -667,6 +670,10 @@ static void knob_left_cb(void *arg, void *data)
 static void knob_right_cb(void *arg, void *data)
 {
     //knob_handle_t knob = (knob_handle_t)arg;
+    if(screen_index != SCREEN_EYE_CAMERA) {
+        return;
+    }
+
     knob_count++;
     if (knob_count > (SCALE_LEVELS * STEPS_PER_LEVEL - 1)) {
         knob_count = SCALE_LEVELS * STEPS_PER_LEVEL - 1;
@@ -678,7 +685,11 @@ static void knob_right_cb(void *arg, void *data)
 static void encoder_btn_handler(void *arg, void *data)
 {
     ESP_LOGI(TAG, "Encoder button pressed");
-    
+
+    if(screen_index != SCREEN_EYE_SET) {
+        return;
+    }
+
     xEventGroupSetBits(app_event_group, DEEP_SLEEP_BIT);
 }
 
