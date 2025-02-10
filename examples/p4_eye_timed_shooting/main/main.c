@@ -204,21 +204,17 @@ void app_main(void)
 
     if(read_sdcard_config(we_config.ssid, we_config.password)) {
         ESP_LOGI(TAG, "Read wifi config from SD card: SSID: %s, Password: %s", we_config.ssid, we_config.password);
-
         xEventGroupSetBits(app_event_group, WIFI_CONFIGURED_BIT);
     } else {
         ESP_LOGE(TAG, "Failed to read wifi config from SD card");
-
         xEventGroupClearBits(app_event_group, WIFI_CONFIGURED_BIT);
     }
 
     if(read_email_config(we_config.smtp_server, we_config.port, we_config.sender_email, we_config.sender_password, we_config.recipient_email)) {
         ESP_LOGI(TAG, "Read email config from SD card: SMTP Server: %s, Port: %s, Sender Email: %s, Sender Password: %s, Recipient Email: %s", we_config.smtp_server, we_config.port, we_config.sender_email, we_config.sender_password, we_config.recipient_email);
-
         xEventGroupSetBits(app_event_group, EMAIL_CONFIGURED_BIT);
     } else {
         ESP_LOGE(TAG, "Failed to read email config from SD card");
-
         xEventGroupClearBits(app_event_group, EMAIL_CONFIGURED_BIT);
     }
 
@@ -465,7 +461,6 @@ static void wifi_connect_task(void *arg)
         ESP_LOGI(TAG, "SMTP connected");
     }
 
-    ESP_LOGI(TAG, "wifi_connect_task end");
     vTaskDelete(NULL);
 }
 
@@ -638,7 +633,6 @@ bool read_email_config(char *smtp_server, char *port, char *sender_email, char *
 static void deep_sleep_register_rtc_timer_wakeup(void)
 {
     printf("Enabling timer wakeup, %ldmin\n", timed_min);
-
     ESP_ERROR_CHECK(esp_sleep_enable_timer_wakeup(timed_min * UNIT_TIME));
 }
 
