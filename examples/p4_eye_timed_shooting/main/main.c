@@ -40,8 +40,8 @@
 #include "app_sntp.h"
 #include "ui.h"
 
-#define LOG_MEMORY_SYSTEM_INFO         (1)
-#define LOG_TASK_SYSTEM_INFO           (1)
+#define LOG_MEMORY_SYSTEM_INFO         (0)
+#define LOG_TASK_SYSTEM_INFO           (0)
 #define LOG_TIME_INTERVAL_MS           (2000)
 #define SYS_TASKS_ELAPSED_TIME_MS      (2000)   // Period of stats measurement
 
@@ -60,6 +60,8 @@
 #define P4_EYE_CAMERA_EN_PIN                       (GPIO_NUM_12)
 #define P4_EYE_RST_PIN                             (GPIO_NUM_26)
 #define P4_EYE_SDCARD_EN_PIN                       (GPIO_NUM_46)
+
+#define CAPTURE_INDEX                              (5)
 
 #define XCLK_OUTPUT_FREQUENCY                      (24000000)       // Frequency in Hertz. Set frequency at 10MHz
 #define XCLK_OUTPUT_IO                             (11)             // Define the output GPIO
@@ -181,9 +183,10 @@ static void deep_sleep_task(void *arg)
         // Wait for the deep sleep event
         xEventGroupWaitBits(deep_sleep_event_group, DEEP_SLEEP_EVENT_BIT, pdTRUE, pdFALSE, portMAX_DELAY);
 
-        ESP_LOGI(TAG, "Deep sleep event triggered");
         nvs_set_i8(nvs_save_handle, "timed_shooting", 1);
         sleep_init();
+
+        ESP_LOGI(TAG, "Deep sleep event triggered");
         esp_deep_sleep_start();
     }
 }
@@ -197,9 +200,6 @@ void app_main(void)
         err = nvs_flash_init();
     }
     ESP_ERROR_CHECK(err);
-    ESP_ERROR_CHECK(esp_netif_init());
-    ESP_ERROR_CHECK(esp_event_loop_create_default());
-
     err = nvs_open("storage", NVS_READWRITE, &nvs_save_handle);
     if (err != ESP_OK) {
         printf("Error (%s) opening NVS handle!\n", esp_err_to_name(err));
@@ -222,6 +222,15 @@ void app_main(void)
         }
     }
 
+#if WIFI_SWITCH_ON
+    ESP_ERROR_CHECK(esp_netif_init());
+    ESP_ERROR_CHECK(esp_event_loop_create_default());
+#endif
+
+    timed_min = 5;
+
+    gpio_init();
+
     if(esp_sleep_get_wakeup_cause() == ESP_SLEEP_WAKEUP_TIMER) {
         ESP_LOGI(TAG, "Wakeup by timer");
         timed_shooting = true;
@@ -231,8 +240,6 @@ void app_main(void)
     }
 
     if(timed_min) {
-        deep_sleep_register_rtc_timer_wakeup();
-
         const gpio_config_t config = {
             .pin_bit_mask = BIT(GPIO_NUM_3) | BIT(GPIO_NUM_4) | BIT(GPIO_NUM_5),
             .mode = GPIO_MODE_INPUT,
@@ -240,6 +247,8 @@ void app_main(void)
 
         ESP_ERROR_CHECK(gpio_config(&config));
         ESP_ERROR_CHECK(esp_deep_sleep_enable_gpio_wakeup(BIT(GPIO_NUM_3) | BIT(GPIO_NUM_4) | BIT(GPIO_NUM_5), 0));
+
+        deep_sleep_register_rtc_timer_wakeup();
     }
 
     // Initialize knob
@@ -250,7 +259,7 @@ void app_main(void)
     };
 
     // Create knob instance
-     knob_handle_t knob = iot_knob_create(&cfg);
+    knob_handle_t knob = iot_knob_create(&cfg);
     if (knob == NULL) {
         ESP_LOGE(TAG, "Failed to create knob");
         return;
@@ -270,8 +279,6 @@ void app_main(void)
     ESP_ERROR_CHECK(esp_cam_sensor_xclk_allocate(ESP_CAM_SENSOR_XCLK_ESP_CLOCK_ROUTER, &xclk_handle));
     ESP_ERROR_CHECK(esp_cam_sensor_xclk_start(xclk_handle, &cam_xclk_config));
 
-    gpio_init();
-
     // Initialize the display
     bsp_display_start();
 
@@ -285,7 +292,7 @@ void app_main(void)
     ESP_ERROR_CHECK(ppa_register_client(&ppa_srm_config, &ppa_srm_handle));
     ESP_ERROR_CHECK(esp_cache_get_alignment(MALLOC_CAP_SPIRAM, &data_cache_line_size));
 
-    // // // // Initialize the SD card
+    // Initialize the SD card
     ESP_ERROR_CHECK(bsp_sdcard_mount());
     ESP_LOGI(TAG, "SD card mounted");
 
@@ -309,10 +316,10 @@ void app_main(void)
         email_configured = false;
     }
 
-    // // Initialize the USB MSC
+    // Initialize the USB MSC
     app_usb_msc_init();
 
-    // // Initialize the I2C
+    // Initialize the I2C
     ESP_ERROR_CHECK(bsp_i2c_init());
     bsp_get_i2c_bus_handle(&i2c_handle);
 
@@ -330,7 +337,7 @@ void app_main(void)
         return;
     }
 
-    // // Initialize video capture device
+    // Initialize video capture device
     ESP_ERROR_CHECK(app_video_set_bufs(video_cam_fd0, EXAMPLE_CAM_BUF_NUM, NULL));
     
     ESP_ERROR_CHECK(esp_cache_get_alignment(MALLOC_CAP_SPIRAM, &data_cache_line_size));
@@ -380,7 +387,7 @@ void app_main(void)
     deep_sleep_event_group = xEventGroupCreate();
     xTaskCreatePinnedToCore(deep_sleep_task, "deep_sleep_task", 4096, NULL, 5, NULL, 0);
 
-//     /* Init Buttons */
+    /* Init Buttons */
     button_handle_t btns[BSP_BUTTON_NUM];
     ESP_ERROR_CHECK(bsp_iot_button_create(btns, NULL, BSP_BUTTON_NUM));
     ESP_ERROR_CHECK(iot_button_register_cb(btns[BSP_BUTTON_1], BUTTON_PRESS_DOWN, mode_switch_btn_handler, (void *) BSP_BUTTON_1));
@@ -418,6 +425,9 @@ void app_main(void)
 
 static void camera_video_frame_operation(uint8_t *camera_buf, uint8_t camera_buf_index, uint32_t camera_buf_hes, uint32_t camera_buf_ves, size_t camera_buf_len)
 {
+    static uint8_t capture_index = 0;
+    capture_index++;
+
     uint16_t block_w = scale_level_res[scale_levels - 1];
     uint16_t block_h = scale_level_res[scale_levels - 1];
     float scale_x = (float)BSP_LCD_H_RES / block_w;
@@ -460,7 +470,7 @@ static void camera_video_frame_operation(uint8_t *camera_buf, uint8_t camera_buf
     lv_canvas_set_buffer(cam_canvas, canvas_buf[camera_buf_index], BSP_LCD_H_RES, BSP_LCD_V_RES, LV_IMG_CF_TRUE_COLOR);
     bsp_display_unlock();
 
-    if(timed_shooting) {
+    if(timed_shooting && capture_index == CAPTURE_INDEX) {
         jpeg_encode_cfg_t enc_config = {
             .src_type = JPEG_ENCODE_IN_FORMAT_RGB565,
             .sub_sample = JPEG_DOWN_SAMPLING_YUV420,
