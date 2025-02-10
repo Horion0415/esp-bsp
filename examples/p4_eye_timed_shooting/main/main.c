@@ -73,11 +73,6 @@ static lv_obj_t* cam_canvas;
 static uint32_t timed_min = 5;
 static bool timed_shooting = false;
 
-// #define DEEP_SLEEP_EVENT_BIT BIT0
-// static bool wifi_configured = false;
-// static bool email_configured = false;
-// static bool smtp_connected = false;
-
 typedef enum {
     WIFI_CONFIGURED_BIT   = BIT1,
     EMAIL_CONFIGURED_BIT  = BIT2,
@@ -138,6 +133,11 @@ void app_main(void)
         err = nvs_flash_init();
     }
     ESP_ERROR_CHECK(err);
+#if WIFI_SWITCH_ON
+    ESP_ERROR_CHECK(esp_netif_init());
+    ESP_ERROR_CHECK(esp_event_loop_create_default());
+#endif
+
     err = nvs_open("storage", NVS_READWRITE, &nvs_save_handle);
     if (err != ESP_OK) {
         printf("Error (%s) opening NVS handle!\n", esp_err_to_name(err));
@@ -160,11 +160,6 @@ void app_main(void)
         }
     }
 
-#if WIFI_SWITCH_ON
-    ESP_ERROR_CHECK(esp_netif_init());
-    ESP_ERROR_CHECK(esp_event_loop_create_default());
-#endif
-
     if(esp_sleep_get_wakeup_cause() == ESP_SLEEP_WAKEUP_TIMER) {
         ESP_LOGI(TAG, "Wakeup by timer");
         timed_shooting = true;
@@ -179,12 +174,12 @@ void app_main(void)
 
     if(timed_min) {
         const gpio_config_t config = {
-            .pin_bit_mask = BIT(GPIO_NUM_3) | BIT(GPIO_NUM_4) | BIT(GPIO_NUM_5),
+            .pin_bit_mask = BIT(BSP_BUTTON_NUM1) | BIT(BSP_BUTTON_NUM2) | BIT(BSP_BUTTON_NUM3) | BIT(BSP_BUTTON_ENCODER),
             .mode = GPIO_MODE_INPUT,
         };
 
         ESP_ERROR_CHECK(gpio_config(&config));
-        ESP_ERROR_CHECK(esp_deep_sleep_enable_gpio_wakeup(BIT(GPIO_NUM_3) | BIT(GPIO_NUM_4) | BIT(GPIO_NUM_5), 0));
+        ESP_ERROR_CHECK(esp_deep_sleep_enable_gpio_wakeup(BIT(BSP_BUTTON_NUM1) | BIT(BSP_BUTTON_NUM2) | BIT(BSP_BUTTON_NUM3) | BIT(BSP_BUTTON_ENCODER), 0));
 
         deep_sleep_register_rtc_timer_wakeup();
     }
@@ -195,11 +190,11 @@ void app_main(void)
     ESP_ERROR_CHECK(bsp_knob_register_cb(KNOB_LEFT, knob_left_cb, NULL));
     ESP_ERROR_CHECK(bsp_knob_register_cb(KNOB_RIGHT, knob_right_cb, NULL));
 
-    // Initialize the display
-    bsp_display_start();
-
     // Initialize the led
     ESP_ERROR_CHECK(bsp_leds_init());
+
+    // Initialize the display
+    bsp_display_start();
 
     // Initialize the PPA
     ppa_client_config_t ppa_srm_config = {
@@ -215,24 +210,20 @@ void app_main(void)
     if(read_sdcard_config(we_config.ssid, we_config.password)) {
         ESP_LOGI(TAG, "Read wifi config from SD card: SSID: %s, Password: %s", we_config.ssid, we_config.password);
 
-        // wifi_configured = true;
         xEventGroupSetBits(app_event_group, WIFI_CONFIGURED_BIT);
     } else {
         ESP_LOGE(TAG, "Failed to read wifi config from SD card");
 
-        // wifi_configured = false;
         xEventGroupClearBits(app_event_group, WIFI_CONFIGURED_BIT);
     }
 
     if(read_email_config(we_config.smtp_server, we_config.port, we_config.sender_email, we_config.sender_password, we_config.recipient_email)) {
         ESP_LOGI(TAG, "Read email config from SD card: SMTP Server: %s, Port: %s, Sender Email: %s, Sender Password: %s, Recipient Email: %s", we_config.smtp_server, we_config.port, we_config.sender_email, we_config.sender_password, we_config.recipient_email);
 
-        // email_configured = true;
         xEventGroupSetBits(app_event_group, EMAIL_CONFIGURED_BIT);
     } else {
         ESP_LOGE(TAG, "Failed to read email config from SD card");
 
-        // email_configured = false;
         xEventGroupClearBits(app_event_group, EMAIL_CONFIGURED_BIT);
     }
 
@@ -390,7 +381,14 @@ static void camera_video_frame_operation(uint8_t *camera_buf, uint8_t camera_buf
     lv_canvas_set_buffer(cam_canvas, canvas_buf[camera_buf_index], BSP_LCD_H_RES, BSP_LCD_V_RES, LV_IMG_CF_TRUE_COLOR);
     bsp_display_unlock();
 
+#if WIFI_SWITCH_ON
+    if(timed_shooting && capture_index > CAPTURE_INDEX && xEventGroupGetBits(app_event_group) & SMTP_CONNECTED_BIT) {
+#else
     if(timed_shooting && capture_index > CAPTURE_INDEX) {
+#endif
+
+        timed_shooting = false;
+
         jpeg_encode_cfg_t enc_config = {
             .src_type = JPEG_ENCODE_IN_FORMAT_RGB565,
             .sub_sample = JPEG_DOWN_SAMPLING_YUV420,
@@ -399,7 +397,7 @@ static void camera_video_frame_operation(uint8_t *camera_buf, uint8_t camera_buf
             .height = camera_buf_ves,
         };
 
-        timed_shooting = false;
+
         char file_name[64];
 
 #if LED_LIGHT_ON
@@ -424,13 +422,12 @@ static void camera_video_frame_operation(uint8_t *camera_buf, uint8_t camera_buf
 #endif
 
 #if WIFI_SWITCH_ON
-        if(xEventGroupGetBits(app_event_group) & SMTP_CONNECTED_BIT) {
-            ESP_ERROR_CHECK(app_smtp_tls_init());
-            ESP_ERROR_CHECK(app_smtp_connect_server());
-            ESP_ERROR_CHECK(app_smtp_perform_authentication());
-            app_smtp_compose_email(jpg_buf, jpg_size, file_name);
-        }
-#endif  
+        ESP_ERROR_CHECK(app_smtp_tls_init());
+        ESP_ERROR_CHECK(app_smtp_connect_server());
+        ESP_ERROR_CHECK(app_smtp_perform_authentication());
+        app_smtp_compose_email(jpg_buf, jpg_size, file_name);
+        ESP_LOGI(TAG, "SMTP send email");
+#endif
         vTaskDelay(300 / portTICK_PERIOD_MS);
         xEventGroupSetBits(app_event_group, DEEP_SLEEP_BIT);
     }
@@ -471,6 +468,7 @@ static void wifi_connect_task(void *arg)
         ESP_ERROR_CHECK(app_smtp_perform_authentication());
 
         xEventGroupSetBits(app_event_group, SMTP_CONNECTED_BIT);
+        ESP_LOGI(TAG, "SMTP connected");
     }
 
     ESP_LOGI(TAG, "wifi_connect_task end");
@@ -552,6 +550,10 @@ static int get_next_file_index(const char *path)
 
 static void increase_btn_handler(void *button_handle, void *usr_data)
 {
+    if(screen_index != SCREEN_EYE_SET) {
+        return;
+    }
+
     timed_min += 5;
     if(timed_min > 120) {
         timed_min = 5;
@@ -568,6 +570,10 @@ static void increase_btn_handler(void *button_handle, void *usr_data)
 
 static void decrease_btn_handler(void *button_handle, void *usr_data)
 {
+    if(screen_index != SCREEN_EYE_SET) {
+        return;
+    }
+
     timed_min -= 5;
     if(timed_min < 5) {
         timed_min = 120;
