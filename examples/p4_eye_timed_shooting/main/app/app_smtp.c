@@ -340,6 +340,7 @@ esp_err_t app_smtp_connect_server(void)
     ret = perform_tls_handshake(&ssl);
     if (ret != 0) {
         ESP_LOGE(TAG, "Failed to perform TLS handshake");
+        return ESP_FAIL;
     }
 #else /* SERVER_USES_STARTSSL */
     ret = perform_tls_handshake(&ssl);
@@ -378,6 +379,7 @@ esp_err_t app_smtp_perform_authentication(void)
                                 &base64_len, (unsigned char *) sender_mail, strlen(sender_mail));
     if (ret != 0) {
         ESP_LOGE(TAG, "Error in mbedtls encode! ret = -0x%x", -ret);
+        return ESP_FAIL;
     }
     len = snprintf((char *) buf, BUF_SIZE, "%s\r\n", base64_buffer);
     ret = write_ssl_and_get_response(&ssl, (unsigned char *) buf, len);
@@ -388,6 +390,7 @@ esp_err_t app_smtp_perform_authentication(void)
                                 &base64_len, (unsigned char *) sender_password, strlen(sender_password));
     if (ret != 0) {
         ESP_LOGE(TAG, "Error in mbedtls encode! ret = -0x%x", -ret);
+        return ESP_FAIL;
     }
     len = snprintf((char *) buf, BUF_SIZE, "%s\r\n", base64_buffer);
     ret = write_ssl_and_get_response(&ssl, (unsigned char *) buf, len);

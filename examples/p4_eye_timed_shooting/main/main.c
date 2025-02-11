@@ -46,7 +46,7 @@
 
 #define TIMER_SEC_INTERVAL                         (1 * 1000000)
 #define TIMER_MIN_INTERVAL                         (60 * 1000000)
-#define UNIT_TIME                                  (TIMER_SEC_INTERVAL)
+#define UNIT_TIME                                  (TIMER_MIN_INTERVAL)
 
 #define CONFIG_FILE                                BSP_SD_MOUNT_POINT"/info_config.txt"
 
@@ -72,12 +72,13 @@ static lv_obj_t* cam_canvas;
 
 static uint32_t timed_min = 5;
 static bool timed_shooting = false;
-
 typedef enum {
     WIFI_CONFIGURED_BIT   = BIT1,
     EMAIL_CONFIGURED_BIT  = BIT2,
     SMTP_CONNECTED_BIT    = BIT3,
     DEEP_SLEEP_BIT        = BIT4,
+    WIFI_FAILED_BIT       = BIT5,
+    SMTP_FAILED_BIT      = BIT6,
 } AppEventBits;
 
 // static EventGroupHandle_t deep_sleep_event_group;
@@ -373,7 +374,7 @@ static void camera_video_frame_operation(uint8_t *camera_buf, uint8_t camera_buf
     bsp_display_unlock();
 
 #if WIFI_SWITCH_ON
-    if(timed_shooting && capture_index > CAPTURE_INDEX && xEventGroupGetBits(app_event_group) & SMTP_CONNECTED_BIT) {
+    if(timed_shooting && capture_index > CAPTURE_INDEX && (xEventGroupGetBits(app_event_group) & SMTP_CONNECTED_BIT || xEventGroupGetBits(app_event_group) & WIFI_FAILED_BIT || xEventGroupGetBits(app_event_group) & SMTP_FAILED_BIT)) {
 #else
     if(timed_shooting && capture_index > CAPTURE_INDEX) {
 #endif
@@ -412,11 +413,13 @@ static void camera_video_frame_operation(uint8_t *camera_buf, uint8_t camera_buf
 #endif
 
 #if WIFI_SWITCH_ON
+    if(xEventGroupGetBits(app_event_group) & SMTP_CONNECTED_BIT) {
         ESP_ERROR_CHECK(app_smtp_tls_init());
         ESP_ERROR_CHECK(app_smtp_connect_server());
         ESP_ERROR_CHECK(app_smtp_perform_authentication());
         app_smtp_compose_email(jpg_buf, jpg_size, file_name);
         ESP_LOGI(TAG, "SMTP send email");
+    }
 #endif
         vTaskDelay(300 / portTICK_PERIOD_MS);
         xEventGroupSetBits(app_event_group, DEEP_SLEEP_BIT);
@@ -447,15 +450,38 @@ static void wifi_connect_task(void *arg)
     if(xEventGroupGetBits(app_event_group) & WIFI_CONFIGURED_BIT) {
         wifi_init_sta((uint8_t *)we_config.ssid, (uint8_t *)we_config.password);
     }
+
+    if(!app_wifi_get_connected()) {
+        xEventGroupSetBits(app_event_group, WIFI_FAILED_BIT);
+        ESP_LOGE(TAG, "Failed to connect to the wifi network");
+        vTaskDelete(NULL);
+    }
     
-    if(app_wifi_get_connected() && (xEventGroupGetBits(app_event_group) & EMAIL_CONFIGURED_BIT)) {
+    if(xEventGroupGetBits(app_event_group) & EMAIL_CONFIGURED_BIT) {
         app_smtp_set_config(we_config.smtp_server, we_config.port, we_config.sender_email, we_config.sender_password, we_config.recipient_email);
         
         app_sntp_init();
 
-        ESP_ERROR_CHECK(app_smtp_tls_init());
-        ESP_ERROR_CHECK(app_smtp_connect_server());
-        ESP_ERROR_CHECK(app_smtp_perform_authentication());
+        esp_err_t ret = app_smtp_tls_init();
+        if(ret != ESP_OK) {
+            xEventGroupSetBits(app_event_group, SMTP_FAILED_BIT);
+            ESP_LOGE(TAG, "app_smtp_tls_init failed");
+            vTaskDelete(NULL);
+        }
+
+        ret = app_smtp_connect_server();
+        if(ret != ESP_OK) {
+            xEventGroupSetBits(app_event_group, SMTP_FAILED_BIT);
+            ESP_LOGE(TAG, "app_smtp_connect_server failed");
+            vTaskDelete(NULL);
+        }
+
+        ret = app_smtp_perform_authentication();
+        if(ret != ESP_OK) {
+            xEventGroupSetBits(app_event_group, SMTP_FAILED_BIT);
+            ESP_LOGE(TAG, "app_smtp_perform_authentication failed");
+            vTaskDelete(NULL);
+        }
 
         xEventGroupSetBits(app_event_group, SMTP_CONNECTED_BIT);
         ESP_LOGI(TAG, "SMTP connected");
@@ -675,7 +701,7 @@ static void encoder_btn_handler(void *arg, void *data)
 {
     ESP_LOGI(TAG, "Encoder button pressed");
 
-    if(screen_index != SCREEN_EYE_SET) {
+    if(screen_index != SCREEN_EYE_CAMERA) {
         return;
     }
 
