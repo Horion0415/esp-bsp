@@ -82,6 +82,8 @@ static esp_cam_sensor_xclk_handle_t xclk_handle = NULL;
 
 static knob_handle_t knob = NULL;
 
+static bool led_status = false;
+
 /**
  * @brief LCD panel initialization commands.
  *
@@ -598,7 +600,13 @@ esp_err_t bsp_leds_init(void)
 esp_err_t bsp_led_set(const bsp_led_t led_io, const bool on)
 {
     BSP_ERROR_CHECK_RETURN_ERR(gpio_set_level((gpio_num_t) led_io, (uint32_t) on));
+    led_status = on;
     return ESP_OK;
+}
+
+bool bsp_get_led_status(const bsp_led_t led_io)
+{
+    return led_status;
 }
 
 esp_err_t bsp_extra_pdm_i2s_read(void *audio_buffer, size_t len, size_t *bytes_read, uint32_t timeout_ms)

@@ -25,10 +25,13 @@
 #define KNOB_LEFT_BIT BIT3
 #define KNOB_RIGHT_BIT BIT4
 #define KNOB_PRESS_BIT BIT5
+#define ALL_KNOB_BITS (KNOB_LEFT_BIT | KNOB_RIGHT_BIT | KNOB_PRESS_BIT)
 
+#define LED_WHITE_BIT BIT6
 static const char *TAG = "main";
 
 static EventGroupHandle_t button_event_group;
+static EventBits_t bits;
 
 static esp_err_t create_and_write_file(const char *path, char *data, bool append)
 {
@@ -62,20 +65,43 @@ static void btn_handler(void *arg, void *data)
         xEventGroupSetBits(button_event_group, BUTTON_3_BIT);
     } else if ((int)data == BSP_BUTTON_ED) {
         ESP_LOGI(TAG, "Button ED pressed");
-        xEventGroupSetBits(button_event_group, KNOB_PRESS_BIT);
+        EventBits_t current_bits = xEventGroupGetBits(button_event_group);
+        if((current_bits & ALL_BUTTONS_BITS) == ALL_BUTTONS_BITS) {
+            xEventGroupSetBits(button_event_group, KNOB_PRESS_BIT);
+        } else {
+            ESP_LOGI(TAG, "Please press all three buttons first!");
+        }
+    }
+
+    EventBits_t current_bits = xEventGroupGetBits(button_event_group);
+    if((current_bits & ALL_KNOB_BITS) == ALL_KNOB_BITS && bsp_get_led_status(BSP_LED_WHITE)) {
+        bsp_led_set(BSP_LED_WHITE, 0);  // Turn off the white LED
+        xEventGroupSetBits(button_event_group, LED_WHITE_BIT);
     }
 }
 
 static void knob_left_cb(void *arg, void *data)
 {
     ESP_LOGI(TAG, "Knob left pressed");
-    xEventGroupSetBits(button_event_group, KNOB_LEFT_BIT);
+    EventBits_t current_bits = xEventGroupGetBits(button_event_group);
+    // 检查是否所有按钮都已经按下
+    if((current_bits & ALL_BUTTONS_BITS) == ALL_BUTTONS_BITS) {
+        xEventGroupSetBits(button_event_group, KNOB_LEFT_BIT);
+    } else {
+        ESP_LOGI(TAG, "Please press all three buttons first!");
+    }
 }
 
 static void knob_right_cb(void *arg, void *data)
 {
     ESP_LOGI(TAG, "Knob right pressed");
-    xEventGroupSetBits(button_event_group, KNOB_RIGHT_BIT);
+    EventBits_t current_bits = xEventGroupGetBits(button_event_group);
+    // 检查是否所有按钮都已经按下
+    if((current_bits & ALL_BUTTONS_BITS) == ALL_BUTTONS_BITS) {
+        xEventGroupSetBits(button_event_group, KNOB_RIGHT_BIT);
+    } else {
+        ESP_LOGI(TAG, "Please press all three buttons first!");
+    }
 }
 
 void app_main(void)
@@ -155,10 +181,10 @@ void app_main(void)
 
     button_event_group = xEventGroupCreate();
 
-    EventBits_t bits = xEventGroupWaitBits(
+    bits = xEventGroupWaitBits(
         button_event_group,   
         ALL_BUTTONS_BITS,     
-        pdTRUE,              
+        pdFALSE,              
         pdTRUE,              
         portMAX_DELAY);      
 
@@ -170,20 +196,31 @@ void app_main(void)
     // Initialize the knob
     ESP_ERROR_CHECK(bsp_knob_init());
     // Register callback functions
-    ESP_ERROR_CHECK(bsp_knob_register_cb(KNOB_LEFT, knob_right_cb, NULL));
-    ESP_ERROR_CHECK(bsp_knob_register_cb(KNOB_RIGHT, knob_left_cb, NULL));    
+    ESP_ERROR_CHECK(bsp_knob_register_cb(KNOB_LEFT, knob_left_cb, NULL));
+    ESP_ERROR_CHECK(bsp_knob_register_cb(KNOB_RIGHT, knob_right_cb, NULL));    
     ESP_ERROR_CHECK(iot_button_register_cb(btns[BSP_BUTTON_ED], BUTTON_PRESS_UP, btn_handler, (void *) BSP_BUTTON_ED));
 
     lv_label_set_text(label, "Toggle the knob left");
-    xEventGroupWaitBits(button_event_group, KNOB_LEFT_BIT, pdTRUE, pdTRUE, portMAX_DELAY);
+    xEventGroupWaitBits(button_event_group, KNOB_LEFT_BIT, pdFALSE, pdTRUE, portMAX_DELAY);
 
     lv_label_set_text(label, "Toggle the knob right");
-    xEventGroupWaitBits(button_event_group, KNOB_RIGHT_BIT, pdTRUE, pdTRUE, portMAX_DELAY);
+    xEventGroupWaitBits(button_event_group, KNOB_RIGHT_BIT, pdFALSE, pdTRUE, portMAX_DELAY);
 
     lv_label_set_text(label, "Press the knob");
-    xEventGroupWaitBits(button_event_group, KNOB_PRESS_BIT, pdTRUE, pdTRUE, portMAX_DELAY);
+    xEventGroupWaitBits(button_event_group, KNOB_PRESS_BIT, pdFALSE, pdTRUE, portMAX_DELAY);
 
     lv_label_set_text(label, "Knob test \n passed!");
     create_and_write_file(file_path, "Knob: PASS", true);
+
+    // Initialize the led
+    ESP_ERROR_CHECK(bsp_leds_init());
+    lv_label_set_text(label, "Check fill light \n if on \n press any key.");
+
+    bsp_led_set(BSP_LED_WHITE, 1);  // Turn on the white LED
+    
+    xEventGroupWaitBits(button_event_group, LED_WHITE_BIT, pdFALSE, pdTRUE, portMAX_DELAY);
+
+    lv_label_set_text(label, "LED test \n passed!");
+    create_and_write_file(file_path, "LED: PASS", true);
 }
 

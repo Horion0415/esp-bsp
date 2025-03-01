@@ -447,6 +447,14 @@ esp_err_t bsp_leds_init(void);
  */
 esp_err_t bsp_led_set(const bsp_led_t led_io, const bool on);
 
+/**
+ * @brief Get LED status
+ *
+ * @param led_io LED io
+ * @return LED status
+ */
+bool bsp_get_led_status(const bsp_led_t led_io);
+
 /**************************************************************************************************
  *
  * I2S audio interface
