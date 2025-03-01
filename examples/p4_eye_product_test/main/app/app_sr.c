@@ -176,7 +176,7 @@ esp_err_t app_sr_set_language(sr_language_t new_lang)
 
     g_sr_data->lang = new_lang;
 
-    ESP_LOGW(TAG, "Set language to %s", SR_LANG_EN == g_sr_data->lang ? "EN" : "CN");
+    ESP_LOGI(TAG, "Set language to %s", SR_LANG_EN == g_sr_data->lang ? "EN" : "CN");
     if (g_sr_data->model_data) {
         g_sr_data->multinet->destroy(g_sr_data->model_data);
     }
