@@ -11,6 +11,7 @@
 
 #include "app_usb_msc.h"
 #include "app_sr.h"
+#include "app_wifi_scan.h"
 
 #define TEST_DISK_PATH "/disk"
 #define TEST_RESULT_FILE "test.txt"
@@ -50,6 +51,7 @@ void app_main(void)
     bsp_display_unlock();
     bsp_display_backlight_on();
 
+    // Wait for USB HS
     while(!app_usb_msc_stage()) {
         lv_label_set_text(label, "Detecting USB HS...");
         vTaskDelay(300 / portTICK_PERIOD_MS);
@@ -62,6 +64,7 @@ void app_main(void)
     bsp_extra_pdm_codec_init();
     app_sr_start(false);
 
+    // Wait for wakeup
     while (!app_sr_get_wakeup_result()) {
         lv_label_set_text(label, "Detecting wakeup...");
         vTaskDelay(100 / portTICK_PERIOD_MS);
@@ -69,5 +72,17 @@ void app_main(void)
 
     lv_label_set_text(label, "Wakeup detected");
     create_and_write_file(TEST_DISK_PATH "/" TEST_RESULT_FILE, "Wakeup: PASS", true);
+
+    // Scan WiFi
+    lv_label_set_text(label, "Scanning WiFi...");
+    app_wifi_scan();
+    uint16_t ap_count = app_wifi_scan_get_ap_count();
+    if (ap_count > 0) {
+        lv_label_set_text(label, "WiFi scan: PASS");
+        create_and_write_file(TEST_DISK_PATH "/" TEST_RESULT_FILE, "WiFi scan: PASS", true);
+    } else {
+        lv_label_set_text(label, "WiFi scan: FAIL");
+        create_and_write_file(TEST_DISK_PATH "/" TEST_RESULT_FILE, "WiFi scan: FAIL", true);
+    }
 }
 

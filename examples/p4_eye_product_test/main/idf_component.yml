@@ -8,3 +8,9 @@ dependencies:
   espressif/esp_tinyusb: "*"
 
   espressif/esp-sr: "*"
+
+  espressif/esp_wifi_remote:
+    version: "*"
+    
+  espressif/esp_hosted:
+    version: "==1.3.1"
