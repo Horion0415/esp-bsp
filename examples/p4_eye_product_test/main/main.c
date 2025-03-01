@@ -10,6 +10,7 @@
 #include "esp_log.h"
 
 #include "app_usb_msc.h"
+#include "app_sr.h"
 
 #define TEST_DISK_PATH "/disk"
 #define TEST_RESULT_FILE "test.txt"
@@ -38,24 +39,35 @@ void app_main(void)
     ESP_ERROR_CHECK(app_usb_msc_init(TEST_DISK_PATH));
     create_and_write_file(TEST_DISK_PATH "/" TEST_RESULT_FILE, "", false);
 
-    // bsp_display_start();
-    // bsp_display_lock(0);
+    bsp_display_start();
+    bsp_display_lock(0);
 
-    // lv_obj_t *label = lv_label_create(lv_scr_act());
-    // lv_obj_set_style_text_font(label, &lv_font_montserrat_24, LV_PART_MAIN);
-    // lv_label_set_text(label, "Auto detecting");
-    // lv_obj_align(label, LV_ALIGN_CENTER, 0, 0);
+    lv_obj_t *label = lv_label_create(lv_scr_act());
+    lv_obj_set_style_text_font(label, &lv_font_montserrat_24, LV_PART_MAIN);
+    lv_label_set_text(label, "Auto detecting");
+    lv_obj_align(label, LV_ALIGN_CENTER, 0, 0);
     
-    // bsp_display_unlock();
-    // bsp_display_backlight_on();
+    bsp_display_unlock();
+    bsp_display_backlight_on();
 
     while(!app_usb_msc_stage()) {
-    //     lv_label_set_text(label, "Detecting USB HS...");
-         vTaskDelay(300 / portTICK_PERIOD_MS);
+        lv_label_set_text(label, "Detecting USB HS...");
+        vTaskDelay(300 / portTICK_PERIOD_MS);
     }
 
-    // lv_label_set_text(label, "USB HS detected");
-    create_and_write_file(TEST_DISK_PATH "/" TEST_RESULT_FILE, "USB HS: PASS\n", true);
-    vTaskDelay(1000 / portTICK_PERIOD_MS);
+    lv_label_set_text(label, "USB HS detected");
+    create_and_write_file(TEST_DISK_PATH "/" TEST_RESULT_FILE, "LCD: PASS", true);
+    create_and_write_file(TEST_DISK_PATH "/" TEST_RESULT_FILE, "USB HS: PASS", true);
+
+    bsp_extra_pdm_codec_init();
+    app_sr_start(false);
+
+    while (!app_sr_get_wakeup_result()) {
+        lv_label_set_text(label, "Detecting wakeup...");
+        vTaskDelay(100 / portTICK_PERIOD_MS);
+    }
+
+    lv_label_set_text(label, "Wakeup detected");
+    create_and_write_file(TEST_DISK_PATH "/" TEST_RESULT_FILE, "Wakeup: PASS", true);
 }
 

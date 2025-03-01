@@ -6,3 +6,5 @@ dependencies:
     override_path: "../../../bsp/esp32_p4_eye"
 
   espressif/esp_tinyusb: "*"
+
+  espressif/esp-sr: "*"
