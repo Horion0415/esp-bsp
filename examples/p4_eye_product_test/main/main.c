@@ -21,6 +21,7 @@ static const char *TAG = "main";
 static esp_err_t create_and_write_file(const char *path, char *data, bool append)
 {
     ESP_LOGI(TAG, "Opening file %s", path);
+    
     FILE *f = fopen(path, append ? "a" : "w");
     if (f == NULL) {
         ESP_LOGE(TAG, "Failed to open file for writing");
@@ -28,7 +29,8 @@ static esp_err_t create_and_write_file(const char *path, char *data, bool append
     }
     fprintf(f, "%s\n", data);
     fclose(f);
-    ESP_LOGI(TAG, "File written");
+
+    ESP_LOGI(TAG, "File written: %s, data: %s", path, data);
 
     return ESP_OK;
 }

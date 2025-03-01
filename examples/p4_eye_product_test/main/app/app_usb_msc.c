@@ -20,7 +20,7 @@ esp_err_t app_usb_msc_init(const char *base_path)
     wl_handle_t wl_handle_1 = WL_INVALID_HANDLE;
     ESP_LOGI(TAG, "using internal flash");
     const esp_vfs_fat_mount_config_t mount_config = {
-        .format_if_mount_failed = false,
+        .format_if_mount_failed = true,
         .max_files = 9,
         .allocation_unit_size = CONFIG_WL_SECTOR_SIZE
     };
