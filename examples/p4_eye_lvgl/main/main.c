@@ -84,9 +84,35 @@ static void scroll_end_event_cb(lv_event_t * e)
             closest_child = child;
         }
     }
-    
     // 将最接近的子元素滚动到视图中心
     if(closest_child) {
+        // 先重置所有子元素的样式
+        for(uint32_t i = 0; i < child_cnt; i++) {
+            lv_obj_t * child = lv_obj_get_child(cont, i);
+            lv_obj_set_style_transform_zoom(child, 256, 0);  // 恢复正常大小
+            
+            // 恢复标签字体大小
+            lv_obj_t * label = lv_obj_get_child(child, 0);
+            if(label) {
+                lv_obj_set_style_text_font(label, &lv_font_montserrat_16, 0);
+            }
+        }
+        
+        // 放大选中的子元素
+        lv_obj_set_style_transform_zoom(closest_child, 256 * 1.3, 0);  // 放大到130%
+        
+        // 放大选中元素的文本
+        lv_obj_t * label = lv_obj_get_child(closest_child, 0);
+        if(label) {
+            lv_obj_set_style_text_font(label, &lv_font_montserrat_20, 0);  // 使用更大的字体
+        }
+        
+        // 添加高亮效果
+        lv_obj_set_style_bg_color(closest_child, lv_color_hex(0x2196F3), 0);  // 蓝色背景
+        lv_obj_set_style_shadow_width(closest_child, 15, 0);  // 添加阴影
+        lv_obj_set_style_shadow_opa(closest_child, LV_OPA_50, 0);  // 阴影透明度
+        
+        // 滚动到视图
         lv_obj_scroll_to_view(closest_child, LV_ANIM_ON);
     }
 }
