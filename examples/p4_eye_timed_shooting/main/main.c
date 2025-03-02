@@ -40,7 +40,7 @@
 #define SYS_TASKS_ELAPSED_TIME_MS      (2000)   // Period of stats measurement
 
 #define LED_LIGHT_ON                               (1)
-#define WIFI_SWITCH_ON                             (1)
+#define WIFI_SWITCH_ON                             (0)
 
 #define ALIGN_UP(num, align)    (((num) + ((align) - 1)) & ~((align) - 1))
 
