@@ -1,0 +1,6 @@
+description: BSP Display example
+
+dependencies:
+  esp32_p4_eye:
+    version: "0.*"
+    override_path: "../../../bsp/esp32_p4_eye"
