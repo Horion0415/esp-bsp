@@ -63,8 +63,10 @@ static void scroll_event_cb(lv_event_t * e)
 void lv_example_scroll_6(void)
 {
     cont = lv_obj_create(lv_scr_act());
+    lv_obj_set_style_pad_row(cont, 40, 0);  // 行间距为20像素
     lv_obj_set_size(cont, 240, 240);
-    lv_obj_center(cont);
+    //lv_obj_center(cont);
+    lv_obj_set_pos(cont, -170, 0);
     lv_obj_set_flex_flow(cont, LV_FLEX_FLOW_COLUMN);
     lv_obj_add_event_cb(cont, scroll_event_cb, LV_EVENT_SCROLL, NULL);
     lv_obj_set_style_radius(cont, LV_RADIUS_CIRCLE, 0);
