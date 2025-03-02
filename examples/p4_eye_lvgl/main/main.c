@@ -57,6 +57,40 @@ static void scroll_event_cb(lv_event_t * e)
     }
 }
 
+static void scroll_end_event_cb(lv_event_t * e)
+{
+    lv_obj_t * cont = lv_event_get_target(e);
+    
+    // 获取容器中心坐标
+    lv_area_t cont_a;
+    lv_obj_get_coords(cont, &cont_a);
+    lv_coord_t cont_y_center = cont_a.y1 + lv_area_get_height(&cont_a) / 2;
+    
+    // 寻找最接近中心的子元素
+    uint32_t child_cnt = lv_obj_get_child_cnt(cont);
+    lv_obj_t * closest_child = NULL;
+    lv_coord_t min_diff = LV_COORD_MAX;
+    
+    for(uint32_t i = 0; i < child_cnt; i++) {
+        lv_obj_t * child = lv_obj_get_child(cont, i);
+        lv_area_t child_a;
+        lv_obj_get_coords(child, &child_a);
+        
+        lv_coord_t child_y_center = child_a.y1 + lv_area_get_height(&child_a) / 2;
+        lv_coord_t diff_y = LV_ABS(child_y_center - cont_y_center);
+        
+        if(diff_y < min_diff) {
+            min_diff = diff_y;
+            closest_child = child;
+        }
+    }
+    
+    // 将最接近的子元素滚动到视图中心
+    if(closest_child) {
+        lv_obj_scroll_to_view(closest_child, LV_ANIM_ON);
+    }
+}
+
 /**
  * Translate the object as they scroll
  */
@@ -69,6 +103,7 @@ void lv_example_scroll_6(void)
     lv_obj_set_pos(cont, -170, 0);
     lv_obj_set_flex_flow(cont, LV_FLEX_FLOW_COLUMN);
     lv_obj_add_event_cb(cont, scroll_event_cb, LV_EVENT_SCROLL, NULL);
+    lv_obj_add_event_cb(cont, scroll_end_event_cb, LV_EVENT_SCROLL_END, NULL);  // 添加滚动结束事件
     lv_obj_set_style_radius(cont, LV_RADIUS_CIRCLE, 0);
     lv_obj_set_style_clip_corner(cont, true, 0);
     lv_obj_set_scroll_dir(cont, LV_DIR_VER);
