@@ -126,7 +126,7 @@ void lv_example_scroll_6(void)
     lv_obj_set_style_pad_row(cont, 40, 0);  // 行间距为20像素
     lv_obj_set_size(cont, 240, 240);
     //lv_obj_center(cont);
-    lv_obj_set_pos(cont, -170, 0);
+    lv_obj_set_pos(cont, -160, 0);
     lv_obj_set_flex_flow(cont, LV_FLEX_FLOW_COLUMN);
     lv_obj_add_event_cb(cont, scroll_event_cb, LV_EVENT_SCROLL, NULL);
     lv_obj_add_event_cb(cont, scroll_end_event_cb, LV_EVENT_SCROLL_END, NULL);  // 添加滚动结束事件
@@ -135,6 +135,13 @@ void lv_example_scroll_6(void)
     lv_obj_set_scroll_dir(cont, LV_DIR_VER);
     lv_obj_set_scroll_snap_y(cont, LV_SCROLL_SNAP_CENTER);
     lv_obj_set_scrollbar_mode(cont, LV_SCROLLBAR_MODE_OFF);
+
+    // 设置容器透明度
+    lv_obj_set_style_bg_opa(cont, LV_OPA_10, 0);  // 背景透明度设为70%
+    lv_obj_set_style_border_opa(cont, LV_OPA_TRANSP, 0);  // 边框透明度设为50%
+    
+    // 可选：设置容器背景色，使透明效果更明显
+    lv_obj_set_style_bg_color(cont, lv_color_hex(0xcccccc), 0);  // 浅灰色背景
 
     uint32_t i;
     for(i = 0; i < 20; i++) {
@@ -178,6 +185,7 @@ void app_main(void)
     bsp_display_start();
     bsp_display_lock(0);
 
+    lv_obj_set_style_bg_color(lv_scr_act(), lv_color_hex(0x006400), 0); // 深绿色 #006400
     lv_example_scroll_6();
 
     bsp_display_unlock();
