@@ -19,37 +19,37 @@ static bool usb_msc_exposed = false;
 /* Function to initialize SPIFFS */
 esp_err_t app_usb_msc_init(const char *base_path)
 {
-    ESP_LOGI(TAG, "Mounting FAT filesystem");
-    esp_err_t ret = ESP_FAIL;
-    // To mount device we need name of device partition, define base_path
-    // and allow format partition in case if it is new one and was not formatted before
+    // ESP_LOGI(TAG, "Mounting FAT filesystem");
+    // esp_err_t ret = ESP_FAIL;
+    // // To mount device we need name of device partition, define base_path
+    // // and allow format partition in case if it is new one and was not formatted before
 
-    // Handle of the wear levelling library instance
-    static wl_handle_t wl_handle = WL_INVALID_HANDLE;
-    ESP_LOGI(TAG, "using internal flash");
-    const esp_vfs_fat_mount_config_t mount_config = {
-            .max_files = 4,
-            .format_if_mount_failed = false,
-            .allocation_unit_size = CONFIG_WL_SECTOR_SIZE,
-            .use_one_fat = false,
-    };
+    // // Handle of the wear levelling library instance
+    // static wl_handle_t wl_handle = WL_INVALID_HANDLE;
+    // ESP_LOGI(TAG, "using internal flash");
+    // const esp_vfs_fat_mount_config_t mount_config = {
+    //         .max_files = 4,
+    //         .format_if_mount_failed = false,
+    //         .allocation_unit_size = CONFIG_WL_SECTOR_SIZE,
+    //         .use_one_fat = false,
+    // };
 
-    ret = esp_vfs_fat_spiflash_mount_rw_wl(base_path, "storage", &mount_config, &wl_handle);
+    // ret = esp_vfs_fat_spiflash_mount_rw_wl(base_path, "storage", &mount_config, &wl_handle);
 
-    if (ret != ESP_OK) {
-        ESP_LOGE(TAG, "Failed to mount FATFS (%s)", esp_err_to_name(ret));
-        return ESP_FAIL;
-    }
+    // if (ret != ESP_OK) {
+    //     ESP_LOGE(TAG, "Failed to mount FATFS (%s)", esp_err_to_name(ret));
+    //     return ESP_FAIL;
+    // }
 
-    vTaskDelay(100 / portTICK_PERIOD_MS);
+    // vTaskDelay(100 / portTICK_PERIOD_MS);
 
     // Initialize tinyusb
-    ESP_LOGI(TAG, "USB MSC initialization");
+    // ESP_LOGI(TAG, "USB MSC initialization");
 
-    const tinyusb_config_t tusb_cfg = {0};
-    ESP_ERROR_CHECK(tinyusb_driver_install(&tusb_cfg));
+    // const tinyusb_config_t tusb_cfg = {0};
+    // ESP_ERROR_CHECK(tinyusb_driver_install(&tusb_cfg));
     
-    ESP_LOGI(TAG, "USB MSC initialization DONE");
+    // ESP_LOGI(TAG, "USB MSC initialization DONE");
 
     return ESP_OK;
 }

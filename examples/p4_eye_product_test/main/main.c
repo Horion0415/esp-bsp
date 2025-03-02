@@ -31,6 +31,7 @@
 #define ALL_KNOB_BITS (KNOB_LEFT_BIT | KNOB_RIGHT_BIT | KNOB_PRESS_BIT)
 
 #define LED_WHITE_BIT BIT6
+#define CAMERA_EXIT_BIT BIT7
 
 #define ALIGN_UP(num, align)    (((num) + ((align) - 1)) & ~((align) - 1))
 
@@ -50,13 +51,13 @@ static esp_err_t create_and_write_file(const char *path, char *data, bool append
 {
     ESP_LOGI(TAG, "Opening file %s", path);
 
-    FILE *f = fopen(path, append ? "a" : "w");
-    if (f == NULL) {
-        ESP_LOGE(TAG, "Failed to open file for writing");
-        return ESP_FAIL;
-    }
-    fprintf(f, "%s\n", data);
-    fclose(f);
+    // FILE *f = fopen(path, append ? "a" : "w");
+    // if (f == NULL) {
+    //     ESP_LOGE(TAG, "Failed to open file for writing");
+    //     return ESP_FAIL;
+    // }
+    // fprintf(f, "%s\n", data);
+    // fclose(f);
 
     ESP_LOGI(TAG, "File written: %s, data: %s", path, data);
 
@@ -90,6 +91,10 @@ static void btn_handler(void *arg, void *data)
     if((current_bits & ALL_KNOB_BITS) == ALL_KNOB_BITS && bsp_get_led_status(BSP_LED_WHITE)) {
         bsp_led_set(BSP_LED_WHITE, 0);  // Turn off the white LED
         xEventGroupSetBits(button_event_group, LED_WHITE_BIT);
+    }
+
+    if(current_bits & LED_WHITE_BIT) {
+        xEventGroupSetBits(button_event_group, CAMERA_EXIT_BIT);
     }
 }
 
@@ -149,11 +154,11 @@ void app_main(void)
     bsp_display_unlock();
     bsp_display_backlight_on();
 
-    // Wait for USB HS
-    while(!app_usb_msc_stage()) {
-        lv_label_set_text(label, "Detecting USB HS...");
-        vTaskDelay(100 / portTICK_PERIOD_MS);
-    }
+    // // Wait for USB HS
+    // while(!app_usb_msc_stage()) {
+    //     lv_label_set_text(label, "Detecting USB HS...");
+    //     vTaskDelay(100 / portTICK_PERIOD_MS);
+    // }
 
     lv_label_set_text(label, "USB HS detected");
     create_and_write_file(file_path, "LCD: PASS", true);
@@ -248,7 +253,8 @@ void app_main(void)
     lv_obj_set_style_text_font(cam_label, &lv_font_montserrat_24, LV_PART_MAIN);
     lv_obj_set_style_text_align(cam_label, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN);
     lv_obj_set_style_text_color(cam_label, lv_color_white(), LV_PART_MAIN);
-    lv_label_set_text(cam_label, "Camera test \n passed!");
+    lv_label_set_text(cam_label, "If normal \n press any key \n to exit.");
+    lv_obj_align(cam_label, LV_ALIGN_CENTER, 0, 0);
 
     bsp_display_unlock();
 
@@ -296,6 +302,10 @@ void app_main(void)
 
     // Start the camera stream task
     ESP_ERROR_CHECK(app_video_stream_task_start(video_cam_fd0, 0));
+
+    xEventGroupWaitBits(button_event_group, CAMERA_EXIT_BIT, pdFALSE, pdTRUE, portMAX_DELAY);
+    lv_label_set_text(cam_label, "Camera test \n passed!");
+    create_and_write_file(file_path, "Camera: PASS", true);
 }
 
 static void camera_video_frame_operation(uint8_t *camera_buf, uint8_t camera_buf_index, uint32_t camera_buf_hes, uint32_t camera_buf_ves, size_t camera_buf_len)
