@@ -195,11 +195,11 @@ static void btn_handler(void *arg, void *data)
 {
     if((int)data == BSP_BUTTON_2) {
         ESP_LOGI(TAG, "scroll up");
-        lv_obj_scroll_by(cont, 0, 80, LV_ANIM_ON);
+        lv_obj_scroll_by(cont, 0, -80, LV_ANIM_ON);
         lv_event_send(cont, LV_EVENT_SCROLL, NULL);
     } else if((int)data == BSP_BUTTON_3) {
         ESP_LOGI(TAG, "scroll down");
-        lv_obj_scroll_by(cont, 0, -80, LV_ANIM_ON);
+        lv_obj_scroll_by(cont, 0, 80, LV_ANIM_ON);
         lv_event_send(cont, LV_EVENT_SCROLL, NULL);
     }
 }
