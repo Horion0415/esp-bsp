@@ -142,7 +142,7 @@ static void scroll_end_event_cb(lv_event_t * e)
         }
         
         // scroll to the view
-        lv_obj_scroll_to_view(closest_child, LV_ANIM_ON);
+        // lv_obj_scroll_to_view(closest_child, LV_ANIM_ON);
     }
 }
 
