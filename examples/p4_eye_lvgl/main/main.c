@@ -27,15 +27,24 @@ static void scroll_event_cb(lv_event_t * e)
     lv_coord_t r = lv_obj_get_height(cont) * 7 / 10;
     uint32_t i;
     uint32_t child_cnt = lv_obj_get_child_cnt(cont);
+    
+    // 找到最接近中心的子元素
+    lv_obj_t * closest_child = NULL;
+    lv_coord_t min_diff = LV_COORD_MAX;
+    
     for(i = 0; i < child_cnt; i++) {
         lv_obj_t * child = lv_obj_get_child(cont, i);
         lv_area_t child_a;
         lv_obj_get_coords(child, &child_a);
 
         lv_coord_t child_y_center = child_a.y1 + lv_area_get_height(&child_a) / 2;
-
-        lv_coord_t diff_y = child_y_center - cont_y_center;
-        diff_y = LV_ABS(diff_y);
+        lv_coord_t diff_y = LV_ABS(child_y_center - cont_y_center);
+        
+        // 记录最接近中心的子元素
+        if(diff_y < min_diff) {
+            min_diff = diff_y;
+            closest_child = child;
+        }
 
         /*Get the x of diff_y on a circle.*/
         lv_coord_t x;
@@ -58,19 +67,105 @@ static void scroll_event_cb(lv_event_t * e)
         /*Use some opacity with larger translations*/
         lv_opa_t opa = lv_map(x, 0, r, LV_OPA_TRANSP, LV_OPA_COVER);
         lv_obj_set_style_opa(child, LV_OPA_COVER - opa, 0);
+        
+        // 重置所有按钮的缩放和图标位置
+        lv_obj_set_style_transform_zoom(child, 256, 0);  // 重置为正常大小
+        lv_obj_t * img = lv_obj_get_child(child, 0);
+        if(img) {
+            lv_obj_align(img, LV_ALIGN_RIGHT_MID, 0, 0);
+        }
+    }
+    
+    // 只放大最接近中心的按钮
+    if(closest_child) {
+        // 放大选中的子元素
+        lv_obj_set_style_transform_zoom(closest_child, 256 * 1.5, 0);  // 放大到140%
+        
+        // 只为中心按钮设置特殊位置
+        lv_obj_t * img = lv_obj_get_child(closest_child, 0);
+        if(img) {
+            lv_obj_set_pos(img, -50, 0);
+        }
     }
 }
+
+// static void scroll_end_event_cb(lv_event_t * e)
+// {
+//     lv_obj_t * cont = lv_event_get_target(e);
+    
+//     // get container center coordinates
+//     lv_area_t cont_a;
+//     lv_obj_get_coords(cont, &cont_a);
+//     lv_coord_t cont_y_center = cont_a.y1 + lv_area_get_height(&cont_a) / 2;
+    
+//     // find the child element closest to the center
+//     uint32_t child_cnt = lv_obj_get_child_cnt(cont);
+//     lv_obj_t * closest_child = NULL;
+//     lv_coord_t min_diff = LV_COORD_MAX;
+    
+//     for(uint32_t i = 0; i < child_cnt; i++) {
+//         lv_obj_t * child = lv_obj_get_child(cont, i);
+//         lv_area_t child_a;
+//         lv_obj_get_coords(child, &child_a);
+        
+//         lv_coord_t child_y_center = child_a.y1 + lv_area_get_height(&child_a) / 2;
+//         lv_coord_t diff_y = LV_ABS(child_y_center - cont_y_center);
+        
+//         if(diff_y < min_diff) {
+//             min_diff = diff_y;
+//             closest_child = child;
+//         }
+//     }
+//     // scroll the closest child element to the center of the view
+//     if(closest_child) {
+//         // reset the style of all child elements
+//         for(uint32_t i = 0; i < child_cnt; i++) {
+//             lv_obj_t * child = lv_obj_get_child(cont, i);
+//             lv_obj_set_style_transform_zoom(child, 256, 0);  // reset to normal size
+            
+//             // // reset the font size of the label
+//             // lv_obj_t * label = lv_obj_get_child(child, 0);
+//             // if(label) {
+//             //     lv_obj_set_style_text_font(label, &lv_font_montserrat_16, 0);
+//             // }
+            
+//             // 重置所有图标位置到默认位置
+//             lv_obj_t * img = lv_obj_get_child(child, 0);
+//             if(img) {
+//                 lv_obj_align(img, LV_ALIGN_RIGHT_MID, 0, 0);
+//             }
+//         }
+        
+//         // zoom the selected child element
+//         lv_obj_set_style_transform_zoom(closest_child, 256 * 1.45, 0);  // zoom to 130%
+        
+//         // // zoom the text of the selected child element
+//         // lv_obj_t * label = lv_obj_get_child(closest_child, 0);
+//         // if(label) {
+//         //     lv_obj_set_style_text_font(label, &lv_font_montserrat_20, 0);  // use a larger font
+//         // }
+
+//         // 只为中心按钮设置特殊位置
+//         lv_obj_t * img = lv_obj_get_child(closest_child, 0);
+//         if(img) {
+//             lv_obj_set_pos(img, -45, 0);
+//         }
+        
+//         // scroll to the view
+//         lv_obj_scroll_to_view(closest_child, LV_ANIM_ON);
+//     }
+// }
 
 static void scroll_end_event_cb(lv_event_t * e)
 {
     lv_obj_t * cont = lv_event_get_target(e);
     
-    // get container center coordinates
+    // 获取容器中心坐标
     lv_area_t cont_a;
     lv_obj_get_coords(cont, &cont_a);
     lv_coord_t cont_y_center = cont_a.y1 + lv_area_get_height(&cont_a) / 2;
     
-    // find the child element closest to the center
+    // 找到最接近中心的子元素
     uint32_t child_cnt = lv_obj_get_child_cnt(cont);
     lv_obj_t * closest_child = NULL;
     lv_coord_t min_diff = LV_COORD_MAX;
@@ -88,18 +183,13 @@ static void scroll_end_event_cb(lv_event_t * e)
             closest_child = child;
         }
     }
-    // scroll the closest child element to the center of the view
+    
+    // 滚动结束后，重新应用样式
     if(closest_child) {
-        // reset the style of all child elements
+        // 重置所有子元素的样式
         for(uint32_t i = 0; i < child_cnt; i++) {
             lv_obj_t * child = lv_obj_get_child(cont, i);
-            lv_obj_set_style_transform_zoom(child, 256, 0);  // reset to normal size
-            
-            // // reset the font size of the label
-            // lv_obj_t * label = lv_obj_get_child(child, 0);
-            // if(label) {
-            //     lv_obj_set_style_text_font(label, &lv_font_montserrat_16, 0);
-            // }
+            lv_obj_set_style_transform_zoom(child, 256, 0);  // 重置为正常大小
             
             // 重置所有图标位置到默认位置
             lv_obj_t * img = lv_obj_get_child(child, 0);
@@ -108,22 +198,16 @@ static void scroll_end_event_cb(lv_event_t * e)
             }
         }
         
-        // zoom the selected child element
-        lv_obj_set_style_transform_zoom(closest_child, 256 * 1.45, 0);  // zoom to 130%
+        // 放大选中的子元素
+        lv_obj_set_style_transform_zoom(closest_child, 256 * 1.5, 0);  // 放大到140%
         
-        // // zoom the text of the selected child element
-        // lv_obj_t * label = lv_obj_get_child(closest_child, 0);
-        // if(label) {
-        //     lv_obj_set_style_text_font(label, &lv_font_montserrat_20, 0);  // use a larger font
-        // }
-
         // 只为中心按钮设置特殊位置
         lv_obj_t * img = lv_obj_get_child(closest_child, 0);
         if(img) {
-            lv_obj_set_pos(img, -45, 0);
+            lv_obj_set_pos(img, -50, 0);
         }
         
-        // scroll to the view
+        // 滚动到视图
         lv_obj_scroll_to_view(closest_child, LV_ANIM_ON);
     }
 }
@@ -141,6 +225,7 @@ void lv_example_scroll_6(void)
     lv_obj_set_flex_flow(cont, LV_FLEX_FLOW_COLUMN);
     lv_obj_add_event_cb(cont, scroll_event_cb, LV_EVENT_SCROLL, NULL);
     lv_obj_add_event_cb(cont, scroll_end_event_cb, LV_EVENT_SCROLL_END, NULL);  // add scroll end event
+    // lv_obj_add_event_cb(cont, scroll_begin_event_cb, LV_EVENT_SCROLL_BEGIN, NULL);  // add scroll begin event
     lv_obj_set_style_radius(cont, LV_RADIUS_CIRCLE, 0);
     lv_obj_set_style_clip_corner(cont, true, 0);
     lv_obj_set_scroll_dir(cont, LV_DIR_VER);
