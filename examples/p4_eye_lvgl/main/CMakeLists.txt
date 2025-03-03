@@ -7,5 +7,5 @@
 #                     INCLUDE_DIRS "." ${APP_DIR}
 #                     REQUIRES ${priv_requires} nvs_flash esp_wifi esp_driver_ppa)
 
-idf_component_register(SRCS "main.c" "camera_icon.c"
+idf_component_register(SRCS "main.c" "camera_icon.c" "timer_icon.c"
                     INCLUDE_DIRS ".")

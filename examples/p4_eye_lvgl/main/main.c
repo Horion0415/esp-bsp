@@ -10,6 +10,7 @@
 #include "esp_log.h"
 
 LV_IMG_DECLARE(camera_icon);
+LV_IMG_DECLARE(timer_icon);
 
 static const char *TAG = "main";
 
@@ -93,26 +94,21 @@ static void scroll_end_event_cb(lv_event_t * e)
             lv_obj_t * child = lv_obj_get_child(cont, i);
             lv_obj_set_style_transform_zoom(child, 256, 0);  // reset to normal size
             
-            // reset the font size of the label
-            lv_obj_t * label = lv_obj_get_child(child, 0);
-            if(label) {
-                lv_obj_set_style_text_font(label, &lv_font_montserrat_16, 0);
-            }
+            // // reset the font size of the label
+            // lv_obj_t * label = lv_obj_get_child(child, 0);
+            // if(label) {
+            //     lv_obj_set_style_text_font(label, &lv_font_montserrat_16, 0);
+            // }
         }
         
         // zoom the selected child element
-        lv_obj_set_style_transform_zoom(closest_child, 256 * 1.3, 0);  // zoom to 130%
+        lv_obj_set_style_transform_zoom(closest_child, 256 * 1.4, 0);  // zoom to 130%
         
         // zoom the text of the selected child element
         lv_obj_t * label = lv_obj_get_child(closest_child, 0);
         if(label) {
             lv_obj_set_style_text_font(label, &lv_font_montserrat_20, 0);  // use a larger font
         }
-        
-        // add highlight effect
-        lv_obj_set_style_bg_color(closest_child, lv_color_hex(0x2196F3), 0);  // blue background
-        lv_obj_set_style_shadow_width(closest_child, 15, 0);  // add shadow
-        lv_obj_set_style_shadow_opa(closest_child, LV_OPA_50, 0);  // shadow opacity
         
         // scroll to the view
         lv_obj_scroll_to_view(closest_child, LV_ANIM_ON);
@@ -125,7 +121,7 @@ static void scroll_end_event_cb(lv_event_t * e)
 void lv_example_scroll_6(void)
 {
     cont = lv_obj_create(lv_scr_act());
-    lv_obj_set_style_pad_row(cont, 40, 0);  
+    lv_obj_set_style_pad_row(cont, 20, 0);  
     lv_obj_set_size(cont, 240, 240);
     //lv_obj_center(cont);
     lv_obj_set_pos(cont, -160, 0);
@@ -148,21 +144,35 @@ void lv_example_scroll_6(void)
     uint32_t i;
     for(i = 0; i < 20; i++) {
         lv_obj_t * btn = lv_btn_create(cont);
+        
+        // set button opacity
         lv_obj_set_style_bg_opa(btn, LV_OPA_TRANSP, 0);
         lv_obj_set_style_border_opa(btn, LV_OPA_TRANSP, 0);
         lv_obj_set_style_border_width(btn, 0, 0);
-        lv_obj_set_style_shadow_opa(btn, LV_OPA_TRANSP, 0);
+        
+        // remove shadow effect
         lv_obj_set_style_shadow_width(btn, 0, 0);
-        lv_obj_set_style_shadow_spread(btn, 0, 0);
+        lv_obj_set_style_shadow_spread(btn, 0, 0); 
+        lv_obj_set_style_shadow_opa(btn, LV_OPA_TRANSP, 0);
+        
+        // remove shadow offset
         lv_obj_set_style_shadow_ofs_x(btn, 0, 0);
         lv_obj_set_style_shadow_ofs_y(btn, 0, 0);
+        
+        // set button width
         lv_obj_set_width(btn, lv_pct(100));
 
-        if(i == 3) {
+        if(i % 2 == 0) {
             lv_obj_t * img1 = lv_img_create(btn);
             lv_img_set_src(img1, &camera_icon);
-            lv_obj_align(img1, LV_ALIGN_RIGHT_MID, -30, 0);
-            lv_img_set_zoom(img1, 180);
+            lv_obj_align(img1, LV_ALIGN_RIGHT_MID, -40, 0);
+            lv_img_set_zoom(img1, 160);
+            lv_img_set_size_mode(img1, LV_IMG_SIZE_MODE_REAL);
+        } else {
+            lv_obj_t * img1 = lv_img_create(btn);
+            lv_img_set_src(img1, &timer_icon);
+            lv_obj_align(img1, LV_ALIGN_RIGHT_MID, -40, 0);
+            lv_img_set_zoom(img1, 160);
             lv_img_set_size_mode(img1, LV_IMG_SIZE_MODE_REAL);
         }
     }
@@ -178,11 +188,11 @@ static void btn_handler(void *arg, void *data)
 {
     if((int)data == BSP_BUTTON_2) {
         ESP_LOGI(TAG, "scroll up");
-        lv_obj_scroll_by(cont, 0, 50, LV_ANIM_ON);
+        lv_obj_scroll_by(cont, 0, 80, LV_ANIM_ON);
         lv_event_send(cont, LV_EVENT_SCROLL, NULL);
     } else if((int)data == BSP_BUTTON_3) {
         ESP_LOGI(TAG, "scroll down");
-        lv_obj_scroll_by(cont, 0, -50, LV_ANIM_ON);
+        lv_obj_scroll_by(cont, 0, -80, LV_ANIM_ON);
         lv_event_send(cont, LV_EVENT_SCROLL, NULL);
     }
 }
