@@ -48,7 +48,8 @@ static void scroll_event_cb(lv_event_t * e)
             uint32_t x_sqr = r * r - diff_y * diff_y;
             lv_sqrt_res_t res;
             lv_sqrt(x_sqr, &res, 0x8000);   /*Use lvgl's built in sqrt root function*/
-            x = r - res.i;
+            // x = r - res.i;
+            x = res.i - r;
         }
 
         /*Translate the item by the calculated X coordinate*/
@@ -99,15 +100,27 @@ static void scroll_end_event_cb(lv_event_t * e)
             // if(label) {
             //     lv_obj_set_style_text_font(label, &lv_font_montserrat_16, 0);
             // }
+            
+            // 重置所有图标位置到默认位置
+            lv_obj_t * img = lv_obj_get_child(child, 0);
+            if(img) {
+                lv_obj_align(img, LV_ALIGN_RIGHT_MID, 0, 0);
+            }
         }
         
         // zoom the selected child element
-        lv_obj_set_style_transform_zoom(closest_child, 256 * 1.4, 0);  // zoom to 130%
+        lv_obj_set_style_transform_zoom(closest_child, 256 * 1.45, 0);  // zoom to 130%
         
-        // zoom the text of the selected child element
-        lv_obj_t * label = lv_obj_get_child(closest_child, 0);
-        if(label) {
-            lv_obj_set_style_text_font(label, &lv_font_montserrat_20, 0);  // use a larger font
+        // // zoom the text of the selected child element
+        // lv_obj_t * label = lv_obj_get_child(closest_child, 0);
+        // if(label) {
+        //     lv_obj_set_style_text_font(label, &lv_font_montserrat_20, 0);  // use a larger font
+        // }
+
+        // 只为中心按钮设置特殊位置
+        lv_obj_t * img = lv_obj_get_child(closest_child, 0);
+        if(img) {
+            lv_obj_set_pos(img, -45, 0);
         }
         
         // scroll to the view
@@ -123,7 +136,7 @@ void lv_example_scroll_6(void)
     cont = lv_obj_create(lv_scr_act());
     lv_obj_set_style_pad_row(cont, 20, 0);  
     lv_obj_set_size(cont, 240, 240);
-    //lv_obj_center(cont);
+    // lv_obj_center(cont);
     lv_obj_set_pos(cont, -160, 0);
     lv_obj_set_flex_flow(cont, LV_FLEX_FLOW_COLUMN);
     lv_obj_add_event_cb(cont, scroll_event_cb, LV_EVENT_SCROLL, NULL);
@@ -165,14 +178,14 @@ void lv_example_scroll_6(void)
         if(i % 2 == 0) {
             lv_obj_t * img1 = lv_img_create(btn);
             lv_img_set_src(img1, &camera_icon);
-            lv_obj_align(img1, LV_ALIGN_RIGHT_MID, -40, 0);
-            lv_img_set_zoom(img1, 160);
+            lv_obj_align(img1, LV_ALIGN_RIGHT_MID, 0, 0);
+            lv_img_set_zoom(img1, 140);
             lv_img_set_size_mode(img1, LV_IMG_SIZE_MODE_REAL);
         } else {
             lv_obj_t * img1 = lv_img_create(btn);
             lv_img_set_src(img1, &timer_icon);
-            lv_obj_align(img1, LV_ALIGN_RIGHT_MID, -40, 0);
-            lv_img_set_zoom(img1, 160);
+            lv_obj_align(img1, LV_ALIGN_RIGHT_MID, 0, 0);
+            lv_img_set_zoom(img1, 140);
             lv_img_set_size_mode(img1, LV_IMG_SIZE_MODE_REAL);
         }
     }
