@@ -143,7 +143,7 @@ void lv_example_scroll_6(void)
     lv_obj_set_pos(cont, -160, 0);
     
     // Set container properties
-    lv_obj_set_style_pad_row(cont, 20, 0);
+    lv_obj_set_style_pad_row(cont, 23, 0);
     lv_obj_set_flex_flow(cont, LV_FLEX_FLOW_COLUMN);
     lv_obj_set_style_radius(cont, LV_RADIUS_CIRCLE, 0);
     lv_obj_set_style_clip_corner(cont, true, 0);
