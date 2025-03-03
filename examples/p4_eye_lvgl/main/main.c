@@ -9,6 +9,8 @@
 #include "lvgl.h"
 #include "esp_log.h"
 
+LV_IMG_DECLARE(camera_icon);
+
 static const char *TAG = "main";
 
 lv_obj_t * cont = NULL;
@@ -61,12 +63,12 @@ static void scroll_end_event_cb(lv_event_t * e)
 {
     lv_obj_t * cont = lv_event_get_target(e);
     
-    // 获取容器中心坐标
+    // get container center coordinates
     lv_area_t cont_a;
     lv_obj_get_coords(cont, &cont_a);
     lv_coord_t cont_y_center = cont_a.y1 + lv_area_get_height(&cont_a) / 2;
     
-    // 寻找最接近中心的子元素
+    // find the child element closest to the center
     uint32_t child_cnt = lv_obj_get_child_cnt(cont);
     lv_obj_t * closest_child = NULL;
     lv_coord_t min_diff = LV_COORD_MAX;
@@ -84,35 +86,35 @@ static void scroll_end_event_cb(lv_event_t * e)
             closest_child = child;
         }
     }
-    // 将最接近的子元素滚动到视图中心
+    // scroll the closest child element to the center of the view
     if(closest_child) {
-        // 先重置所有子元素的样式
+        // reset the style of all child elements
         for(uint32_t i = 0; i < child_cnt; i++) {
             lv_obj_t * child = lv_obj_get_child(cont, i);
-            lv_obj_set_style_transform_zoom(child, 256, 0);  // 恢复正常大小
+            lv_obj_set_style_transform_zoom(child, 256, 0);  // reset to normal size
             
-            // 恢复标签字体大小
+            // reset the font size of the label
             lv_obj_t * label = lv_obj_get_child(child, 0);
             if(label) {
                 lv_obj_set_style_text_font(label, &lv_font_montserrat_16, 0);
             }
         }
         
-        // 放大选中的子元素
-        lv_obj_set_style_transform_zoom(closest_child, 256 * 1.3, 0);  // 放大到130%
+        // zoom the selected child element
+        lv_obj_set_style_transform_zoom(closest_child, 256 * 1.3, 0);  // zoom to 130%
         
-        // 放大选中元素的文本
+        // zoom the text of the selected child element
         lv_obj_t * label = lv_obj_get_child(closest_child, 0);
         if(label) {
-            lv_obj_set_style_text_font(label, &lv_font_montserrat_20, 0);  // 使用更大的字体
+            lv_obj_set_style_text_font(label, &lv_font_montserrat_20, 0);  // use a larger font
         }
         
-        // 添加高亮效果
-        lv_obj_set_style_bg_color(closest_child, lv_color_hex(0x2196F3), 0);  // 蓝色背景
-        lv_obj_set_style_shadow_width(closest_child, 15, 0);  // 添加阴影
-        lv_obj_set_style_shadow_opa(closest_child, LV_OPA_50, 0);  // 阴影透明度
+        // add highlight effect
+        lv_obj_set_style_bg_color(closest_child, lv_color_hex(0x2196F3), 0);  // blue background
+        lv_obj_set_style_shadow_width(closest_child, 15, 0);  // add shadow
+        lv_obj_set_style_shadow_opa(closest_child, LV_OPA_50, 0);  // shadow opacity
         
-        // 滚动到视图
+        // scroll to the view
         lv_obj_scroll_to_view(closest_child, LV_ANIM_ON);
     }
 }
@@ -123,33 +125,46 @@ static void scroll_end_event_cb(lv_event_t * e)
 void lv_example_scroll_6(void)
 {
     cont = lv_obj_create(lv_scr_act());
-    lv_obj_set_style_pad_row(cont, 40, 0);  // 行间距为20像素
+    lv_obj_set_style_pad_row(cont, 40, 0);  
     lv_obj_set_size(cont, 240, 240);
     //lv_obj_center(cont);
     lv_obj_set_pos(cont, -160, 0);
     lv_obj_set_flex_flow(cont, LV_FLEX_FLOW_COLUMN);
     lv_obj_add_event_cb(cont, scroll_event_cb, LV_EVENT_SCROLL, NULL);
-    lv_obj_add_event_cb(cont, scroll_end_event_cb, LV_EVENT_SCROLL_END, NULL);  // 添加滚动结束事件
+    lv_obj_add_event_cb(cont, scroll_end_event_cb, LV_EVENT_SCROLL_END, NULL);  // add scroll end event
     lv_obj_set_style_radius(cont, LV_RADIUS_CIRCLE, 0);
     lv_obj_set_style_clip_corner(cont, true, 0);
     lv_obj_set_scroll_dir(cont, LV_DIR_VER);
     lv_obj_set_scroll_snap_y(cont, LV_SCROLL_SNAP_CENTER);
     lv_obj_set_scrollbar_mode(cont, LV_SCROLLBAR_MODE_OFF);
 
-    // 设置容器透明度
-    lv_obj_set_style_bg_opa(cont, LV_OPA_10, 0);  // 背景透明度设为70%
-    lv_obj_set_style_border_opa(cont, LV_OPA_TRANSP, 0);  // 边框透明度设为50%
+    // set container opacity
+    lv_obj_set_style_bg_opa(cont, LV_OPA_10, 0);  // background opacity set to 70%
+    lv_obj_set_style_border_opa(cont, LV_OPA_TRANSP, 0);  // border opacity set to 50%
     
-    // 可选：设置容器背景色，使透明效果更明显
-    lv_obj_set_style_bg_color(cont, lv_color_hex(0xcccccc), 0);  // 浅灰色背景
+    // optional: set container background color, make transparent effect more obvious
+    lv_obj_set_style_bg_color(cont, lv_color_hex(0xcccccc), 0);  // light gray background
 
     uint32_t i;
     for(i = 0; i < 20; i++) {
         lv_obj_t * btn = lv_btn_create(cont);
+        lv_obj_set_style_bg_opa(btn, LV_OPA_TRANSP, 0);
+        lv_obj_set_style_border_opa(btn, LV_OPA_TRANSP, 0);
+        lv_obj_set_style_border_width(btn, 0, 0);
+        lv_obj_set_style_shadow_opa(btn, LV_OPA_TRANSP, 0);
+        lv_obj_set_style_shadow_width(btn, 0, 0);
+        lv_obj_set_style_shadow_spread(btn, 0, 0);
+        lv_obj_set_style_shadow_ofs_x(btn, 0, 0);
+        lv_obj_set_style_shadow_ofs_y(btn, 0, 0);
         lv_obj_set_width(btn, lv_pct(100));
 
-        lv_obj_t * label = lv_label_create(btn);
-        lv_label_set_text_fmt(label, "Button %"LV_PRIu32, i);
+        if(i == 3) {
+            lv_obj_t * img1 = lv_img_create(btn);
+            lv_img_set_src(img1, &camera_icon);
+            lv_obj_align(img1, LV_ALIGN_RIGHT_MID, -30, 0);
+            lv_img_set_zoom(img1, 180);
+            lv_img_set_size_mode(img1, LV_IMG_SIZE_MODE_REAL);
+        }
     }
 
     /*Update the buttons position manually for first*/
@@ -185,8 +200,8 @@ void app_main(void)
     bsp_display_start();
     bsp_display_lock(0);
 
-    lv_obj_set_style_bg_color(lv_scr_act(), lv_color_hex(0x006400), 0); // 深绿色 #006400
     lv_example_scroll_6();
+    lv_obj_set_style_bg_color(lv_scr_act(), lv_color_hex(0x000000), 0); // 深绿色 #000000
 
     bsp_display_unlock();
     bsp_display_backlight_on();
