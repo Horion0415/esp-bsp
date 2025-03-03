@@ -347,7 +347,7 @@ esp_err_t bsp_knob_register_cb(knob_event_t event, knob_cb_t cb, void *usr_data)
 #define BSP_LCD_SPI_NUM            (SPI2_HOST)
 
 #if (BSP_CONFIG_NO_GRAPHIC_LIB == 0)
-#define BSP_LCD_DRAW_BUFF_SIZE     (BSP_LCD_H_RES * BSP_LCD_V_RES)
+#define BSP_LCD_DRAW_BUFF_SIZE     (BSP_LCD_H_RES * BSP_LCD_V_RES / 2)
 #define BSP_LCD_DRAW_BUFF_DOUBLE   (0)
 
 /**

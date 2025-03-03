@@ -12,7 +12,7 @@
 #include "driver/ppa.h"
 #include "esp_private/esp_cache_private.h"
 
-#include "app_usb_msc.h"
+#include "app_usb_hid.h"
 #include "app_sr.h"
 #include "app_wifi_scan.h"
 #include "app_video.h"
@@ -49,7 +49,7 @@ static void camera_video_frame_operation(uint8_t *camera_buf, uint8_t camera_buf
 
 static esp_err_t create_and_write_file(const char *path, char *data, bool append)
 {
-    ESP_LOGI(TAG, "Opening file %s", path);
+    // ESP_LOGI(TAG, "Opening file %s", path);
 
     // FILE *f = fopen(path, append ? "a" : "w");
     // if (f == NULL) {
@@ -59,7 +59,9 @@ static esp_err_t create_and_write_file(const char *path, char *data, bool append
     // fprintf(f, "%s\n", data);
     // fclose(f);
 
-    ESP_LOGI(TAG, "File written: %s, data: %s", path, data);
+    if (append) {
+        ESP_LOGI(TAG, "[Done] %s", data);
+    } 
 
     return ESP_OK;
 }
@@ -134,13 +136,13 @@ void app_main(void)
     snprintf(mac_str, sizeof(mac_str), "%02X-%02X-%02X-%02X-%02X-%02X",
              base_mac_addr[0], base_mac_addr[1], base_mac_addr[2],
              base_mac_addr[3], base_mac_addr[4], base_mac_addr[5]);
+    ESP_LOGI(TAG, "[MAC address]: %s", mac_str);
 
     char file_path[128];
     snprintf(file_path, sizeof(file_path), TEST_RESULT_FILE_FORMAT, TEST_DISK_PATH, mac_str);
-    ESP_LOGI(TAG, "Test result file path: %s", file_path);
 
     // Initialize USB MSC
-    ESP_ERROR_CHECK(app_usb_msc_init(TEST_DISK_PATH));
+    app_usb_hid_init();
     create_and_write_file(file_path, "", false);
 
     bsp_display_start();
@@ -154,15 +156,12 @@ void app_main(void)
     bsp_display_unlock();
     bsp_display_backlight_on();
 
-    // // Wait for USB HS
-    // while(!app_usb_msc_stage()) {
-    //     lv_label_set_text(label, "Detecting USB HS...");
-    //     vTaskDelay(100 / portTICK_PERIOD_MS);
-    // }
-
-    lv_label_set_text(label, "USB HS detected");
-    create_and_write_file(file_path, "LCD: PASS", true);
-    create_and_write_file(file_path, "USB HS: PASS", true);
+    // Wait for USB HS
+    while(!app_usb_hid_stage()) {
+        lv_label_set_text(label, "Detecting USB HS...");
+        vTaskDelay(100 / portTICK_PERIOD_MS);
+    }
+    ESP_LOGI(TAG, "[Done] USB HS detected!");
 
     bsp_extra_pdm_codec_init();
     app_sr_start(false);
@@ -172,9 +171,7 @@ void app_main(void)
         lv_label_set_text(label, "Detecting wakeup...");
         vTaskDelay(100 / portTICK_PERIOD_MS);
     }
-
-    lv_label_set_text(label, "Wakeup detected");
-    create_and_write_file(file_path, "Wakeup: PASS", true);
+    ESP_LOGI(TAG, "[Done] Wakeup detected!");
 
     // Scan WiFi
     lv_label_set_text(label, "Scanning WiFi...");
@@ -195,7 +192,7 @@ void app_main(void)
     ESP_ERROR_CHECK(iot_button_register_cb(btns[BSP_BUTTON_2], BUTTON_PRESS_DOWN, btn_handler, (void *) BSP_BUTTON_2));
     ESP_ERROR_CHECK(iot_button_register_cb(btns[BSP_BUTTON_3], BUTTON_PRESS_DOWN, btn_handler, (void *) BSP_BUTTON_3));
     
-    lv_label_set_text(label, "Please press the \n three buttons \n on the right.");
+    lv_label_set_text(label, "Please press the \n three buttons \n  on the right.");
 
     button_event_group = xEventGroupCreate();
 
@@ -218,10 +215,10 @@ void app_main(void)
     ESP_ERROR_CHECK(bsp_knob_register_cb(KNOB_RIGHT, knob_left_cb, NULL));    
     ESP_ERROR_CHECK(iot_button_register_cb(btns[BSP_BUTTON_ED], BUTTON_PRESS_UP, btn_handler, (void *) BSP_BUTTON_ED));
 
-    lv_label_set_text(label, "Toggle the knob left");
+    lv_label_set_text(label, "   Toggle \n the knob left");
     xEventGroupWaitBits(button_event_group, KNOB_LEFT_BIT, pdFALSE, pdTRUE, portMAX_DELAY);
 
-    lv_label_set_text(label, "Toggle the knob right");
+    lv_label_set_text(label, "   Toggle \n the knob right");
     xEventGroupWaitBits(button_event_group, KNOB_RIGHT_BIT, pdFALSE, pdTRUE, portMAX_DELAY);
 
     lv_label_set_text(label, "Press the knob");
@@ -232,7 +229,7 @@ void app_main(void)
 
     // Initialize the led
     ESP_ERROR_CHECK(bsp_leds_init());
-    lv_label_set_text(label, "Check fill light \n if on \n press any key.");
+    lv_label_set_text(label, "Check fill light \n        if on \n press any key.");
 
     bsp_led_set(BSP_LED_WHITE, 1);  // Turn on the white LED
     
@@ -240,7 +237,6 @@ void app_main(void)
 
     lv_label_set_text(label, "LED test \n passed!");
     create_and_write_file(file_path, "LED: PASS", true);
-
     bsp_display_lock(0);
 
     lv_obj_add_flag(label, LV_OBJ_FLAG_HIDDEN);
@@ -252,7 +248,7 @@ void app_main(void)
     cam_label = lv_label_create(cam_canvas);
     lv_obj_set_style_text_font(cam_label, &lv_font_montserrat_24, LV_PART_MAIN);
     lv_obj_set_style_text_align(cam_label, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN);
-    lv_obj_set_style_text_color(cam_label, lv_color_white(), LV_PART_MAIN);
+    lv_obj_set_style_text_color(cam_label, lv_color_make(255, 0, 0), LV_PART_MAIN);
     lv_label_set_text(cam_label, "If normal \n press any key \n to exit.");
     lv_obj_align(cam_label, LV_ALIGN_CENTER, 0, 0);
 
