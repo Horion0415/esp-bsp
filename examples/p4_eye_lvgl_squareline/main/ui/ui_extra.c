@@ -89,6 +89,8 @@ static void scroll_event_cb(lv_event_t * e)
         // Reset icon position
         lv_obj_t * img = lv_obj_get_child(child, 0);
         if(img) {
+            // lv_obj_invalidate(img);
+            lv_img_cache_invalidate_src(lv_img_get_src(img));
             lv_obj_set_style_transform_zoom(img, 256, 0);
             lv_obj_align(img, LV_ALIGN_CENTER, 0, 0);
         }
@@ -100,6 +102,8 @@ static void scroll_event_cb(lv_event_t * e)
         lv_obj_set_size(closest_child, btn_width * ZOOM_FACTOR, btn_height * ZOOM_FACTOR);
         lv_obj_t * img = lv_obj_get_child(closest_child, 0);
         if(img) {
+            // lv_obj_invalidate(img);
+            lv_img_cache_invalidate_src(lv_img_get_src(img));
             // lv_obj_set_size(img, btn_width * ZOOM_FACTOR, btn_height * ZOOM_FACTOR);
             lv_obj_set_style_transform_zoom(img, 256 * IMG_ZOOM_FACTOR, 0);
             lv_obj_set_pos(img, ZOOM_OFFSET, -25);
@@ -171,6 +175,8 @@ static void scroll_end_event_cb(lv_event_t * e)
             // reset the icon position to the default position
             lv_obj_t * img = lv_obj_get_child(child, 0);
             if(img) {
+                // lv_obj_invalidate(img);
+                lv_img_cache_invalidate_src(lv_img_get_src(img));
                 lv_obj_set_style_transform_zoom(img, 256, 0);
                 lv_obj_align(img, LV_ALIGN_CENTER, 0, 0);
             }
@@ -183,6 +189,8 @@ static void scroll_end_event_cb(lv_event_t * e)
         // set the special position for the center button
         lv_obj_t * img = lv_obj_get_child(closest_child, 0);
         if(img) {
+            // lv_obj_invalidate(img);
+            lv_img_cache_invalidate_src(lv_img_get_src(img));
             lv_obj_set_style_transform_zoom(img, 256 * IMG_ZOOM_FACTOR, 0);
             lv_obj_set_pos(img, ZOOM_OFFSET, -25);
         }
