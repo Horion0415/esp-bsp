@@ -13,11 +13,15 @@ LV_IMG_DECLARE(camera_icon);
 LV_IMG_DECLARE(timer_icon);
 
 #define ZOOM_FACTOR 1.5
-#define ZOOM_OFFSET 20
+#define ZOOM_OFFSET 15
+#define IMG_ZOOM_FACTOR 2
 
 static const char *TAG = "main";
 
 lv_obj_t * cont = NULL;
+
+lv_coord_t btn_width = 0;
+lv_coord_t btn_height = 0;
 
 static void scroll_event_cb(lv_event_t * e)
 {
@@ -57,20 +61,25 @@ static void scroll_event_cb(lv_event_t * e)
         // Apply transformations
         lv_obj_set_style_translate_x(child, x, 0);
         lv_obj_set_style_opa(child, LV_OPA_COVER - lv_map(x, 0, r, LV_OPA_TRANSP, LV_OPA_COVER), 0);
-        lv_obj_set_style_transform_zoom(child, 256, 0);
-        
+        // lv_obj_set_style_transform_zoom(child, 256, 0);
+        lv_obj_set_size(child, btn_width, btn_height);
+
         // Reset icon position
         lv_obj_t * img = lv_obj_get_child(child, 0);
         if(img) {
+            lv_obj_set_style_transform_zoom(img, 256, 0);
             lv_obj_align(img, LV_ALIGN_CENTER, 30, 0);
         }
     }
     
     // Apply special effects to closest child
     if(closest_child) {
-        lv_obj_set_style_transform_zoom(closest_child, 256 * ZOOM_FACTOR, 0);
+        // lv_obj_set_style_transform_zoom(closest_child, 256 * ZOOM_FACTOR, 0);
+        lv_obj_set_size(closest_child, btn_width * ZOOM_FACTOR, btn_height * ZOOM_FACTOR);
         lv_obj_t * img = lv_obj_get_child(closest_child, 0);
         if(img) {
+            // lv_obj_set_size(img, btn_width * ZOOM_FACTOR, btn_height * ZOOM_FACTOR);
+            lv_obj_set_style_transform_zoom(img, 256 * IMG_ZOOM_FACTOR, 0);
             lv_obj_set_pos(img, ZOOM_OFFSET, 0);
         }
     }
@@ -109,21 +118,25 @@ static void scroll_end_event_cb(lv_event_t * e)
         // reset the styles of all children
         for(uint32_t i = 0; i < child_cnt; i++) {
             lv_obj_t * child = lv_obj_get_child(cont, i);
-            lv_obj_set_style_transform_zoom(child, 256, 0);  // reset to normal size
-            
+            // lv_obj_set_style_transform_zoom(child, 256, 0);  // reset to normal size
+            lv_obj_set_size(child, btn_width, btn_height);
+
             // reset the icon position to the default position
             lv_obj_t * img = lv_obj_get_child(child, 0);
             if(img) {
+                lv_obj_set_style_transform_zoom(img, 256, 0);
                 lv_obj_align(img, LV_ALIGN_CENTER, 30, 0);
             }
         }
         
         // zoom the selected child
-        lv_obj_set_style_transform_zoom(closest_child, 256 * ZOOM_FACTOR, 0);  // zoom to 140%
-        
+        // lv_obj_set_style_transform_zoom(closest_child, 256 * ZOOM_FACTOR, 0);  // zoom to 140%
+        lv_obj_set_size(closest_child, btn_width * ZOOM_FACTOR, btn_height * ZOOM_FACTOR);
+
         // set the special position for the center button
         lv_obj_t * img = lv_obj_get_child(closest_child, 0);
         if(img) {
+            lv_obj_set_style_transform_zoom(img, 256 * IMG_ZOOM_FACTOR, 0);
             lv_obj_set_pos(img, ZOOM_OFFSET, 0);
         }
         
@@ -162,18 +175,18 @@ void lv_example_scroll_6(void)
     lv_obj_set_style_border_opa(cont, LV_OPA_TRANSP, 0);
 
     // Create buttons with alternating icons
-    for(uint32_t i = 0; i < 20; i++) {
+    for(uint32_t i = 0; i < 6; i++) {
         lv_obj_t * btn = lv_btn_create(cont);
         
         // Set button style - make all properties transparent
-        lv_obj_set_style_bg_opa(btn, LV_OPA_TRANSP, 0);
-        lv_obj_set_style_border_opa(btn, LV_OPA_TRANSP, 0);
-        lv_obj_set_style_border_width(btn, 0, 0);
-        lv_obj_set_style_shadow_width(btn, 0, 0);
-        lv_obj_set_style_shadow_spread(btn, 0, 0);
-        lv_obj_set_style_shadow_opa(btn, LV_OPA_TRANSP, 0);
-        lv_obj_set_style_shadow_ofs_x(btn, 0, 0);
-        lv_obj_set_style_shadow_ofs_y(btn, 0, 0);
+        // lv_obj_set_style_bg_opa(btn, LV_OPA_TRANSP, 0);
+        // lv_obj_set_style_border_opa(btn, LV_OPA_TRANSP, 0);
+        // lv_obj_set_style_border_width(btn, 0, 0);
+        // lv_obj_set_style_shadow_width(btn, 0, 0);
+        // lv_obj_set_style_shadow_spread(btn, 0, 0);
+        // lv_obj_set_style_shadow_opa(btn, LV_OPA_TRANSP, 0);
+        // lv_obj_set_style_shadow_ofs_x(btn, 0, 0);
+        // lv_obj_set_style_shadow_ofs_y(btn, 0, 0);
         
         lv_obj_set_width(btn, lv_pct(100));
 
@@ -183,6 +196,10 @@ void lv_example_scroll_6(void)
         lv_obj_align(img, LV_ALIGN_CENTER, 30, 0);
         lv_img_set_zoom(img, 120);
         lv_img_set_size_mode(img, LV_IMG_SIZE_MODE_REAL);
+
+        lv_obj_update_layout(btn);
+        btn_width = lv_obj_get_width(btn);
+        btn_height = lv_obj_get_height(btn);
     }
 
     // Initialize scroll position
