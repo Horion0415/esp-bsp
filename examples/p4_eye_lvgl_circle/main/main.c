@@ -14,7 +14,7 @@ LV_IMG_DECLARE(timer_icon);
 
 #define ZOOM_FACTOR 1.9
 #define IMG_ZOOM_FACTOR 2.6
-#define ZOOM_OFFSET -45
+#define ZOOM_OFFSET -65
 
 static const char *TAG = "main";
 
@@ -22,6 +22,8 @@ lv_obj_t * cont = NULL;
 
 lv_coord_t btn_width = 0;
 lv_coord_t btn_height = 0;
+lv_obj_t * selected_btn = NULL;  
+lv_obj_t * info_label = NULL;  
 
 static void scroll_event_cb(lv_event_t * e)
 {
@@ -115,6 +117,17 @@ static void scroll_end_event_cb(lv_event_t * e)
     
     // after scroll end, apply the styles again
     if(closest_child) {
+        selected_btn = closest_child;
+        const char* btn_text = lv_obj_get_user_data(selected_btn);
+        if (btn_text) {
+            ESP_LOGI(TAG, "selected: %s", btn_text);
+
+            if (info_label) {
+                lv_label_set_text(info_label, btn_text);
+                lv_obj_clear_flag(info_label, LV_OBJ_FLAG_HIDDEN);
+            }
+        }
+
         // reset the styles of all children
         for(uint32_t i = 0; i < child_cnt; i++) {
             lv_obj_t * child = lv_obj_get_child(cont, i);
@@ -174,9 +187,22 @@ void lv_example_scroll_6(void)
     lv_obj_set_style_bg_opa(cont, LV_OPA_TRANSP, 0);
     lv_obj_set_style_border_opa(cont, LV_OPA_TRANSP, 0);
 
+    info_label = lv_label_create(lv_scr_act());
+    lv_obj_set_style_text_font(info_label, &lv_font_montserrat_20, 0);
+    lv_obj_set_style_text_color(info_label, lv_color_hex(0x000000), 0);
+    lv_obj_align(info_label, LV_ALIGN_CENTER, 9, 50);
+    lv_label_set_text(info_label, "");  
+
+    const char* btn_texts[] = {
+        "camera", "timer", "setting", "music", 
+        "weather", "calendar",
+    };
+
     // Create buttons with alternating icons
     for(uint32_t i = 0; i < 6; i++) {
         lv_obj_t * btn = lv_btn_create(cont);
+
+        lv_obj_set_user_data(btn, (void *)btn_texts[i]);
         
         // Set button style - make all properties transparent
         lv_obj_set_style_bg_opa(btn, LV_OPA_TRANSP, 0);
@@ -207,19 +233,26 @@ void lv_example_scroll_6(void)
     // Initialize scroll position
     lv_event_send(cont, LV_EVENT_SCROLL, NULL);
     lv_obj_scroll_to_view(lv_obj_get_child(cont, 0), LV_ANIM_OFF);
+
+    const char* initial_text = lv_obj_get_user_data(lv_obj_get_child(cont, 0));
+    if (initial_text) {
+        lv_label_set_text(info_label, initial_text);
+    }
 }
 
 static void btn_handler(void *arg, void *data)
 {
     if((int)data == BSP_BUTTON_2) {
-        ESP_LOGI(TAG, "scroll up");
+        ESP_LOGD(TAG, "scroll up");
         lv_obj_scroll_by(cont, 0, 30, LV_ANIM_ON);
         lv_event_send(cont, LV_EVENT_SCROLL, NULL);
     } else if((int)data == BSP_BUTTON_3) {
-        ESP_LOGI(TAG, "scroll down");
+        ESP_LOGD(TAG, "scroll down");
         lv_obj_scroll_by(cont, 0, -30, LV_ANIM_ON);
         lv_event_send(cont, LV_EVENT_SCROLL, NULL);
     }
+
+    lv_obj_add_flag(info_label, LV_OBJ_FLAG_HIDDEN);
 }
 
 void app_main(void)
