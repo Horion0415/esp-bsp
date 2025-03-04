@@ -12,9 +12,9 @@
 LV_IMG_DECLARE(camera_icon);
 LV_IMG_DECLARE(timer_icon);
 
-#define ZOOM_FACTOR 1.5
-#define ZOOM_OFFSET 15
-#define IMG_ZOOM_FACTOR 2
+#define ZOOM_FACTOR 1.6
+#define IMG_ZOOM_FACTOR 2.5
+#define ZOOM_OFFSET -5
 
 static const char *TAG = "main";
 
@@ -80,7 +80,7 @@ static void scroll_event_cb(lv_event_t * e)
         if(img) {
             // lv_obj_set_size(img, btn_width * ZOOM_FACTOR, btn_height * ZOOM_FACTOR);
             lv_obj_set_style_transform_zoom(img, 256 * IMG_ZOOM_FACTOR, 0);
-            lv_obj_set_pos(img, ZOOM_OFFSET, 0);
+            lv_obj_set_pos(img, ZOOM_OFFSET, -25);
         }
     }
 }
@@ -137,7 +137,7 @@ static void scroll_end_event_cb(lv_event_t * e)
         lv_obj_t * img = lv_obj_get_child(closest_child, 0);
         if(img) {
             lv_obj_set_style_transform_zoom(img, 256 * IMG_ZOOM_FACTOR, 0);
-            lv_obj_set_pos(img, ZOOM_OFFSET, 0);
+            lv_obj_set_pos(img, ZOOM_OFFSET, -25);
         }
         
         // scroll to the view
@@ -153,7 +153,7 @@ void lv_example_scroll_6(void)
     // Create main container
     cont = lv_obj_create(lv_scr_act());
     lv_obj_set_size(cont, 240, 240);
-    lv_obj_set_pos(cont, -100, 0);
+    lv_obj_set_pos(cont, -90, 0);
     
     // Set container properties
     lv_obj_set_style_pad_row(cont, 0, 0);
@@ -179,16 +179,17 @@ void lv_example_scroll_6(void)
         lv_obj_t * btn = lv_btn_create(cont);
         
         // Set button style - make all properties transparent
-        // lv_obj_set_style_bg_opa(btn, LV_OPA_TRANSP, 0);
-        // lv_obj_set_style_border_opa(btn, LV_OPA_TRANSP, 0);
-        // lv_obj_set_style_border_width(btn, 0, 0);
-        // lv_obj_set_style_shadow_width(btn, 0, 0);
-        // lv_obj_set_style_shadow_spread(btn, 0, 0);
-        // lv_obj_set_style_shadow_opa(btn, LV_OPA_TRANSP, 0);
-        // lv_obj_set_style_shadow_ofs_x(btn, 0, 0);
-        // lv_obj_set_style_shadow_ofs_y(btn, 0, 0);
+        lv_obj_set_style_bg_opa(btn, LV_OPA_TRANSP, 0);
+        lv_obj_set_style_border_opa(btn, LV_OPA_TRANSP, 0);
+        lv_obj_set_style_border_width(btn, 0, 0);
+        lv_obj_set_style_shadow_width(btn, 0, 0);
+        lv_obj_set_style_shadow_spread(btn, 0, 0);
+        lv_obj_set_style_shadow_opa(btn, LV_OPA_TRANSP, 0);
+        lv_obj_set_style_shadow_ofs_x(btn, 0, 0);
+        lv_obj_set_style_shadow_ofs_y(btn, 0, 0);
         
         lv_obj_set_width(btn, lv_pct(100));
+        lv_obj_set_height(btn, 40);
 
         // Create and configure icon
         lv_obj_t * img = lv_img_create(btn);
@@ -211,11 +212,11 @@ static void btn_handler(void *arg, void *data)
 {
     if((int)data == BSP_BUTTON_2) {
         ESP_LOGI(TAG, "scroll up");
-        lv_obj_scroll_by(cont, 0, -30, LV_ANIM_ON);
+        lv_obj_scroll_by(cont, 0, 30, LV_ANIM_ON);
         lv_event_send(cont, LV_EVENT_SCROLL, NULL);
     } else if((int)data == BSP_BUTTON_3) {
         ESP_LOGI(TAG, "scroll down");
-        lv_obj_scroll_by(cont, 0, 30, LV_ANIM_ON);
+        lv_obj_scroll_by(cont, 0, -30, LV_ANIM_ON);
         lv_event_send(cont, LV_EVENT_SCROLL, NULL);
     }
 }
