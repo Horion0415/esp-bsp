@@ -4,9 +4,10 @@
 
 #include "ui.h"
 
+#define BASE_ZOOM 60
 #define ZOOM_FACTOR 2.3
 #define IMG_ZOOM_FACTOR 2.4
-#define ZOOM_OFFSET -110
+#define ZOOM_OFFSET -80
 
 static const char * TAG = "ui_extra";
 
@@ -32,13 +33,14 @@ lv_obj_t * create_img_button(lv_obj_t *parent, const void *img_src, const char *
     lv_obj_set_style_shadow_ofs_y(btn, 0, 0);
     
     lv_obj_set_width(btn, lv_pct(100));
-    lv_obj_set_height(btn, 40);
+    lv_obj_set_height(btn, 38);
 
     // Create and configure the icon
     lv_obj_t * img = lv_img_create(btn);
     lv_img_set_src(img, img_src);
     lv_obj_align(img, LV_ALIGN_CENTER, 0, 0);
-    lv_img_set_zoom(img, 60);
+    lv_img_set_zoom(img, BASE_ZOOM);
+    lv_obj_refr_size(img);
     lv_img_set_size_mode(img, LV_IMG_SIZE_MODE_REAL);
     lv_obj_add_flag(img, LV_OBJ_FLAG_FLOATING);
     
@@ -88,8 +90,8 @@ static void scroll_event_cb(lv_event_t * e)
         // Reset icon position
         lv_obj_t * img = lv_obj_get_child(child, 0);
         if(img) {
-            lv_img_cache_invalidate_src(lv_img_get_src(img));
-            lv_obj_set_style_transform_zoom(img, 256, 0);
+            lv_img_set_zoom(img, BASE_ZOOM);
+            lv_obj_refr_size(img);
             lv_obj_align(img, LV_ALIGN_CENTER, 0, 0);
         }
     }
@@ -99,9 +101,9 @@ static void scroll_event_cb(lv_event_t * e)
         lv_obj_set_size(closest_child, btn_width * ZOOM_FACTOR, btn_height * ZOOM_FACTOR);
         lv_obj_t * img = lv_obj_get_child(closest_child, 0);
         if(img) {
-            lv_img_cache_invalidate_src(lv_img_get_src(img));
-            lv_obj_set_style_transform_zoom(img, 256 * IMG_ZOOM_FACTOR, 0);
-            lv_obj_set_pos(img, ZOOM_OFFSET, -25);
+            lv_img_set_zoom(img, BASE_ZOOM * IMG_ZOOM_FACTOR);
+            lv_obj_refr_size(img);
+            lv_obj_set_pos(img, ZOOM_OFFSET, 0);
         }
     }
 }
@@ -139,7 +141,7 @@ static void scroll_end_event_cb(lv_event_t * e)
         selected_btn = closest_child;
         const char* btn_text = lv_obj_get_user_data(selected_btn);
         if (btn_text) {
-            ESP_LOGI(TAG, "selected: %s", btn_text);
+            ESP_LOGD(TAG, "selected: %s", btn_text);
 
             if (info_label) {
                 lv_label_set_text(info_label, btn_text);
@@ -169,8 +171,8 @@ static void scroll_end_event_cb(lv_event_t * e)
             // reset the icon position to the default position
             lv_obj_t * img = lv_obj_get_child(child, 0);
             if(img) {
-                lv_img_cache_invalidate_src(lv_img_get_src(img));
-                lv_obj_set_style_transform_zoom(img, 256, 0);
+                lv_img_set_zoom(img, BASE_ZOOM);
+                lv_obj_refr_size(img);
                 lv_obj_align(img, LV_ALIGN_CENTER, 0, 0);
             }
         }
@@ -181,9 +183,9 @@ static void scroll_end_event_cb(lv_event_t * e)
         // set the special position for the center button
         lv_obj_t * img = lv_obj_get_child(closest_child, 0);
         if(img) {
-            lv_img_cache_invalidate_src(lv_img_get_src(img));
-            lv_obj_set_style_transform_zoom(img, 256 * IMG_ZOOM_FACTOR, 0);
-            lv_obj_set_pos(img, ZOOM_OFFSET, -25);
+            lv_img_set_zoom(img, BASE_ZOOM * IMG_ZOOM_FACTOR);
+            lv_obj_refr_size(img);
+            lv_obj_set_pos(img, ZOOM_OFFSET, 0);
         }
         
         // scroll to the view
@@ -276,14 +278,14 @@ void ui_extra_init(void)
 
 void ui_extra_scroll_up(void)
 {
-    lv_obj_scroll_by(scroll_cont, 0, 50, LV_ANIM_ON);
+    lv_obj_scroll_by(scroll_cont, 0, 40, LV_ANIM_ON);
     lv_event_send(scroll_cont, LV_EVENT_SCROLL, NULL);
     lv_obj_add_flag(info_label, LV_OBJ_FLAG_HIDDEN);
 }
 
 void ui_extra_scroll_down(void)
 {
-    lv_obj_scroll_by(scroll_cont, 0, -50, LV_ANIM_ON);
+    lv_obj_scroll_by(scroll_cont, 0, -40, LV_ANIM_ON);
     lv_event_send(scroll_cont, LV_EVENT_SCROLL, NULL);
     lv_obj_add_flag(info_label, LV_OBJ_FLAG_HIDDEN);
 }
