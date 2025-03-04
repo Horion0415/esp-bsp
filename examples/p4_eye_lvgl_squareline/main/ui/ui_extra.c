@@ -21,7 +21,7 @@ lv_obj_t * create_img_button(lv_obj_t *parent, const void *img_src, const char *
     
     lv_obj_set_user_data(btn, (void *)btn_text);
     
-    // 设置按钮样式 - 所有属性透明
+    // Set the button style
     lv_obj_set_style_bg_opa(btn, LV_OPA_TRANSP, 0);
     lv_obj_set_style_border_opa(btn, LV_OPA_TRANSP, 0);
     lv_obj_set_style_border_width(btn, 0, 0);
@@ -34,7 +34,7 @@ lv_obj_t * create_img_button(lv_obj_t *parent, const void *img_src, const char *
     lv_obj_set_width(btn, lv_pct(100));
     lv_obj_set_height(btn, 40);
 
-    // 创建并配置图标
+    // Create and configure the icon
     lv_obj_t * img = lv_img_create(btn);
     lv_img_set_src(img, img_src);
     lv_obj_align(img, LV_ALIGN_CENTER, 0, 0);
@@ -83,13 +83,11 @@ static void scroll_event_cb(lv_event_t * e)
         // Apply transformations
         lv_obj_set_style_translate_x(child, x, 0);
         lv_obj_set_style_opa(child, LV_OPA_COVER - lv_map(x, 0, r, LV_OPA_TRANSP, LV_OPA_COVER), 0);
-        // lv_obj_set_style_transform_zoom(child, 256, 0);
         lv_obj_set_size(child, btn_width, btn_height);
 
         // Reset icon position
         lv_obj_t * img = lv_obj_get_child(child, 0);
         if(img) {
-            // lv_obj_invalidate(img);
             lv_img_cache_invalidate_src(lv_img_get_src(img));
             lv_obj_set_style_transform_zoom(img, 256, 0);
             lv_obj_align(img, LV_ALIGN_CENTER, 0, 0);
@@ -98,13 +96,10 @@ static void scroll_event_cb(lv_event_t * e)
     
     // Apply special effects to closest child
     if(closest_child) {
-        // lv_obj_set_style_transform_zoom(closest_child, 256 * ZOOM_FACTOR, 0);
         lv_obj_set_size(closest_child, btn_width * ZOOM_FACTOR, btn_height * ZOOM_FACTOR);
         lv_obj_t * img = lv_obj_get_child(closest_child, 0);
         if(img) {
-            // lv_obj_invalidate(img);
             lv_img_cache_invalidate_src(lv_img_get_src(img));
-            // lv_obj_set_size(img, btn_width * ZOOM_FACTOR, btn_height * ZOOM_FACTOR);
             lv_obj_set_style_transform_zoom(img, 256 * IMG_ZOOM_FACTOR, 0);
             lv_obj_set_pos(img, ZOOM_OFFSET, -25);
         }
@@ -169,13 +164,11 @@ static void scroll_end_event_cb(lv_event_t * e)
         // reset the styles of all children
         for(uint32_t i = 0; i < child_cnt; i++) {
             lv_obj_t * child = lv_obj_get_child(cont, i);
-            // lv_obj_set_style_transform_zoom(child, 256, 0);  // reset to normal size
             lv_obj_set_size(child, btn_width, btn_height);
 
             // reset the icon position to the default position
             lv_obj_t * img = lv_obj_get_child(child, 0);
             if(img) {
-                // lv_obj_invalidate(img);
                 lv_img_cache_invalidate_src(lv_img_get_src(img));
                 lv_obj_set_style_transform_zoom(img, 256, 0);
                 lv_obj_align(img, LV_ALIGN_CENTER, 0, 0);
@@ -183,13 +176,11 @@ static void scroll_end_event_cb(lv_event_t * e)
         }
         
         // zoom the selected child
-        // lv_obj_set_style_transform_zoom(closest_child, 256 * ZOOM_FACTOR, 0);  // zoom to 140%
         lv_obj_set_size(closest_child, btn_width * ZOOM_FACTOR, btn_height * ZOOM_FACTOR);
 
         // set the special position for the center button
         lv_obj_t * img = lv_obj_get_child(closest_child, 0);
         if(img) {
-            // lv_obj_invalidate(img);
             lv_img_cache_invalidate_src(lv_img_get_src(img));
             lv_obj_set_style_transform_zoom(img, 256 * IMG_ZOOM_FACTOR, 0);
             lv_obj_set_pos(img, ZOOM_OFFSET, -25);
@@ -237,41 +228,25 @@ void lv_scroll_create(void)
         "USB DISK", "SETTINGS",
     };
 
-    lv_obj_t * btn = create_img_button(
-            scroll_cont, 
-            &ui_img_camera_big_png,
-            btn_texts[0]
+    // define the image source for each button
+    const void* img_srcs[] = {
+        &ui_img_camera_big_png,
+        &ui_img_interval_big_png,
+        &ui_img_video_big_png,
+        &ui_img_album_big_png,
+        &ui_img_usb_big_png,
+        &ui_img_settings_big_png
+    };
+    
+    // Use a loop to create all buttons
+    lv_obj_t *btn = NULL;
+    for (int i = 0; i < sizeof(btn_texts)/sizeof(btn_texts[0]); i++) {
+        btn = create_img_button(
+            scroll_cont,
+            img_srcs[i],
+            btn_texts[i]
         );
-
-    btn = create_img_button(
-            scroll_cont, 
-            &ui_img_interval_big_png,
-            btn_texts[1]
-        );
-
-    btn = create_img_button(
-            scroll_cont, 
-            &ui_img_video_big_png,
-            btn_texts[2]
-        );
-
-    btn = create_img_button(
-            scroll_cont, 
-            &ui_img_album_big_png,
-            btn_texts[3]
-        );
-
-    btn = create_img_button(
-            scroll_cont, 
-            &ui_img_usb_big_png,
-            btn_texts[4]
-        );
-
-    btn = create_img_button(
-            scroll_cont, 
-            &ui_img_settings_big_png,
-            btn_texts[5]
-        );
+    }
         
     lv_obj_update_layout(btn);
     btn_width = lv_obj_get_width(btn);
@@ -296,7 +271,6 @@ void ui_extra_init(void)
     lv_obj_clear_flag(ui_ImageCanvasSelect, LV_OBJ_FLAG_HIDDEN);
     lv_obj_clear_flag(ui_ImageCanvasUp, LV_OBJ_FLAG_HIDDEN);
     lv_obj_clear_flag(ui_ImageCanvasDown, LV_OBJ_FLAG_HIDDEN);
-
     lv_obj_clear_flag(ui_PanelCanvasMaskLarge, LV_OBJ_FLAG_HIDDEN);
 }
 
