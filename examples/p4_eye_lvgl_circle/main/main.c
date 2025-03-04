@@ -12,9 +12,9 @@
 LV_IMG_DECLARE(camera_icon);
 LV_IMG_DECLARE(timer_icon);
 
-#define ZOOM_FACTOR 1.6
-#define IMG_ZOOM_FACTOR 2.5
-#define ZOOM_OFFSET -5
+#define ZOOM_FACTOR 1.9
+#define IMG_ZOOM_FACTOR 2.6
+#define ZOOM_OFFSET -45
 
 static const char *TAG = "main";
 
@@ -68,7 +68,7 @@ static void scroll_event_cb(lv_event_t * e)
         lv_obj_t * img = lv_obj_get_child(child, 0);
         if(img) {
             lv_obj_set_style_transform_zoom(img, 256, 0);
-            lv_obj_align(img, LV_ALIGN_CENTER, 30, 0);
+            lv_obj_align(img, LV_ALIGN_CENTER, -20, 0);
         }
     }
     
@@ -125,7 +125,7 @@ static void scroll_end_event_cb(lv_event_t * e)
             lv_obj_t * img = lv_obj_get_child(child, 0);
             if(img) {
                 lv_obj_set_style_transform_zoom(img, 256, 0);
-                lv_obj_align(img, LV_ALIGN_CENTER, 30, 0);
+                lv_obj_align(img, LV_ALIGN_CENTER, -20, 0);
             }
         }
         
@@ -153,7 +153,7 @@ void lv_example_scroll_6(void)
     // Create main container
     cont = lv_obj_create(lv_scr_act());
     lv_obj_set_size(cont, 240, 240);
-    lv_obj_set_pos(cont, -90, 0);
+    lv_obj_set_pos(cont, -50, 0);
     
     // Set container properties
     lv_obj_set_style_pad_row(cont, 0, 0);
@@ -194,9 +194,10 @@ void lv_example_scroll_6(void)
         // Create and configure icon
         lv_obj_t * img = lv_img_create(btn);
         lv_img_set_src(img, (i % 2 == 0) ? &camera_icon : &timer_icon);
-        lv_obj_align(img, LV_ALIGN_CENTER, 30, 0);
+        lv_obj_align(img, LV_ALIGN_CENTER, -20, 0);
         lv_img_set_zoom(img, 120);
         lv_img_set_size_mode(img, LV_IMG_SIZE_MODE_REAL);
+        lv_obj_add_flag(img, LV_OBJ_FLAG_FLOATING);
 
         lv_obj_update_layout(btn);
         btn_width = lv_obj_get_width(btn);
