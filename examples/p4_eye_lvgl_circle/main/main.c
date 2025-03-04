@@ -13,7 +13,7 @@ LV_IMG_DECLARE(camera_icon);
 LV_IMG_DECLARE(timer_icon);
 
 #define ZOOM_FACTOR 1.5
-#define ZOOM_OFFSET -50
+#define ZOOM_OFFSET 20
 
 static const char *TAG = "main";
 
@@ -62,7 +62,7 @@ static void scroll_event_cb(lv_event_t * e)
         // Reset icon position
         lv_obj_t * img = lv_obj_get_child(child, 0);
         if(img) {
-            lv_obj_align(img, LV_ALIGN_RIGHT_MID, 0, 0);
+            lv_obj_align(img, LV_ALIGN_CENTER, 30, 0);
         }
     }
     
@@ -114,7 +114,7 @@ static void scroll_end_event_cb(lv_event_t * e)
             // reset the icon position to the default position
             lv_obj_t * img = lv_obj_get_child(child, 0);
             if(img) {
-                lv_obj_align(img, LV_ALIGN_RIGHT_MID, 0, 0);
+                lv_obj_align(img, LV_ALIGN_CENTER, 30, 0);
             }
         }
         
@@ -140,10 +140,10 @@ void lv_example_scroll_6(void)
     // Create main container
     cont = lv_obj_create(lv_scr_act());
     lv_obj_set_size(cont, 240, 240);
-    lv_obj_set_pos(cont, -160, 0);
+    lv_obj_set_pos(cont, -100, 0);
     
     // Set container properties
-    lv_obj_set_style_pad_row(cont, 23, 0);
+    lv_obj_set_style_pad_row(cont, 0, 0);
     lv_obj_set_flex_flow(cont, LV_FLEX_FLOW_COLUMN);
     lv_obj_set_style_radius(cont, LV_RADIUS_CIRCLE, 0);
     lv_obj_set_style_clip_corner(cont, true, 0);
@@ -158,9 +158,8 @@ void lv_example_scroll_6(void)
     lv_obj_add_event_cb(cont, scroll_end_event_cb, LV_EVENT_SCROLL_END, NULL);
 
     // Set container visual style
-    lv_obj_set_style_bg_opa(cont, LV_OPA_10, 0);
+    lv_obj_set_style_bg_opa(cont, LV_OPA_TRANSP, 0);
     lv_obj_set_style_border_opa(cont, LV_OPA_TRANSP, 0);
-    lv_obj_set_style_bg_color(cont, lv_color_hex(0xcccccc), 0);
 
     // Create buttons with alternating icons
     for(uint32_t i = 0; i < 20; i++) {
@@ -181,8 +180,8 @@ void lv_example_scroll_6(void)
         // Create and configure icon
         lv_obj_t * img = lv_img_create(btn);
         lv_img_set_src(img, (i % 2 == 0) ? &camera_icon : &timer_icon);
-        lv_obj_align(img, LV_ALIGN_RIGHT_MID, 0, 0);
-        lv_img_set_zoom(img, 140);
+        lv_obj_align(img, LV_ALIGN_CENTER, 30, 0);
+        lv_img_set_zoom(img, 120);
         lv_img_set_size_mode(img, LV_IMG_SIZE_MODE_REAL);
     }
 
@@ -195,11 +194,11 @@ static void btn_handler(void *arg, void *data)
 {
     if((int)data == BSP_BUTTON_2) {
         ESP_LOGI(TAG, "scroll up");
-        lv_obj_scroll_by(cont, 0, -80, LV_ANIM_ON);
+        lv_obj_scroll_by(cont, 0, -30, LV_ANIM_ON);
         lv_event_send(cont, LV_EVENT_SCROLL, NULL);
     } else if((int)data == BSP_BUTTON_3) {
         ESP_LOGI(TAG, "scroll down");
-        lv_obj_scroll_by(cont, 0, 80, LV_ANIM_ON);
+        lv_obj_scroll_by(cont, 0, 30, LV_ANIM_ON);
         lv_event_send(cont, LV_EVENT_SCROLL, NULL);
     }
 }
@@ -218,7 +217,7 @@ void app_main(void)
     bsp_display_lock(0);
 
     lv_example_scroll_6();
-    lv_obj_set_style_bg_color(lv_scr_act(), lv_color_hex(0x000000), 0); // dark green #000000
+    lv_obj_set_style_bg_color(lv_scr_act(), lv_color_hex(0xffffff), 0); // dark green #000000
 
     bsp_display_unlock();
     bsp_display_backlight_on();
