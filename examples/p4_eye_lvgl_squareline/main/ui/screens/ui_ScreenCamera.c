@@ -143,7 +143,9 @@ void ui_ScreenCamera_screen_init(void)
     lv_obj_set_align(ui_LabelCanvas2X, LV_ALIGN_CENTER);
     lv_label_set_text(ui_LabelCanvas2X, "2X");
     lv_obj_add_flag(ui_LabelCanvas2X, LV_OBJ_FLAG_HIDDEN);     /// Flags
-    lv_obj_set_style_text_font(ui_LabelCanvas2X, &ui_font_FontKoHoBold16, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_color(ui_LabelCanvas2X, lv_color_hex(0x000000), LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_opa(ui_LabelCanvas2X, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_font(ui_LabelCanvas2X, &ui_font_FontKoHoMiniBold18, LV_PART_MAIN | LV_STATE_DEFAULT);
 
     ui_LabelCanvas3X = lv_label_create(ui_PanelCanvas);
     lv_obj_set_width(ui_LabelCanvas3X, LV_SIZE_CONTENT);   /// 1
@@ -153,7 +155,9 @@ void ui_ScreenCamera_screen_init(void)
     lv_obj_set_align(ui_LabelCanvas3X, LV_ALIGN_CENTER);
     lv_label_set_text(ui_LabelCanvas3X, "3X");
     lv_obj_add_flag(ui_LabelCanvas3X, LV_OBJ_FLAG_HIDDEN);     /// Flags
-    lv_obj_set_style_text_font(ui_LabelCanvas3X, &ui_font_FontKoHoBold16, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_color(ui_LabelCanvas3X, lv_color_hex(0x000000), LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_opa(ui_LabelCanvas3X, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_font(ui_LabelCanvas3X, &ui_font_FontKoHoMiniBold18, LV_PART_MAIN | LV_STATE_DEFAULT);
 
     ui_LabelCanvasFactor = lv_label_create(ui_PanelCanvas);
     lv_obj_set_width(ui_LabelCanvasFactor, LV_SIZE_CONTENT);   /// 1
@@ -163,7 +167,9 @@ void ui_ScreenCamera_screen_init(void)
     lv_obj_set_align(ui_LabelCanvasFactor, LV_ALIGN_CENTER);
     lv_label_set_text(ui_LabelCanvasFactor, "1.0X");
     lv_obj_add_flag(ui_LabelCanvasFactor, LV_OBJ_FLAG_HIDDEN);     /// Flags
-    lv_obj_set_style_text_font(ui_LabelCanvasFactor, &ui_font_FontKoHoBold16, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_color(ui_LabelCanvasFactor, lv_color_hex(0x000000), LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_opa(ui_LabelCanvasFactor, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_font(ui_LabelCanvasFactor, &ui_font_FontKoHoMiniBold18, LV_PART_MAIN | LV_STATE_DEFAULT);
 
     ui_PanelCanvasMaskCamera = lv_obj_create(ui_PanelCanvas);
     lv_obj_set_width(ui_PanelCanvasMaskCamera, 100);
@@ -211,6 +217,9 @@ void ui_ScreenCamera_screen_init(void)
     lv_obj_set_y(ui_LabelPanelCanvasPopupCameraTopInterval, -59);
     lv_obj_set_align(ui_LabelPanelCanvasPopupCameraTopInterval, LV_ALIGN_CENTER);
     lv_label_set_text(ui_LabelPanelCanvasPopupCameraTopInterval, "      Interval \n  Camera Mode");
+    lv_obj_set_style_text_color(ui_LabelPanelCanvasPopupCameraTopInterval, lv_color_hex(0x000000),
+                                LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_opa(ui_LabelPanelCanvasPopupCameraTopInterval, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_font(ui_LabelPanelCanvasPopupCameraTopInterval, &ui_font_FontKoHoBold28,
                                LV_PART_MAIN | LV_STATE_DEFAULT);
 
@@ -232,6 +241,9 @@ void ui_ScreenCamera_screen_init(void)
     lv_obj_set_y(ui_LabelPanelCanvasPopupCameraIntervalDown, 46);
     lv_obj_set_align(ui_LabelPanelCanvasPopupCameraIntervalDown, LV_ALIGN_CENTER);
     lv_label_set_text(ui_LabelPanelCanvasPopupCameraIntervalDown, " 1)Set Interval\n2)Press wheel to \nstart shooting");
+    lv_obj_set_style_text_color(ui_LabelPanelCanvasPopupCameraIntervalDown, lv_color_hex(0x000000),
+                                LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_opa(ui_LabelPanelCanvasPopupCameraIntervalDown, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_font(ui_LabelPanelCanvasPopupCameraIntervalDown, &ui_font_FontKoHoMiniBold24,
                                LV_PART_MAIN | LV_STATE_DEFAULT);
 
@@ -268,7 +280,9 @@ void ui_ScreenCamera_screen_init(void)
     lv_obj_set_align(ui_LabelCanvas5mplus, LV_ALIGN_CENTER);
     lv_label_set_text(ui_LabelCanvas5mplus, "+5m");
     lv_obj_add_flag(ui_LabelCanvas5mplus, LV_OBJ_FLAG_HIDDEN);     /// Flags
-    lv_obj_set_style_text_font(ui_LabelCanvas5mplus, &ui_font_FontKoHoBold16, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_color(ui_LabelCanvas5mplus, lv_color_hex(0x000000), LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_opa(ui_LabelCanvas5mplus, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_font(ui_LabelCanvas5mplus, &ui_font_FontKoHoMiniBold18, LV_PART_MAIN | LV_STATE_DEFAULT);
 
     ui_LabelCanvas5mSub = lv_label_create(ui_PanelCanvas);
     lv_obj_set_width(ui_LabelCanvas5mSub, LV_SIZE_CONTENT);   /// 1
@@ -278,7 +292,9 @@ void ui_ScreenCamera_screen_init(void)
     lv_obj_set_align(ui_LabelCanvas5mSub, LV_ALIGN_CENTER);
     lv_label_set_text(ui_LabelCanvas5mSub, "-5m");
     lv_obj_add_flag(ui_LabelCanvas5mSub, LV_OBJ_FLAG_HIDDEN);     /// Flags
-    lv_obj_set_style_text_font(ui_LabelCanvas5mSub, &ui_font_FontKoHoBold16, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_color(ui_LabelCanvas5mSub, lv_color_hex(0x000000), LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_opa(ui_LabelCanvas5mSub, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_font(ui_LabelCanvas5mSub, &ui_font_FontKoHoMiniBold18, LV_PART_MAIN | LV_STATE_DEFAULT);
 
     ui_LabelCanvasInvervalTime = lv_label_create(ui_PanelCanvas);
     lv_obj_set_width(ui_LabelCanvasInvervalTime, LV_SIZE_CONTENT);   /// 1
@@ -288,6 +304,8 @@ void ui_ScreenCamera_screen_init(void)
     lv_obj_set_align(ui_LabelCanvasInvervalTime, LV_ALIGN_CENTER);
     lv_label_set_text(ui_LabelCanvasInvervalTime, "30min");
     lv_obj_add_flag(ui_LabelCanvasInvervalTime, LV_OBJ_FLAG_HIDDEN);     /// Flags
+    lv_obj_set_style_text_color(ui_LabelCanvasInvervalTime, lv_color_hex(0x000000), LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_opa(ui_LabelCanvasInvervalTime, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
 
     ui_PanelCanvasPopupVideoMode = lv_obj_create(ui_PanelCanvas);
     lv_obj_set_width(ui_PanelCanvasPopupVideoMode, 212);
@@ -310,6 +328,9 @@ void ui_ScreenCamera_screen_init(void)
     lv_obj_set_y(ui_LabelPanelCanvasPopupVideoModeTop, -66);
     lv_obj_set_align(ui_LabelPanelCanvasPopupVideoModeTop, LV_ALIGN_CENTER);
     lv_label_set_text(ui_LabelPanelCanvasPopupVideoModeTop, "Video Mode");
+    lv_obj_set_style_text_color(ui_LabelPanelCanvasPopupVideoModeTop, lv_color_hex(0x000000),
+                                LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_opa(ui_LabelPanelCanvasPopupVideoModeTop, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_font(ui_LabelPanelCanvasPopupVideoModeTop, &ui_font_FontKoHoBold28,
                                LV_PART_MAIN | LV_STATE_DEFAULT);
 
@@ -330,6 +351,9 @@ void ui_ScreenCamera_screen_init(void)
     lv_obj_set_y(ui_LabelPanelCanvasPopupVideoModeDown, 32);
     lv_obj_set_align(ui_LabelPanelCanvasPopupVideoModeDown, LV_ALIGN_CENTER);
     lv_label_set_text(ui_LabelPanelCanvasPopupVideoModeDown, "Rotate wheel to \n  adjust zoom.");
+    lv_obj_set_style_text_color(ui_LabelPanelCanvasPopupVideoModeDown, lv_color_hex(0x000000),
+                                LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_opa(ui_LabelPanelCanvasPopupVideoModeDown, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_font(ui_LabelPanelCanvasPopupVideoModeDown, &ui_font_FontKoHoMiniBold24,
                                LV_PART_MAIN | LV_STATE_DEFAULT);
 
@@ -400,6 +424,9 @@ void ui_ScreenCamera_screen_init(void)
     lv_obj_set_align(ui_LabelPanelCanvasPopupCameraSDWarning, LV_ALIGN_CENTER);
     lv_label_set_text(ui_LabelPanelCanvasPopupCameraSDWarning,
                       "No SD card detected\n\n  Insert SD Card to \n          continue");
+    lv_obj_set_style_text_color(ui_LabelPanelCanvasPopupCameraSDWarning, lv_color_hex(0x000000),
+                                LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_opa(ui_LabelPanelCanvasPopupCameraSDWarning, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_font(ui_LabelPanelCanvasPopupCameraSDWarning, &ui_font_FontKoHoMiniBold22,
                                LV_PART_MAIN | LV_STATE_DEFAULT);
 
@@ -426,6 +453,9 @@ void ui_ScreenCamera_screen_init(void)
     lv_obj_set_y(ui_LabelPanelCanvasPopupIntervalTimerWarning, -38);
     lv_obj_set_align(ui_LabelPanelCanvasPopupIntervalTimerWarning, LV_ALIGN_CENTER);
     lv_label_set_text(ui_LabelPanelCanvasPopupIntervalTimerWarning, "Interval Cam");
+    lv_obj_set_style_text_color(ui_LabelPanelCanvasPopupIntervalTimerWarning, lv_color_hex(0x000000),
+                                LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_opa(ui_LabelPanelCanvasPopupIntervalTimerWarning, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_font(ui_LabelPanelCanvasPopupIntervalTimerWarning, &ui_font_FontKoHoBold28,
                                LV_PART_MAIN | LV_STATE_DEFAULT);
 
@@ -448,6 +478,9 @@ void ui_ScreenCamera_screen_init(void)
     lv_obj_set_align(ui_LabelPanelCanvasPopupCameraIntervalTimerWarning, LV_ALIGN_CENTER);
     lv_label_set_text(ui_LabelPanelCanvasPopupCameraIntervalTimerWarning,
                       "   Display will be \n        dimmed\nPress any button to\n  end interval cam\n");
+    lv_obj_set_style_text_color(ui_LabelPanelCanvasPopupCameraIntervalTimerWarning, lv_color_hex(0x000000),
+                                LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_opa(ui_LabelPanelCanvasPopupCameraIntervalTimerWarning, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_font(ui_LabelPanelCanvasPopupCameraIntervalTimerWarning, &ui_font_FontKoHoMiniBold22,
                                LV_PART_MAIN | LV_STATE_DEFAULT);
 
@@ -458,6 +491,9 @@ void ui_ScreenCamera_screen_init(void)
     lv_obj_set_y(ui_LabelPanelCanvasPopupIntervalTimer, -74);
     lv_obj_set_align(ui_LabelPanelCanvasPopupIntervalTimer, LV_ALIGN_CENTER);
     lv_label_set_text(ui_LabelPanelCanvasPopupIntervalTimer, "Starting 30 min");
+    lv_obj_set_style_text_color(ui_LabelPanelCanvasPopupIntervalTimer, lv_color_hex(0x000000),
+                                LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_opa(ui_LabelPanelCanvasPopupIntervalTimer, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_font(ui_LabelPanelCanvasPopupIntervalTimer, &ui_font_FontKoHoBold28,
                                LV_PART_MAIN | LV_STATE_DEFAULT);
 
@@ -484,6 +520,9 @@ void ui_ScreenCamera_screen_init(void)
     lv_obj_set_y(ui_LabelPanelCanvasPopupIntervalTimerWarningEnd, -23);
     lv_obj_set_align(ui_LabelPanelCanvasPopupIntervalTimerWarningEnd, LV_ALIGN_CENTER);
     lv_label_set_text(ui_LabelPanelCanvasPopupIntervalTimerWarningEnd, "Interval Cam");
+    lv_obj_set_style_text_color(ui_LabelPanelCanvasPopupIntervalTimerWarningEnd, lv_color_hex(0x000000),
+                                LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_opa(ui_LabelPanelCanvasPopupIntervalTimerWarningEnd, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_font(ui_LabelPanelCanvasPopupIntervalTimerWarningEnd, &ui_font_FontKoHoBold28,
                                LV_PART_MAIN | LV_STATE_DEFAULT);
 
@@ -505,6 +544,9 @@ void ui_ScreenCamera_screen_init(void)
     lv_obj_set_y(ui_LabelPanelCanvasPopupCameraIntervalTimerWarningEnd, 61);
     lv_obj_set_align(ui_LabelPanelCanvasPopupCameraIntervalTimerWarningEnd, LV_ALIGN_CENTER);
     lv_label_set_text(ui_LabelPanelCanvasPopupCameraIntervalTimerWarningEnd, "3 photos saved to \n       SD Card");
+    lv_obj_set_style_text_color(ui_LabelPanelCanvasPopupCameraIntervalTimerWarningEnd, lv_color_hex(0x000000),
+                                LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_opa(ui_LabelPanelCanvasPopupCameraIntervalTimerWarningEnd, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_font(ui_LabelPanelCanvasPopupCameraIntervalTimerWarningEnd, &ui_font_FontKoHoMiniBold22,
                                LV_PART_MAIN | LV_STATE_DEFAULT);
 
@@ -515,6 +557,9 @@ void ui_ScreenCamera_screen_init(void)
     lv_obj_set_y(ui_LabelPanelCanvasPopupIntervalTimerEnd, -67);
     lv_obj_set_align(ui_LabelPanelCanvasPopupIntervalTimerEnd, LV_ALIGN_CENTER);
     lv_label_set_text(ui_LabelPanelCanvasPopupIntervalTimerEnd, "Ended 30 min");
+    lv_obj_set_style_text_color(ui_LabelPanelCanvasPopupIntervalTimerEnd, lv_color_hex(0x000000),
+                                LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_opa(ui_LabelPanelCanvasPopupIntervalTimerEnd, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_font(ui_LabelPanelCanvasPopupIntervalTimerEnd, &ui_font_FontKoHoBold28,
                                LV_PART_MAIN | LV_STATE_DEFAULT);
 
@@ -536,12 +581,14 @@ void ui_ScreenCamera_screen_init(void)
     lv_obj_set_align(ui_LabelRedDotTime, LV_ALIGN_CENTER);
     lv_label_set_text(ui_LabelRedDotTime, "22:22");
     lv_obj_add_flag(ui_LabelRedDotTime, LV_OBJ_FLAG_HIDDEN);     /// Flags
+    lv_obj_set_style_text_color(ui_LabelRedDotTime, lv_color_hex(0x000000), LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_opa(ui_LabelRedDotTime, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
 
     ui_PanelSettings = lv_obj_create(ui_PanelCanvas);
     lv_obj_set_width(ui_PanelSettings, 183);
-    lv_obj_set_height(ui_PanelSettings, 139);
-    lv_obj_set_x(ui_PanelSettings, -13);
-    lv_obj_set_y(ui_PanelSettings, 6);
+    lv_obj_set_height(ui_PanelSettings, 170);
+    lv_obj_set_x(ui_PanelSettings, -14);
+    lv_obj_set_y(ui_PanelSettings, -16);
     lv_obj_set_align(ui_PanelSettings, LV_ALIGN_CENTER);
     lv_obj_add_flag(ui_PanelSettings, LV_OBJ_FLAG_HIDDEN);     /// Flags
     lv_obj_clear_flag(ui_PanelSettings, LV_OBJ_FLAG_SCROLLABLE);      /// Flags
@@ -555,16 +602,18 @@ void ui_ScreenCamera_screen_init(void)
     lv_obj_set_width(ui_LabelPanelSettings, LV_SIZE_CONTENT);   /// 1
     lv_obj_set_height(ui_LabelPanelSettings, LV_SIZE_CONTENT);    /// 1
     lv_obj_set_x(ui_LabelPanelSettings, 0);
-    lv_obj_set_y(ui_LabelPanelSettings, -52);
+    lv_obj_set_y(ui_LabelPanelSettings, -72);
     lv_obj_set_align(ui_LabelPanelSettings, LV_ALIGN_CENTER);
     lv_label_set_text(ui_LabelPanelSettings, "Settings");
+    lv_obj_set_style_text_color(ui_LabelPanelSettings, lv_color_hex(0x000000), LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_opa(ui_LabelPanelSettings, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_font(ui_LabelPanelSettings, &ui_font_FontKoHoBold18, LV_PART_MAIN | LV_STATE_DEFAULT);
 
     ui_PanelPanelSettingsLanguage = lv_obj_create(ui_PanelSettings);
     lv_obj_set_width(ui_PanelPanelSettingsLanguage, 172);
-    lv_obj_set_height(ui_PanelPanelSettingsLanguage, 27);
-    lv_obj_set_x(ui_PanelPanelSettingsLanguage, 0);
-    lv_obj_set_y(ui_PanelPanelSettingsLanguage, -20);
+    lv_obj_set_height(ui_PanelPanelSettingsLanguage, 30);
+    lv_obj_set_x(ui_PanelPanelSettingsLanguage, 1);
+    lv_obj_set_y(ui_PanelPanelSettingsLanguage, -39);
     lv_obj_set_align(ui_PanelPanelSettingsLanguage, LV_ALIGN_CENTER);
     lv_obj_clear_flag(ui_PanelPanelSettingsLanguage, LV_OBJ_FLAG_SCROLLABLE);      /// Flags
     lv_obj_set_style_radius(ui_PanelPanelSettingsLanguage, 30, LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -582,7 +631,10 @@ void ui_ScreenCamera_screen_init(void)
     lv_obj_set_y(ui_LabelPanelPanelSettingsLanguageItem, 0);
     lv_obj_set_align(ui_LabelPanelPanelSettingsLanguageItem, LV_ALIGN_CENTER);
     lv_label_set_text(ui_LabelPanelPanelSettingsLanguageItem, "Language");
-    lv_obj_set_style_text_font(ui_LabelPanelPanelSettingsLanguageItem, &ui_font_FontKoHoMiniBold14,
+    lv_obj_set_style_text_color(ui_LabelPanelPanelSettingsLanguageItem, lv_color_hex(0x000000),
+                                LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_opa(ui_LabelPanelPanelSettingsLanguageItem, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_font(ui_LabelPanelPanelSettingsLanguageItem, &ui_font_FontKoHoMiniBold18,
                                LV_PART_MAIN | LV_STATE_DEFAULT);
 
     ui_LabelPanelPanelSettingsLanguageBody = lv_label_create(ui_PanelPanelSettingsLanguage);
@@ -592,14 +644,17 @@ void ui_ScreenCamera_screen_init(void)
     lv_obj_set_y(ui_LabelPanelPanelSettingsLanguageBody, 0);
     lv_obj_set_align(ui_LabelPanelPanelSettingsLanguageBody, LV_ALIGN_CENTER);
     lv_label_set_text(ui_LabelPanelPanelSettingsLanguageBody, "English");
-    lv_obj_set_style_text_font(ui_LabelPanelPanelSettingsLanguageBody, &ui_font_FontKoHoMiniBold14,
+    lv_obj_set_style_text_color(ui_LabelPanelPanelSettingsLanguageBody, lv_color_hex(0x000000),
+                                LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_opa(ui_LabelPanelPanelSettingsLanguageBody, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_font(ui_LabelPanelPanelSettingsLanguageBody, &ui_font_FontKoHoMiniBold18,
                                LV_PART_MAIN | LV_STATE_DEFAULT);
 
     ui_PanelPanelSettingsRes = lv_obj_create(ui_PanelSettings);
     lv_obj_set_width(ui_PanelPanelSettingsRes, 172);
     lv_obj_set_height(ui_PanelPanelSettingsRes, 27);
     lv_obj_set_x(ui_PanelPanelSettingsRes, 0);
-    lv_obj_set_y(ui_PanelPanelSettingsRes, 15);
+    lv_obj_set_y(ui_PanelPanelSettingsRes, 7);
     lv_obj_set_align(ui_PanelPanelSettingsRes, LV_ALIGN_CENTER);
     lv_obj_clear_flag(ui_PanelPanelSettingsRes, LV_OBJ_FLAG_SCROLLABLE);      /// Flags
     lv_obj_set_style_radius(ui_PanelPanelSettingsRes, 30, LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -617,7 +672,9 @@ void ui_ScreenCamera_screen_init(void)
     lv_obj_set_y(ui_LabelPanelPanelSettingsResItem, 0);
     lv_obj_set_align(ui_LabelPanelPanelSettingsResItem, LV_ALIGN_CENTER);
     lv_label_set_text(ui_LabelPanelPanelSettingsResItem, "Resolution");
-    lv_obj_set_style_text_font(ui_LabelPanelPanelSettingsResItem, &ui_font_FontKoHoMiniBold14,
+    lv_obj_set_style_text_color(ui_LabelPanelPanelSettingsResItem, lv_color_hex(0x000000), LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_opa(ui_LabelPanelPanelSettingsResItem, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_font(ui_LabelPanelPanelSettingsResItem, &ui_font_FontKoHoMiniBold18,
                                LV_PART_MAIN | LV_STATE_DEFAULT);
 
     ui_LabelPanelPanelSettingsResBody = lv_label_create(ui_PanelPanelSettingsRes);
@@ -627,14 +684,16 @@ void ui_ScreenCamera_screen_init(void)
     lv_obj_set_y(ui_LabelPanelPanelSettingsResBody, 0);
     lv_obj_set_align(ui_LabelPanelPanelSettingsResBody, LV_ALIGN_CENTER);
     lv_label_set_text(ui_LabelPanelPanelSettingsResBody, "720P");
-    lv_obj_set_style_text_font(ui_LabelPanelPanelSettingsResBody, &ui_font_FontKoHoMiniBold14,
+    lv_obj_set_style_text_color(ui_LabelPanelPanelSettingsResBody, lv_color_hex(0x000000), LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_opa(ui_LabelPanelPanelSettingsResBody, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_font(ui_LabelPanelPanelSettingsResBody, &ui_font_FontKoHoMiniBold18,
                                LV_PART_MAIN | LV_STATE_DEFAULT);
 
     ui_PanelPanelSettingsFlash = lv_obj_create(ui_PanelSettings);
     lv_obj_set_width(ui_PanelPanelSettingsFlash, 172);
     lv_obj_set_height(ui_PanelPanelSettingsFlash, 27);
     lv_obj_set_x(ui_PanelPanelSettingsFlash, 0);
-    lv_obj_set_y(ui_PanelPanelSettingsFlash, 48);
+    lv_obj_set_y(ui_PanelPanelSettingsFlash, 50);
     lv_obj_set_align(ui_PanelPanelSettingsFlash, LV_ALIGN_CENTER);
     lv_obj_clear_flag(ui_PanelPanelSettingsFlash, LV_OBJ_FLAG_SCROLLABLE);      /// Flags
     lv_obj_set_style_radius(ui_PanelPanelSettingsFlash, 30, LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -652,7 +711,10 @@ void ui_ScreenCamera_screen_init(void)
     lv_obj_set_y(ui_LabelPanelPanelSettingsFlashItem, 0);
     lv_obj_set_align(ui_LabelPanelPanelSettingsFlashItem, LV_ALIGN_CENTER);
     lv_label_set_text(ui_LabelPanelPanelSettingsFlashItem, "Flash");
-    lv_obj_set_style_text_font(ui_LabelPanelPanelSettingsFlashItem, &ui_font_FontKoHoMiniBold14,
+    lv_obj_set_style_text_color(ui_LabelPanelPanelSettingsFlashItem, lv_color_hex(0x000000),
+                                LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_opa(ui_LabelPanelPanelSettingsFlashItem, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_font(ui_LabelPanelPanelSettingsFlashItem, &ui_font_FontKoHoMiniBold18,
                                LV_PART_MAIN | LV_STATE_DEFAULT);
 
     ui_LabelPanelPanelSettingsFlashBody = lv_label_create(ui_PanelPanelSettingsFlash);
@@ -662,14 +724,17 @@ void ui_ScreenCamera_screen_init(void)
     lv_obj_set_y(ui_LabelPanelPanelSettingsFlashBody, 0);
     lv_obj_set_align(ui_LabelPanelPanelSettingsFlashBody, LV_ALIGN_CENTER);
     lv_label_set_text(ui_LabelPanelPanelSettingsFlashBody, "Off");
-    lv_obj_set_style_text_font(ui_LabelPanelPanelSettingsFlashBody, &ui_font_FontKoHoMiniBold14,
+    lv_obj_set_style_text_color(ui_LabelPanelPanelSettingsFlashBody, lv_color_hex(0x000000),
+                                LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_opa(ui_LabelPanelPanelSettingsFlashBody, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_font(ui_LabelPanelPanelSettingsFlashBody, &ui_font_FontKoHoMiniBold18,
                                LV_PART_MAIN | LV_STATE_DEFAULT);
 
     ui_PanelSettingsMenu = lv_obj_create(ui_PanelCanvas);
     lv_obj_set_width(ui_PanelSettingsMenu, 181);
-    lv_obj_set_height(ui_PanelSettingsMenu, 27);
-    lv_obj_set_x(ui_PanelSettingsMenu, -13);
-    lv_obj_set_y(ui_PanelSettingsMenu, 96);
+    lv_obj_set_height(ui_PanelSettingsMenu, 33);
+    lv_obj_set_x(ui_PanelSettingsMenu, -12);
+    lv_obj_set_y(ui_PanelSettingsMenu, 92);
     lv_obj_set_align(ui_PanelSettingsMenu, LV_ALIGN_CENTER);
     lv_obj_add_flag(ui_PanelSettingsMenu, LV_OBJ_FLAG_HIDDEN);     /// Flags
     lv_obj_clear_flag(ui_PanelSettingsMenu, LV_OBJ_FLAG_SCROLLABLE);      /// Flags
@@ -684,8 +749,12 @@ void ui_ScreenCamera_screen_init(void)
     ui_LabelPanelSettingsMenu = lv_label_create(ui_PanelSettingsMenu);
     lv_obj_set_width(ui_LabelPanelSettingsMenu, LV_SIZE_CONTENT);   /// 1
     lv_obj_set_height(ui_LabelPanelSettingsMenu, LV_SIZE_CONTENT);    /// 1
+    lv_obj_set_x(ui_LabelPanelSettingsMenu, 0);
+    lv_obj_set_y(ui_LabelPanelSettingsMenu, 1);
     lv_obj_set_align(ui_LabelPanelSettingsMenu, LV_ALIGN_CENTER);
     lv_label_set_text(ui_LabelPanelSettingsMenu, "Back to Menu");
-    lv_obj_set_style_text_font(ui_LabelPanelSettingsMenu, &ui_font_FontKoHoMiniBold14, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_color(ui_LabelPanelSettingsMenu, lv_color_hex(0x000000), LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_opa(ui_LabelPanelSettingsMenu, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_font(ui_LabelPanelSettingsMenu, &ui_font_FontKoHoMiniBold18, LV_PART_MAIN | LV_STATE_DEFAULT);
 
 }

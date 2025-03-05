@@ -123,12 +123,12 @@ LV_IMG_DECLARE(ui_img_settings_big_png);    // assets/settings_big.png
 
 
 LV_FONT_DECLARE(ui_font_FontKoHoBold14);
-LV_FONT_DECLARE(ui_font_FontKoHoBold16);
 LV_FONT_DECLARE(ui_font_FontKoHoBold18);
-LV_FONT_DECLARE(ui_font_FontKoHoMiniBold14);
 LV_FONT_DECLARE(ui_font_FontKoHoBold28);
-LV_FONT_DECLARE(ui_font_FontKoHoMiniBold24);
+LV_FONT_DECLARE(ui_font_FontKoHoMiniBold14);
 LV_FONT_DECLARE(ui_font_FontKoHoMiniBold22);
+LV_FONT_DECLARE(ui_font_FontKoHoMiniBold24);
+LV_FONT_DECLARE(ui_font_FontKoHoMiniBold18);
 
 
 void ui_init(void);
