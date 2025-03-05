@@ -116,6 +116,40 @@ static void init_settings_display(void) {
     }
 }
 
+static void app_extra_img_set_zoom(lv_obj_t * obj, uint16_t zoom)
+{
+    lv_img_t * img = (lv_img_t *)obj;
+    if(zoom == img->zoom) return;
+
+    if(zoom == 0) zoom = 1;
+
+    lv_coord_t w = lv_obj_get_width(obj);
+    lv_coord_t h = lv_obj_get_height(obj);
+    lv_area_t a;
+    _lv_img_buf_get_transformed_area(&a, w, h, img->angle, img->zoom >> 8, &img->pivot);
+    a.x1 += obj->coords.x1 - 1;
+    a.y1 += obj->coords.y1 - 1;
+    a.x2 += obj->coords.x1 + 1;
+    a.y2 += obj->coords.y1 + 1;
+    lv_obj_invalidate_area(obj, &a);
+
+    img->zoom = zoom;
+
+    /* Disable invalidations because lv_obj_refresh_ext_draw_size would invalidate
+     * the whole ext draw area */
+    lv_disp_t * disp = lv_obj_get_disp(obj);
+    lv_disp_enable_invalidation(disp, false);
+    lv_obj_refresh_ext_draw_size(obj);
+    lv_disp_enable_invalidation(disp, true);
+
+    _lv_img_buf_get_transformed_area(&a, w, h, img->angle, img->zoom, &img->pivot);
+    a.x1 += obj->coords.x1 - 1;
+    a.y1 += obj->coords.y1 - 1;
+    a.x2 += obj->coords.x1 + 1;
+    a.y2 += obj->coords.y1 + 1;
+    lv_obj_invalidate_area(obj, &a);
+}
+
 static lv_obj_t * create_img_button(lv_obj_t *parent, const void *img_src, const char *btn_text) {
     lv_obj_t * btn = lv_btn_create(parent);
     
@@ -139,6 +173,7 @@ static lv_obj_t * create_img_button(lv_obj_t *parent, const void *img_src, const
     lv_img_set_src(img, img_src);
     lv_obj_set_size(img, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
     lv_obj_align(img, LV_ALIGN_CENTER, 0, 0);
+    // app_extra_img_set_zoom(img, BASE_ZOOM);
     lv_img_set_zoom(img, BASE_ZOOM);
     lv_obj_refr_size(img);
     lv_img_set_size_mode(img, LV_IMG_SIZE_MODE_REAL);
@@ -190,7 +225,7 @@ static void scroll_event_cb(lv_event_t * e)
         // Reset icon position
         lv_obj_t * img = lv_obj_get_child(child, 0);
         if(img) {
-            lv_img_set_zoom(img, BASE_ZOOM);
+            app_extra_img_set_zoom(img, BASE_ZOOM);
             lv_obj_refr_size(img);
             lv_obj_align(img, LV_ALIGN_CENTER, 0, 0);
         }
