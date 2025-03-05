@@ -173,7 +173,6 @@ static lv_obj_t * create_img_button(lv_obj_t *parent, const void *img_src, const
     lv_img_set_src(img, img_src);
     lv_obj_set_size(img, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
     lv_obj_align(img, LV_ALIGN_CENTER, 0, 0);
-    // app_extra_img_set_zoom(img, BASE_ZOOM);
     lv_img_set_zoom(img, BASE_ZOOM);
     lv_obj_refr_size(img);
     lv_img_set_size_mode(img, LV_IMG_SIZE_MODE_REAL);
@@ -236,8 +235,8 @@ static void scroll_event_cb(lv_event_t * e)
         lv_obj_set_size(closest_child, btn_width * ZOOM_FACTOR, btn_height * ZOOM_FACTOR);
         lv_obj_t * img = lv_obj_get_child(closest_child, 0);
         if(img) {
-            // lv_img_set_zoom(img, BASE_ZOOM * IMG_ZOOM_FACTOR * 0.5);
-            // lv_obj_refr_size(img);
+            app_extra_img_set_zoom(img, BASE_ZOOM * IMG_ZOOM_FACTOR);
+            lv_obj_refr_size(img);
             lv_obj_set_pos(img, ZOOM_OFFSET, 0);
         }
     }
