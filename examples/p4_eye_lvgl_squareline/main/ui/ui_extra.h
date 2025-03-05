@@ -1,6 +1,7 @@
 #ifndef UI_EXTRA_H
 #define UI_EXTRA_H
 
+#include "ui.h"
 typedef enum {
     UI_PAGE_MAIN,           // main page
     UI_PAGE_CAMERA,         // camera page

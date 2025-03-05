@@ -2,7 +2,6 @@
 #include "esp_log.h"
 #include "lvgl.h"
 
-#include "ui.h"
 #include "ui_extra.h"
 #define BASE_ZOOM       60
 #define ZOOM_FACTOR     2.3
