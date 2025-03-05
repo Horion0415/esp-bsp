@@ -151,7 +151,7 @@ static void scroll_end_event_cb(lv_event_t * e)
                 if(strcmp(btn_text, "CAMERA") == 0) {
                     lv_obj_align(info_label, LV_ALIGN_CENTER, 6, 50);
                 } else if(strcmp(btn_text, "INTERVAL CAM") == 0) {
-                    lv_obj_align(info_label, LV_ALIGN_CENTER, 3, 50);
+                    lv_obj_align(info_label, LV_ALIGN_CENTER, 3, 40);
                 } else if(strcmp(btn_text, "VIDEO MODE") == 0) {
                     lv_obj_align(info_label, LV_ALIGN_CENTER, 6, 45);
                 } else if(strcmp(btn_text, "ALBUM") == 0) {
