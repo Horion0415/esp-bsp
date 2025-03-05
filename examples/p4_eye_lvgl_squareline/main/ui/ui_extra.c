@@ -31,6 +31,8 @@ static lv_obj_t * info_label = NULL;
 static ui_page_t current_page = UI_PAGE_MAIN;
 static int current_settings_item = 0;
 
+lv_timer_t *lv_popup_timer = NULL;
+
 typedef struct {
     const char** options;  
     int option_count;      
@@ -501,7 +503,7 @@ static void ui_extra_redirect_to_camera_page(void)
     ui_extra_clear_page();
 
     lv_obj_clear_flag(ui_PanelCanvasPopupCamera, LV_OBJ_FLAG_HIDDEN);
-    lv_timer_create(pop_up_timer_callback, 5000, ui_PanelCanvasPopupCamera);
+    lv_popup_timer = lv_timer_create(pop_up_timer_callback, 5000, ui_PanelCanvasPopupCamera);
 }
 
 static void ui_extra_redirect_to_interval_camera_page(void)
@@ -511,7 +513,7 @@ static void ui_extra_redirect_to_interval_camera_page(void)
     ui_extra_clear_page();
 
     lv_obj_clear_flag(ui_PanelCanvasPopupCameraInterval, LV_OBJ_FLAG_HIDDEN);
-    lv_timer_create(pop_up_timer_callback, 5000, ui_PanelCanvasPopupCameraInterval);
+    lv_popup_timer = lv_timer_create(pop_up_timer_callback, 5000, ui_PanelCanvasPopupCameraInterval);
 }
 
 static void ui_extra_redirect_to_video_mode_page(void)
@@ -521,7 +523,7 @@ static void ui_extra_redirect_to_video_mode_page(void)
     ui_extra_clear_page();
     
     lv_obj_clear_flag(ui_PanelCanvasPopupVideoMode, LV_OBJ_FLAG_HIDDEN);
-    lv_timer_create(pop_up_timer_callback, 5000, ui_PanelCanvasPopupVideoMode);
+    lv_popup_timer = lv_timer_create(pop_up_timer_callback, 5000, ui_PanelCanvasPopupVideoMode);
 }
 
 static void ui_extra_redirect_to_album_page(void)
@@ -600,6 +602,27 @@ void ui_extra_goto_page(ui_page_t page)
             ui_extra_redirect_to_main_page();
             break;
     }   
+}
+
+void ui_extra_clear_popup_window(void)
+{
+    if(!lv_obj_has_flag(ui_PanelCanvasPopupCamera, LV_OBJ_FLAG_HIDDEN) || 
+       !lv_obj_has_flag(ui_PanelCanvasPopupCameraInterval, LV_OBJ_FLAG_HIDDEN) ||
+       !lv_obj_has_flag(ui_PanelCanvasPopupVideoMode, LV_OBJ_FLAG_HIDDEN) ||
+       !lv_obj_has_flag(ui_PanelCanvasPopupSDWarning, LV_OBJ_FLAG_HIDDEN) ||
+       !lv_obj_has_flag(ui_PanelCanvasPopupIntervalTimerWarning, LV_OBJ_FLAG_HIDDEN) ||
+       !lv_obj_has_flag(ui_PanelCanvasPopupIntervalTimerWarningEnd, LV_OBJ_FLAG_HIDDEN)) {
+            
+            lv_timer_del(lv_popup_timer);
+
+            lv_obj_add_flag(ui_PanelCanvasPopupCamera, LV_OBJ_FLAG_HIDDEN);
+            lv_obj_add_flag(ui_PanelCanvasPopupCameraInterval, LV_OBJ_FLAG_HIDDEN);
+            lv_obj_add_flag(ui_PanelCanvasPopupVideoMode, LV_OBJ_FLAG_HIDDEN);
+            lv_obj_add_flag(ui_PanelCanvasPopupSDWarning, LV_OBJ_FLAG_HIDDEN);
+            lv_obj_add_flag(ui_PanelCanvasPopupIntervalTimerWarning, LV_OBJ_FLAG_HIDDEN);
+            lv_obj_add_flag(ui_PanelCanvasPopupIntervalTimerWarningEnd, LV_OBJ_FLAG_HIDDEN);
+    
+    }
 }
 
 ui_page_t ui_extra_get_current_page(void)

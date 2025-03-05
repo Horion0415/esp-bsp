@@ -163,27 +163,27 @@ void app_main(void)
     }
     ESP_LOGI(TAG, "[Done] USB HS detected!");
 
-    bsp_extra_pdm_codec_init();
-    app_sr_start(false);
+    // bsp_extra_pdm_codec_init();
+    // app_sr_start(false);
 
-    // Wait for wakeup
-    while (!app_sr_get_wakeup_result()) {
-        lv_label_set_text(label, "Detecting wakeup...");
-        vTaskDelay(100 / portTICK_PERIOD_MS);
-    }
-    ESP_LOGI(TAG, "[Done] Wakeup detected!");
+    // // Wait for wakeup
+    // while (!app_sr_get_wakeup_result()) {
+    //     lv_label_set_text(label, "Detecting wakeup...");
+    //     vTaskDelay(100 / portTICK_PERIOD_MS);
+    // }
+    // ESP_LOGI(TAG, "[Done] Wakeup detected!");
 
     // Scan WiFi
-    lv_label_set_text(label, "Scanning WiFi...");
-    app_wifi_scan();
-    uint16_t ap_count = app_wifi_scan_get_ap_count();
-    if (ap_count > 0) {
-        lv_label_set_text(label, "WiFi scan: PASS");
-        create_and_write_file(file_path, "WiFi scan: PASS", true);
-    } else {
-        lv_label_set_text(label, "WiFi scan: FAIL");
-        create_and_write_file(file_path, "WiFi scan: FAIL", true);
-    }
+    // lv_label_set_text(label, "Scanning WiFi...");
+    // app_wifi_scan();
+    // uint16_t ap_count = app_wifi_scan_get_ap_count();
+    // if (ap_count > 0) {
+    //     lv_label_set_text(label, "WiFi scan: PASS");
+    //     create_and_write_file(file_path, "WiFi scan: PASS", true);
+    // } else {
+    //     lv_label_set_text(label, "WiFi scan: FAIL");
+    //     create_and_write_file(file_path, "WiFi scan: FAIL", true);
+    // }
 
     /* Init Buttons */
     button_handle_t btns[BSP_BUTTON_NUM];
