@@ -10,7 +10,7 @@ void ui_ScreenCamera_screen_init(void)
     ui_ScreenCamera = lv_obj_create(NULL);
     lv_obj_clear_flag(ui_ScreenCamera, LV_OBJ_FLAG_SCROLLABLE);      /// Flags
 
-    ui_PanelCanvas = lv_canvas_create(ui_ScreenCamera);
+    ui_PanelCanvas = lv_obj_create(ui_ScreenCamera);
     lv_obj_set_width(ui_PanelCanvas, 240);
     lv_obj_set_height(ui_PanelCanvas, 240);
     lv_obj_set_align(ui_PanelCanvas, LV_ALIGN_CENTER);
@@ -63,10 +63,10 @@ void ui_ScreenCamera_screen_init(void)
     lv_obj_set_style_border_opa(ui_PanelCanvasMaskLarge, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
 
     ui_PanelCanvasPopupCamera = lv_obj_create(ui_PanelCanvas);
-    lv_obj_set_width(ui_PanelCanvasPopupCamera, 156);
-    lv_obj_set_height(ui_PanelCanvasPopupCamera, 132);
-    lv_obj_set_x(ui_PanelCanvasPopupCamera, -3);
-    lv_obj_set_y(ui_PanelCanvasPopupCamera, -12);
+    lv_obj_set_width(ui_PanelCanvasPopupCamera, 212);
+    lv_obj_set_height(ui_PanelCanvasPopupCamera, 213);
+    lv_obj_set_x(ui_PanelCanvasPopupCamera, -1);
+    lv_obj_set_y(ui_PanelCanvasPopupCamera, -3);
     lv_obj_set_align(ui_PanelCanvasPopupCamera, LV_ALIGN_CENTER);
     lv_obj_add_flag(ui_PanelCanvasPopupCamera, LV_OBJ_FLAG_HIDDEN);     /// Flags
     lv_obj_clear_flag(ui_PanelCanvasPopupCamera, LV_OBJ_FLAG_SCROLLABLE);      /// Flags
@@ -79,17 +79,17 @@ void ui_ScreenCamera_screen_init(void)
     ui_LabelPanelCanvasPopupCameraTop = lv_label_create(ui_PanelCanvasPopupCamera);
     lv_obj_set_width(ui_LabelPanelCanvasPopupCameraTop, LV_SIZE_CONTENT);   /// 1
     lv_obj_set_height(ui_LabelPanelCanvasPopupCameraTop, LV_SIZE_CONTENT);    /// 1
-    lv_obj_set_x(ui_LabelPanelCanvasPopupCameraTop, -1);
-    lv_obj_set_y(ui_LabelPanelCanvasPopupCameraTop, -31);
+    lv_obj_set_x(ui_LabelPanelCanvasPopupCameraTop, -2);
+    lv_obj_set_y(ui_LabelPanelCanvasPopupCameraTop, -59);
     lv_obj_set_align(ui_LabelPanelCanvasPopupCameraTop, LV_ALIGN_CENTER);
     lv_label_set_text(ui_LabelPanelCanvasPopupCameraTop, "Camera Mode");
-    lv_obj_set_style_text_font(ui_LabelPanelCanvasPopupCameraTop, &ui_font_FontKoHoBold18, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_font(ui_LabelPanelCanvasPopupCameraTop, &ui_font_FontKoHoBold28, LV_PART_MAIN | LV_STATE_DEFAULT);
 
     ui_PanelCanvasPopupCameraLine = lv_obj_create(ui_PanelCanvasPopupCamera);
-    lv_obj_set_width(ui_PanelCanvasPopupCameraLine, 141);
+    lv_obj_set_width(ui_PanelCanvasPopupCameraLine, 201);
     lv_obj_set_height(ui_PanelCanvasPopupCameraLine, 6);
-    lv_obj_set_x(ui_PanelCanvasPopupCameraLine, 0);
-    lv_obj_set_y(ui_PanelCanvasPopupCameraLine, -12);
+    lv_obj_set_x(ui_PanelCanvasPopupCameraLine, -1);
+    lv_obj_set_y(ui_PanelCanvasPopupCameraLine, -27);
     lv_obj_set_align(ui_PanelCanvasPopupCameraLine, LV_ALIGN_CENTER);
     lv_obj_clear_flag(ui_PanelCanvasPopupCameraLine, LV_OBJ_FLAG_SCROLLABLE);      /// Flags
     lv_obj_set_style_bg_color(ui_PanelCanvasPopupCameraLine, lv_color_hex(0x000000), LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -99,10 +99,10 @@ void ui_ScreenCamera_screen_init(void)
     lv_obj_set_width(ui_LabelPanelCanvasPopupCameraDown, LV_SIZE_CONTENT);   /// 1
     lv_obj_set_height(ui_LabelPanelCanvasPopupCameraDown, LV_SIZE_CONTENT);    /// 1
     lv_obj_set_x(ui_LabelPanelCanvasPopupCameraDown, -1);
-    lv_obj_set_y(ui_LabelPanelCanvasPopupCameraDown, 22);
+    lv_obj_set_y(ui_LabelPanelCanvasPopupCameraDown, 35);
     lv_obj_set_align(ui_LabelPanelCanvasPopupCameraDown, LV_ALIGN_CENTER);
     lv_label_set_text(ui_LabelPanelCanvasPopupCameraDown, "Rotate wheel to\n   adjust zoom");
-    lv_obj_set_style_text_font(ui_LabelPanelCanvasPopupCameraDown, &ui_font_FontKoHoMiniBold14,
+    lv_obj_set_style_text_font(ui_LabelPanelCanvasPopupCameraDown, &ui_font_FontKoHoMiniBold24,
                                LV_PART_MAIN | LV_STATE_DEFAULT);
 
     ui_ImageCanvasNOSDcard = lv_img_create(ui_PanelCanvas);
@@ -190,10 +190,10 @@ void ui_ScreenCamera_screen_init(void)
     lv_obj_clear_flag(ui_ImagePanelCanvasMaskCamera, LV_OBJ_FLAG_SCROLLABLE);      /// Flags
 
     ui_PanelCanvasPopupCameraInterval = lv_obj_create(ui_PanelCanvas);
-    lv_obj_set_width(ui_PanelCanvasPopupCameraInterval, 156);
-    lv_obj_set_height(ui_PanelCanvasPopupCameraInterval, 132);
+    lv_obj_set_width(ui_PanelCanvasPopupCameraInterval, 212);
+    lv_obj_set_height(ui_PanelCanvasPopupCameraInterval, 212);
     lv_obj_set_x(ui_PanelCanvasPopupCameraInterval, -3);
-    lv_obj_set_y(ui_PanelCanvasPopupCameraInterval, -12);
+    lv_obj_set_y(ui_PanelCanvasPopupCameraInterval, 0);
     lv_obj_set_align(ui_PanelCanvasPopupCameraInterval, LV_ALIGN_CENTER);
     lv_obj_add_flag(ui_PanelCanvasPopupCameraInterval, LV_OBJ_FLAG_HIDDEN);     /// Flags
     lv_obj_clear_flag(ui_PanelCanvasPopupCameraInterval, LV_OBJ_FLAG_SCROLLABLE);      /// Flags
@@ -207,18 +207,18 @@ void ui_ScreenCamera_screen_init(void)
     ui_LabelPanelCanvasPopupCameraTopInterval = lv_label_create(ui_PanelCanvasPopupCameraInterval);
     lv_obj_set_width(ui_LabelPanelCanvasPopupCameraTopInterval, LV_SIZE_CONTENT);   /// 1
     lv_obj_set_height(ui_LabelPanelCanvasPopupCameraTopInterval, LV_SIZE_CONTENT);    /// 1
-    lv_obj_set_x(ui_LabelPanelCanvasPopupCameraTopInterval, -1);
-    lv_obj_set_y(ui_LabelPanelCanvasPopupCameraTopInterval, -35);
+    lv_obj_set_x(ui_LabelPanelCanvasPopupCameraTopInterval, -4);
+    lv_obj_set_y(ui_LabelPanelCanvasPopupCameraTopInterval, -59);
     lv_obj_set_align(ui_LabelPanelCanvasPopupCameraTopInterval, LV_ALIGN_CENTER);
     lv_label_set_text(ui_LabelPanelCanvasPopupCameraTopInterval, "      Interval \n  Camera Mode");
-    lv_obj_set_style_text_font(ui_LabelPanelCanvasPopupCameraTopInterval, &ui_font_FontKoHoBold18,
+    lv_obj_set_style_text_font(ui_LabelPanelCanvasPopupCameraTopInterval, &ui_font_FontKoHoBold28,
                                LV_PART_MAIN | LV_STATE_DEFAULT);
 
     ui_PanelCanvasPopupCameraIntervalLine = lv_obj_create(ui_PanelCanvasPopupCameraInterval);
-    lv_obj_set_width(ui_PanelCanvasPopupCameraIntervalLine, 141);
+    lv_obj_set_width(ui_PanelCanvasPopupCameraIntervalLine, 200);
     lv_obj_set_height(ui_PanelCanvasPopupCameraIntervalLine, 6);
     lv_obj_set_x(ui_PanelCanvasPopupCameraIntervalLine, 0);
-    lv_obj_set_y(ui_PanelCanvasPopupCameraIntervalLine, -12);
+    lv_obj_set_y(ui_PanelCanvasPopupCameraIntervalLine, -14);
     lv_obj_set_align(ui_PanelCanvasPopupCameraIntervalLine, LV_ALIGN_CENTER);
     lv_obj_clear_flag(ui_PanelCanvasPopupCameraIntervalLine, LV_OBJ_FLAG_SCROLLABLE);      /// Flags
     lv_obj_set_style_bg_color(ui_PanelCanvasPopupCameraIntervalLine, lv_color_hex(0x000000),
@@ -229,10 +229,10 @@ void ui_ScreenCamera_screen_init(void)
     lv_obj_set_width(ui_LabelPanelCanvasPopupCameraIntervalDown, LV_SIZE_CONTENT);   /// 1
     lv_obj_set_height(ui_LabelPanelCanvasPopupCameraIntervalDown, LV_SIZE_CONTENT);    /// 1
     lv_obj_set_x(ui_LabelPanelCanvasPopupCameraIntervalDown, 2);
-    lv_obj_set_y(ui_LabelPanelCanvasPopupCameraIntervalDown, 27);
+    lv_obj_set_y(ui_LabelPanelCanvasPopupCameraIntervalDown, 46);
     lv_obj_set_align(ui_LabelPanelCanvasPopupCameraIntervalDown, LV_ALIGN_CENTER);
     lv_label_set_text(ui_LabelPanelCanvasPopupCameraIntervalDown, " 1)Set Interval\n2)Press wheel to \nstart shooting");
-    lv_obj_set_style_text_font(ui_LabelPanelCanvasPopupCameraIntervalDown, &ui_font_FontKoHoMiniBold14,
+    lv_obj_set_style_text_font(ui_LabelPanelCanvasPopupCameraIntervalDown, &ui_font_FontKoHoMiniBold24,
                                LV_PART_MAIN | LV_STATE_DEFAULT);
 
     ui_PanelCanvasMaskCameraInterval = lv_obj_create(ui_PanelCanvas);
@@ -290,10 +290,10 @@ void ui_ScreenCamera_screen_init(void)
     lv_obj_add_flag(ui_LabelCanvasInvervalTime, LV_OBJ_FLAG_HIDDEN);     /// Flags
 
     ui_PanelCanvasPopupVideoMode = lv_obj_create(ui_PanelCanvas);
-    lv_obj_set_width(ui_PanelCanvasPopupVideoMode, 156);
-    lv_obj_set_height(ui_PanelCanvasPopupVideoMode, 132);
-    lv_obj_set_x(ui_PanelCanvasPopupVideoMode, -3);
-    lv_obj_set_y(ui_PanelCanvasPopupVideoMode, -12);
+    lv_obj_set_width(ui_PanelCanvasPopupVideoMode, 212);
+    lv_obj_set_height(ui_PanelCanvasPopupVideoMode, 212);
+    lv_obj_set_x(ui_PanelCanvasPopupVideoMode, -2);
+    lv_obj_set_y(ui_PanelCanvasPopupVideoMode, -1);
     lv_obj_set_align(ui_PanelCanvasPopupVideoMode, LV_ALIGN_CENTER);
     lv_obj_add_flag(ui_PanelCanvasPopupVideoMode, LV_OBJ_FLAG_HIDDEN);     /// Flags
     lv_obj_clear_flag(ui_PanelCanvasPopupVideoMode, LV_OBJ_FLAG_SCROLLABLE);      /// Flags
@@ -306,18 +306,18 @@ void ui_ScreenCamera_screen_init(void)
     ui_LabelPanelCanvasPopupVideoModeTop = lv_label_create(ui_PanelCanvasPopupVideoMode);
     lv_obj_set_width(ui_LabelPanelCanvasPopupVideoModeTop, LV_SIZE_CONTENT);   /// 1
     lv_obj_set_height(ui_LabelPanelCanvasPopupVideoModeTop, LV_SIZE_CONTENT);    /// 1
-    lv_obj_set_x(ui_LabelPanelCanvasPopupVideoModeTop, -2);
-    lv_obj_set_y(ui_LabelPanelCanvasPopupVideoModeTop, -34);
+    lv_obj_set_x(ui_LabelPanelCanvasPopupVideoModeTop, -1);
+    lv_obj_set_y(ui_LabelPanelCanvasPopupVideoModeTop, -66);
     lv_obj_set_align(ui_LabelPanelCanvasPopupVideoModeTop, LV_ALIGN_CENTER);
     lv_label_set_text(ui_LabelPanelCanvasPopupVideoModeTop, "Video Mode");
-    lv_obj_set_style_text_font(ui_LabelPanelCanvasPopupVideoModeTop, &ui_font_FontKoHoBold18,
+    lv_obj_set_style_text_font(ui_LabelPanelCanvasPopupVideoModeTop, &ui_font_FontKoHoBold28,
                                LV_PART_MAIN | LV_STATE_DEFAULT);
 
     ui_PanelCanvasPopupVideoModeLine = lv_obj_create(ui_PanelCanvasPopupVideoMode);
-    lv_obj_set_width(ui_PanelCanvasPopupVideoModeLine, 141);
+    lv_obj_set_width(ui_PanelCanvasPopupVideoModeLine, 183);
     lv_obj_set_height(ui_PanelCanvasPopupVideoModeLine, 6);
-    lv_obj_set_x(ui_PanelCanvasPopupVideoModeLine, 0);
-    lv_obj_set_y(ui_PanelCanvasPopupVideoModeLine, -12);
+    lv_obj_set_x(ui_PanelCanvasPopupVideoModeLine, -3);
+    lv_obj_set_y(ui_PanelCanvasPopupVideoModeLine, -32);
     lv_obj_set_align(ui_PanelCanvasPopupVideoModeLine, LV_ALIGN_CENTER);
     lv_obj_clear_flag(ui_PanelCanvasPopupVideoModeLine, LV_OBJ_FLAG_SCROLLABLE);      /// Flags
     lv_obj_set_style_bg_color(ui_PanelCanvasPopupVideoModeLine, lv_color_hex(0x000000), LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -326,11 +326,11 @@ void ui_ScreenCamera_screen_init(void)
     ui_LabelPanelCanvasPopupVideoModeDown = lv_label_create(ui_PanelCanvasPopupVideoMode);
     lv_obj_set_width(ui_LabelPanelCanvasPopupVideoModeDown, LV_SIZE_CONTENT);   /// 1
     lv_obj_set_height(ui_LabelPanelCanvasPopupVideoModeDown, LV_SIZE_CONTENT);    /// 1
-    lv_obj_set_x(ui_LabelPanelCanvasPopupVideoModeDown, -1);
-    lv_obj_set_y(ui_LabelPanelCanvasPopupVideoModeDown, 22);
+    lv_obj_set_x(ui_LabelPanelCanvasPopupVideoModeDown, 1);
+    lv_obj_set_y(ui_LabelPanelCanvasPopupVideoModeDown, 32);
     lv_obj_set_align(ui_LabelPanelCanvasPopupVideoModeDown, LV_ALIGN_CENTER);
     lv_label_set_text(ui_LabelPanelCanvasPopupVideoModeDown, "Rotate wheel to \n  adjust zoom.");
-    lv_obj_set_style_text_font(ui_LabelPanelCanvasPopupVideoModeDown, &ui_font_FontKoHoMiniBold14,
+    lv_obj_set_style_text_font(ui_LabelPanelCanvasPopupVideoModeDown, &ui_font_FontKoHoMiniBold24,
                                LV_PART_MAIN | LV_STATE_DEFAULT);
 
     ui_PanelCanvasMaskVideoMode = lv_obj_create(ui_PanelCanvas);
@@ -358,10 +358,10 @@ void ui_ScreenCamera_screen_init(void)
     lv_obj_clear_flag(ui_ImagePanelCanvasMaskVideoMode, LV_OBJ_FLAG_SCROLLABLE);      /// Flags
 
     ui_PanelCanvasPopupSDWarning = lv_obj_create(ui_PanelCanvas);
-    lv_obj_set_width(ui_PanelCanvasPopupSDWarning, 156);
-    lv_obj_set_height(ui_PanelCanvasPopupSDWarning, 132);
-    lv_obj_set_x(ui_PanelCanvasPopupSDWarning, -3);
-    lv_obj_set_y(ui_PanelCanvasPopupSDWarning, -12);
+    lv_obj_set_width(ui_PanelCanvasPopupSDWarning, 212);
+    lv_obj_set_height(ui_PanelCanvasPopupSDWarning, 212);
+    lv_obj_set_x(ui_PanelCanvasPopupSDWarning, -2);
+    lv_obj_set_y(ui_PanelCanvasPopupSDWarning, -4);
     lv_obj_set_align(ui_PanelCanvasPopupSDWarning, LV_ALIGN_CENTER);
     lv_obj_add_flag(ui_PanelCanvasPopupSDWarning, LV_OBJ_FLAG_HIDDEN);     /// Flags
     lv_obj_clear_flag(ui_PanelCanvasPopupSDWarning, LV_OBJ_FLAG_SCROLLABLE);      /// Flags
@@ -374,19 +374,19 @@ void ui_ScreenCamera_screen_init(void)
     ui_LabelPanelCanvasPopupSDWarning = lv_label_create(ui_PanelCanvasPopupSDWarning);
     lv_obj_set_width(ui_LabelPanelCanvasPopupSDWarning, LV_SIZE_CONTENT);   /// 1
     lv_obj_set_height(ui_LabelPanelCanvasPopupSDWarning, LV_SIZE_CONTENT);    /// 1
-    lv_obj_set_x(ui_LabelPanelCanvasPopupSDWarning, -1);
-    lv_obj_set_y(ui_LabelPanelCanvasPopupSDWarning, -35);
+    lv_obj_set_x(ui_LabelPanelCanvasPopupSDWarning, -4);
+    lv_obj_set_y(ui_LabelPanelCanvasPopupSDWarning, -70);
     lv_obj_set_align(ui_LabelPanelCanvasPopupSDWarning, LV_ALIGN_CENTER);
     lv_label_set_text(ui_LabelPanelCanvasPopupSDWarning, "Warning");
     lv_obj_set_style_text_color(ui_LabelPanelCanvasPopupSDWarning, lv_color_hex(0xFF0000), LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_opa(ui_LabelPanelCanvasPopupSDWarning, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
-    lv_obj_set_style_text_font(ui_LabelPanelCanvasPopupSDWarning, &ui_font_FontKoHoBold18, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_font(ui_LabelPanelCanvasPopupSDWarning, &ui_font_FontKoHoBold28, LV_PART_MAIN | LV_STATE_DEFAULT);
 
     ui_PanelCanvasPopupCameraSDWarning = lv_obj_create(ui_PanelCanvasPopupSDWarning);
-    lv_obj_set_width(ui_PanelCanvasPopupCameraSDWarning, 141);
+    lv_obj_set_width(ui_PanelCanvasPopupCameraSDWarning, 197);
     lv_obj_set_height(ui_PanelCanvasPopupCameraSDWarning, 6);
-    lv_obj_set_x(ui_PanelCanvasPopupCameraSDWarning, 0);
-    lv_obj_set_y(ui_PanelCanvasPopupCameraSDWarning, -17);
+    lv_obj_set_x(ui_PanelCanvasPopupCameraSDWarning, -1);
+    lv_obj_set_y(ui_PanelCanvasPopupCameraSDWarning, -36);
     lv_obj_set_align(ui_PanelCanvasPopupCameraSDWarning, LV_ALIGN_CENTER);
     lv_obj_clear_flag(ui_PanelCanvasPopupCameraSDWarning, LV_OBJ_FLAG_SCROLLABLE);      /// Flags
     lv_obj_set_style_bg_color(ui_PanelCanvasPopupCameraSDWarning, lv_color_hex(0x000000), LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -395,19 +395,19 @@ void ui_ScreenCamera_screen_init(void)
     ui_LabelPanelCanvasPopupCameraSDWarning = lv_label_create(ui_PanelCanvasPopupSDWarning);
     lv_obj_set_width(ui_LabelPanelCanvasPopupCameraSDWarning, LV_SIZE_CONTENT);   /// 1
     lv_obj_set_height(ui_LabelPanelCanvasPopupCameraSDWarning, LV_SIZE_CONTENT);    /// 1
-    lv_obj_set_x(ui_LabelPanelCanvasPopupCameraSDWarning, 1);
-    lv_obj_set_y(ui_LabelPanelCanvasPopupCameraSDWarning, 25);
+    lv_obj_set_x(ui_LabelPanelCanvasPopupCameraSDWarning, 3);
+    lv_obj_set_y(ui_LabelPanelCanvasPopupCameraSDWarning, 39);
     lv_obj_set_align(ui_LabelPanelCanvasPopupCameraSDWarning, LV_ALIGN_CENTER);
     lv_label_set_text(ui_LabelPanelCanvasPopupCameraSDWarning,
-                      "No SD card detected\n\n  Insert SD Card to \n        continue");
-    lv_obj_set_style_text_font(ui_LabelPanelCanvasPopupCameraSDWarning, &ui_font_FontKoHoMiniBold14,
+                      "No SD card detected\n\n  Insert SD Card to \n          continue");
+    lv_obj_set_style_text_font(ui_LabelPanelCanvasPopupCameraSDWarning, &ui_font_FontKoHoMiniBold22,
                                LV_PART_MAIN | LV_STATE_DEFAULT);
 
     ui_PanelCanvasPopupIntervalTimerWarning = lv_obj_create(ui_PanelCanvas);
-    lv_obj_set_width(ui_PanelCanvasPopupIntervalTimerWarning, 156);
-    lv_obj_set_height(ui_PanelCanvasPopupIntervalTimerWarning, 170);
+    lv_obj_set_width(ui_PanelCanvasPopupIntervalTimerWarning, 212);
+    lv_obj_set_height(ui_PanelCanvasPopupIntervalTimerWarning, 212);
     lv_obj_set_x(ui_PanelCanvasPopupIntervalTimerWarning, -3);
-    lv_obj_set_y(ui_PanelCanvasPopupIntervalTimerWarning, -7);
+    lv_obj_set_y(ui_PanelCanvasPopupIntervalTimerWarning, 0);
     lv_obj_set_align(ui_PanelCanvasPopupIntervalTimerWarning, LV_ALIGN_CENTER);
     lv_obj_add_flag(ui_PanelCanvasPopupIntervalTimerWarning, LV_OBJ_FLAG_HIDDEN);     /// Flags
     lv_obj_clear_flag(ui_PanelCanvasPopupIntervalTimerWarning, LV_OBJ_FLAG_SCROLLABLE);      /// Flags
@@ -423,17 +423,17 @@ void ui_ScreenCamera_screen_init(void)
     lv_obj_set_width(ui_LabelPanelCanvasPopupIntervalTimerWarning, LV_SIZE_CONTENT);   /// 1
     lv_obj_set_height(ui_LabelPanelCanvasPopupIntervalTimerWarning, LV_SIZE_CONTENT);    /// 1
     lv_obj_set_x(ui_LabelPanelCanvasPopupIntervalTimerWarning, -1);
-    lv_obj_set_y(ui_LabelPanelCanvasPopupIntervalTimerWarning, -35);
+    lv_obj_set_y(ui_LabelPanelCanvasPopupIntervalTimerWarning, -38);
     lv_obj_set_align(ui_LabelPanelCanvasPopupIntervalTimerWarning, LV_ALIGN_CENTER);
     lv_label_set_text(ui_LabelPanelCanvasPopupIntervalTimerWarning, "Interval Cam");
-    lv_obj_set_style_text_font(ui_LabelPanelCanvasPopupIntervalTimerWarning, &ui_font_FontKoHoBold18,
+    lv_obj_set_style_text_font(ui_LabelPanelCanvasPopupIntervalTimerWarning, &ui_font_FontKoHoBold28,
                                LV_PART_MAIN | LV_STATE_DEFAULT);
 
     ui_PanelCanvasPopupCameraIntervalTimerWarning = lv_obj_create(ui_PanelCanvasPopupIntervalTimerWarning);
-    lv_obj_set_width(ui_PanelCanvasPopupCameraIntervalTimerWarning, 141);
+    lv_obj_set_width(ui_PanelCanvasPopupCameraIntervalTimerWarning, 199);
     lv_obj_set_height(ui_PanelCanvasPopupCameraIntervalTimerWarning, 6);
     lv_obj_set_x(ui_PanelCanvasPopupCameraIntervalTimerWarning, 0);
-    lv_obj_set_y(ui_PanelCanvasPopupCameraIntervalTimerWarning, -17);
+    lv_obj_set_y(ui_PanelCanvasPopupCameraIntervalTimerWarning, -13);
     lv_obj_set_align(ui_PanelCanvasPopupCameraIntervalTimerWarning, LV_ALIGN_CENTER);
     lv_obj_clear_flag(ui_PanelCanvasPopupCameraIntervalTimerWarning, LV_OBJ_FLAG_SCROLLABLE);      /// Flags
     lv_obj_set_style_bg_color(ui_PanelCanvasPopupCameraIntervalTimerWarning, lv_color_hex(0x000000),
@@ -443,29 +443,29 @@ void ui_ScreenCamera_screen_init(void)
     ui_LabelPanelCanvasPopupCameraIntervalTimerWarning = lv_label_create(ui_PanelCanvasPopupIntervalTimerWarning);
     lv_obj_set_width(ui_LabelPanelCanvasPopupCameraIntervalTimerWarning, LV_SIZE_CONTENT);   /// 1
     lv_obj_set_height(ui_LabelPanelCanvasPopupCameraIntervalTimerWarning, LV_SIZE_CONTENT);    /// 1
-    lv_obj_set_x(ui_LabelPanelCanvasPopupCameraIntervalTimerWarning, -2);
-    lv_obj_set_y(ui_LabelPanelCanvasPopupCameraIntervalTimerWarning, 45);
+    lv_obj_set_x(ui_LabelPanelCanvasPopupCameraIntervalTimerWarning, 0);
+    lv_obj_set_y(ui_LabelPanelCanvasPopupCameraIntervalTimerWarning, 58);
     lv_obj_set_align(ui_LabelPanelCanvasPopupCameraIntervalTimerWarning, LV_ALIGN_CENTER);
     lv_label_set_text(ui_LabelPanelCanvasPopupCameraIntervalTimerWarning,
-                      "   Display will be \n        dimmed\n\nPress any button to\n  end interval cam\n");
-    lv_obj_set_style_text_font(ui_LabelPanelCanvasPopupCameraIntervalTimerWarning, &ui_font_FontKoHoMiniBold14,
+                      "   Display will be \n        dimmed\nPress any button to\n  end interval cam\n");
+    lv_obj_set_style_text_font(ui_LabelPanelCanvasPopupCameraIntervalTimerWarning, &ui_font_FontKoHoMiniBold22,
                                LV_PART_MAIN | LV_STATE_DEFAULT);
 
     ui_LabelPanelCanvasPopupIntervalTimer = lv_label_create(ui_PanelCanvasPopupIntervalTimerWarning);
     lv_obj_set_width(ui_LabelPanelCanvasPopupIntervalTimer, LV_SIZE_CONTENT);   /// 1
     lv_obj_set_height(ui_LabelPanelCanvasPopupIntervalTimer, LV_SIZE_CONTENT);    /// 1
-    lv_obj_set_x(ui_LabelPanelCanvasPopupIntervalTimer, 0);
-    lv_obj_set_y(ui_LabelPanelCanvasPopupIntervalTimer, -59);
+    lv_obj_set_x(ui_LabelPanelCanvasPopupIntervalTimer, 1);
+    lv_obj_set_y(ui_LabelPanelCanvasPopupIntervalTimer, -74);
     lv_obj_set_align(ui_LabelPanelCanvasPopupIntervalTimer, LV_ALIGN_CENTER);
     lv_label_set_text(ui_LabelPanelCanvasPopupIntervalTimer, "Starting 30 min");
-    lv_obj_set_style_text_font(ui_LabelPanelCanvasPopupIntervalTimer, &ui_font_FontKoHoBold18,
+    lv_obj_set_style_text_font(ui_LabelPanelCanvasPopupIntervalTimer, &ui_font_FontKoHoBold28,
                                LV_PART_MAIN | LV_STATE_DEFAULT);
 
     ui_PanelCanvasPopupIntervalTimerWarningEnd = lv_obj_create(ui_PanelCanvas);
-    lv_obj_set_width(ui_PanelCanvasPopupIntervalTimerWarningEnd, 156);
-    lv_obj_set_height(ui_PanelCanvasPopupIntervalTimerWarningEnd, 142);
+    lv_obj_set_width(ui_PanelCanvasPopupIntervalTimerWarningEnd, 212);
+    lv_obj_set_height(ui_PanelCanvasPopupIntervalTimerWarningEnd, 212);
     lv_obj_set_x(ui_PanelCanvasPopupIntervalTimerWarningEnd, -3);
-    lv_obj_set_y(ui_PanelCanvasPopupIntervalTimerWarningEnd, -7);
+    lv_obj_set_y(ui_PanelCanvasPopupIntervalTimerWarningEnd, -3);
     lv_obj_set_align(ui_PanelCanvasPopupIntervalTimerWarningEnd, LV_ALIGN_CENTER);
     lv_obj_add_flag(ui_PanelCanvasPopupIntervalTimerWarningEnd, LV_OBJ_FLAG_HIDDEN);     /// Flags
     lv_obj_clear_flag(ui_PanelCanvasPopupIntervalTimerWarningEnd, LV_OBJ_FLAG_SCROLLABLE);      /// Flags
@@ -480,17 +480,17 @@ void ui_ScreenCamera_screen_init(void)
     ui_LabelPanelCanvasPopupIntervalTimerWarningEnd = lv_label_create(ui_PanelCanvasPopupIntervalTimerWarningEnd);
     lv_obj_set_width(ui_LabelPanelCanvasPopupIntervalTimerWarningEnd, LV_SIZE_CONTENT);   /// 1
     lv_obj_set_height(ui_LabelPanelCanvasPopupIntervalTimerWarningEnd, LV_SIZE_CONTENT);    /// 1
-    lv_obj_set_x(ui_LabelPanelCanvasPopupIntervalTimerWarningEnd, 2);
-    lv_obj_set_y(ui_LabelPanelCanvasPopupIntervalTimerWarningEnd, -13);
+    lv_obj_set_x(ui_LabelPanelCanvasPopupIntervalTimerWarningEnd, 1);
+    lv_obj_set_y(ui_LabelPanelCanvasPopupIntervalTimerWarningEnd, -23);
     lv_obj_set_align(ui_LabelPanelCanvasPopupIntervalTimerWarningEnd, LV_ALIGN_CENTER);
     lv_label_set_text(ui_LabelPanelCanvasPopupIntervalTimerWarningEnd, "Interval Cam");
-    lv_obj_set_style_text_font(ui_LabelPanelCanvasPopupIntervalTimerWarningEnd, &ui_font_FontKoHoBold18,
+    lv_obj_set_style_text_font(ui_LabelPanelCanvasPopupIntervalTimerWarningEnd, &ui_font_FontKoHoBold28,
                                LV_PART_MAIN | LV_STATE_DEFAULT);
 
     ui_PanelCanvasPopupCameraIntervalTimerWarningEnd = lv_obj_create(ui_PanelCanvasPopupIntervalTimerWarningEnd);
-    lv_obj_set_width(ui_PanelCanvasPopupCameraIntervalTimerWarningEnd, 141);
+    lv_obj_set_width(ui_PanelCanvasPopupCameraIntervalTimerWarningEnd, 194);
     lv_obj_set_height(ui_PanelCanvasPopupCameraIntervalTimerWarningEnd, 6);
-    lv_obj_set_x(ui_PanelCanvasPopupCameraIntervalTimerWarningEnd, 0);
+    lv_obj_set_x(ui_PanelCanvasPopupCameraIntervalTimerWarningEnd, 1);
     lv_obj_set_y(ui_PanelCanvasPopupCameraIntervalTimerWarningEnd, 10);
     lv_obj_set_align(ui_PanelCanvasPopupCameraIntervalTimerWarningEnd, LV_ALIGN_CENTER);
     lv_obj_clear_flag(ui_PanelCanvasPopupCameraIntervalTimerWarningEnd, LV_OBJ_FLAG_SCROLLABLE);      /// Flags
@@ -501,21 +501,21 @@ void ui_ScreenCamera_screen_init(void)
     ui_LabelPanelCanvasPopupCameraIntervalTimerWarningEnd = lv_label_create(ui_PanelCanvasPopupIntervalTimerWarningEnd);
     lv_obj_set_width(ui_LabelPanelCanvasPopupCameraIntervalTimerWarningEnd, LV_SIZE_CONTENT);   /// 1
     lv_obj_set_height(ui_LabelPanelCanvasPopupCameraIntervalTimerWarningEnd, LV_SIZE_CONTENT);    /// 1
-    lv_obj_set_x(ui_LabelPanelCanvasPopupCameraIntervalTimerWarningEnd, 1);
-    lv_obj_set_y(ui_LabelPanelCanvasPopupCameraIntervalTimerWarningEnd, 40);
+    lv_obj_set_x(ui_LabelPanelCanvasPopupCameraIntervalTimerWarningEnd, 4);
+    lv_obj_set_y(ui_LabelPanelCanvasPopupCameraIntervalTimerWarningEnd, 61);
     lv_obj_set_align(ui_LabelPanelCanvasPopupCameraIntervalTimerWarningEnd, LV_ALIGN_CENTER);
     lv_label_set_text(ui_LabelPanelCanvasPopupCameraIntervalTimerWarningEnd, "3 photos saved to \n       SD Card");
-    lv_obj_set_style_text_font(ui_LabelPanelCanvasPopupCameraIntervalTimerWarningEnd, &ui_font_FontKoHoMiniBold14,
+    lv_obj_set_style_text_font(ui_LabelPanelCanvasPopupCameraIntervalTimerWarningEnd, &ui_font_FontKoHoMiniBold22,
                                LV_PART_MAIN | LV_STATE_DEFAULT);
 
     ui_LabelPanelCanvasPopupIntervalTimerEnd = lv_label_create(ui_PanelCanvasPopupIntervalTimerWarningEnd);
     lv_obj_set_width(ui_LabelPanelCanvasPopupIntervalTimerEnd, LV_SIZE_CONTENT);   /// 1
     lv_obj_set_height(ui_LabelPanelCanvasPopupIntervalTimerEnd, LV_SIZE_CONTENT);    /// 1
     lv_obj_set_x(ui_LabelPanelCanvasPopupIntervalTimerEnd, 1);
-    lv_obj_set_y(ui_LabelPanelCanvasPopupIntervalTimerEnd, -43);
+    lv_obj_set_y(ui_LabelPanelCanvasPopupIntervalTimerEnd, -67);
     lv_obj_set_align(ui_LabelPanelCanvasPopupIntervalTimerEnd, LV_ALIGN_CENTER);
     lv_label_set_text(ui_LabelPanelCanvasPopupIntervalTimerEnd, "Ended 30 min");
-    lv_obj_set_style_text_font(ui_LabelPanelCanvasPopupIntervalTimerEnd, &ui_font_FontKoHoBold18,
+    lv_obj_set_style_text_font(ui_LabelPanelCanvasPopupIntervalTimerEnd, &ui_font_FontKoHoBold28,
                                LV_PART_MAIN | LV_STATE_DEFAULT);
 
     ui_ImageRedDot = lv_img_create(ui_PanelCanvas);

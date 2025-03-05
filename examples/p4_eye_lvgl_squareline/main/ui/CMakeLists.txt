@@ -27,6 +27,9 @@ SET(SOURCES screens/ui_ScreenCamera.c
     fonts/ui_font_FontKoHoBold14.c
     fonts/ui_font_FontKoHoBold16.c
     fonts/ui_font_FontKoHoBold18.c
-    fonts/ui_font_FontKoHoMiniBold14.c)
+    fonts/ui_font_FontKoHoMiniBold14.c
+    fonts/ui_font_FontKoHoBold28.c
+    fonts/ui_font_FontKoHoMiniBold24.c
+    fonts/ui_font_FontKoHoMiniBold22.c)
 
 add_library(ui ${SOURCES})

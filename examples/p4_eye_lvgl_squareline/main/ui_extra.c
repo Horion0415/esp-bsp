@@ -3,7 +3,7 @@
 #include "lvgl.h"
 
 #include "ui.h"
-
+#include "ui_extra.h"
 #define BASE_ZOOM       60
 #define ZOOM_FACTOR     2.3
 #define IMG_ZOOM_FACTOR 2.4
@@ -11,13 +11,17 @@
 
 static const char * TAG = "ui_extra";
 
-lv_obj_t * scroll_cont = NULL;
-lv_coord_t btn_width = 0;
-lv_coord_t btn_height = 0;
-lv_obj_t * selected_btn = NULL;  
-lv_obj_t * info_label = NULL;  
+static lv_coord_t btn_width = 0;
+static lv_coord_t btn_height = 0;
 
-lv_obj_t * create_img_button(lv_obj_t *parent, const void *img_src, const char *btn_text) {
+static lv_obj_t * selected_btn = NULL;  
+
+static lv_obj_t * scroll_cont = NULL;
+static lv_obj_t * info_label = NULL;  
+
+static ui_page_t current_page = UI_PAGE_MAIN;
+
+static lv_obj_t * create_img_button(lv_obj_t *parent, const void *img_src, const char *btn_text) {
     lv_obj_t * btn = lv_btn_create(parent);
     
     lv_obj_set_user_data(btn, (void *)btn_text);
@@ -104,6 +108,7 @@ static void scroll_event_cb(lv_event_t * e)
         if(img) {
             // lv_img_set_zoom(img, BASE_ZOOM * IMG_ZOOM_FACTOR * 0.5);
             // lv_obj_refr_size(img);
+            // lv_obj_set_style_transform_zoom(img, 256 * IMG_ZOOM_FACTOR, 0);
             lv_obj_set_pos(img, ZOOM_OFFSET, 0);
         }
     }
@@ -146,7 +151,10 @@ static void scroll_end_event_cb(lv_event_t * e)
 
             if (info_label) {
                 lv_label_set_text(info_label, btn_text);
-                lv_obj_clear_flag(info_label, LV_OBJ_FLAG_HIDDEN);
+
+                if(current_page == UI_PAGE_MAIN) {
+                    lv_obj_clear_flag(info_label, LV_OBJ_FLAG_HIDDEN);
+                }
 
                 if(strcmp(btn_text, "CAMERA") == 0) {
                     lv_obj_align(info_label, LV_ALIGN_CENTER, 6, 50);
@@ -194,7 +202,7 @@ static void scroll_end_event_cb(lv_event_t * e)
     }
 }
 
-void lv_scroll_create(void)
+static void lv_scroll_create(void)
 {
     // Create main container
     scroll_cont = lv_obj_create(ui_PanelCanvas);
@@ -265,22 +273,199 @@ void lv_scroll_create(void)
     }
 }
 
-void ui_extra_init(void)
+static void ui_extra_clear_page(void)
 {
-    ui_init();
+    lv_obj_add_flag(ui_ImageCanvasSelect, LV_OBJ_FLAG_HIDDEN | LV_OBJ_FLAG_ADV_HITTEST);     /// Flags
+    lv_obj_add_flag(ui_ImageCanvasUp, LV_OBJ_FLAG_HIDDEN | LV_OBJ_FLAG_ADV_HITTEST);     /// Flags
+    lv_obj_add_flag(ui_ImageCanvasDown, LV_OBJ_FLAG_HIDDEN | LV_OBJ_FLAG_ADV_HITTEST);     /// Flags
+    lv_obj_add_flag(ui_PanelCanvasMaskLarge, LV_OBJ_FLAG_HIDDEN);     /// Flags
+    lv_obj_add_flag(ui_PanelCanvasPopupCamera, LV_OBJ_FLAG_HIDDEN);     /// Flags
+    lv_obj_add_flag(ui_ImageCanvasNOSDcard, LV_OBJ_FLAG_HIDDEN | LV_OBJ_FLAG_ADV_HITTEST);     /// Flags
+    lv_obj_add_flag(ui_ImageCanvasSDcard, LV_OBJ_FLAG_HIDDEN | LV_OBJ_FLAG_ADV_HITTEST);     /// Flags
+    lv_obj_add_flag(ui_ImageCanvasMenu, LV_OBJ_FLAG_HIDDEN | LV_OBJ_FLAG_ADV_HITTEST);     /// Flags
+    lv_obj_add_flag(ui_LabelCanvas2X, LV_OBJ_FLAG_HIDDEN);     /// Flags
+    lv_obj_add_flag(ui_LabelCanvas3X, LV_OBJ_FLAG_HIDDEN);     /// Flags
+    lv_obj_add_flag(ui_LabelCanvasFactor, LV_OBJ_FLAG_HIDDEN);     /// Flags
+    lv_obj_add_flag(ui_PanelCanvasMaskCamera, LV_OBJ_FLAG_HIDDEN);     /// Flags
+    lv_obj_add_flag(ui_PanelCanvasPopupCameraInterval, LV_OBJ_FLAG_HIDDEN);     /// Flags
+    lv_obj_add_flag(ui_PanelCanvasMaskCameraInterval, LV_OBJ_FLAG_HIDDEN);     /// Flags
+    lv_obj_add_flag(ui_LabelCanvas5mplus, LV_OBJ_FLAG_HIDDEN);     /// Flags
+    lv_obj_add_flag(ui_LabelCanvas5mSub, LV_OBJ_FLAG_HIDDEN);     /// Flags
+    lv_obj_add_flag(ui_LabelCanvasInvervalTime, LV_OBJ_FLAG_HIDDEN);     /// Flags
+    lv_obj_add_flag(ui_PanelCanvasPopupVideoMode, LV_OBJ_FLAG_HIDDEN);     /// Flags
+    lv_obj_add_flag(ui_PanelCanvasMaskVideoMode, LV_OBJ_FLAG_HIDDEN);     /// Flags
+    lv_obj_add_flag(ui_PanelCanvasPopupSDWarning, LV_OBJ_FLAG_HIDDEN);     /// Flags
+    lv_obj_add_flag(ui_PanelCanvasPopupIntervalTimerWarning, LV_OBJ_FLAG_HIDDEN);     /// Flags
+    lv_obj_add_flag(ui_PanelCanvasPopupIntervalTimerWarningEnd, LV_OBJ_FLAG_HIDDEN);     /// Flags
+    lv_obj_add_flag(ui_ImageRedDot, LV_OBJ_FLAG_HIDDEN | LV_OBJ_FLAG_ADV_HITTEST);     /// Flags
+    lv_obj_add_flag(ui_LabelRedDotTime, LV_OBJ_FLAG_HIDDEN);     /// Flags
+    lv_obj_add_flag(ui_PanelSettings, LV_OBJ_FLAG_HIDDEN);     /// Flags
+    lv_obj_add_flag(ui_PanelSettingsMenu, LV_OBJ_FLAG_HIDDEN);     /// Flags
+    lv_obj_add_flag(scroll_cont, LV_OBJ_FLAG_HIDDEN);     /// Flags
+    lv_obj_add_flag(info_label, LV_OBJ_FLAG_HIDDEN);     /// Flags
+}
 
-    lv_scroll_create();
+static void pop_up_timer_callback(lv_timer_t * timer)
+{
+    if(timer->user_data == ui_PanelCanvasPopupCamera) {
+        lv_obj_add_flag(ui_PanelCanvasPopupCamera, LV_OBJ_FLAG_HIDDEN);
+    
+        lv_obj_clear_flag(ui_PanelCanvasMaskCamera, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_clear_flag(ui_LabelCanvasFactor, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_clear_flag(ui_LabelCanvas2X, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_clear_flag(ui_LabelCanvas3X, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_clear_flag(ui_ImageCanvasMenu, LV_OBJ_FLAG_HIDDEN);
+    } else if(timer->user_data == ui_PanelCanvasPopupCameraInterval) {
+        lv_obj_add_flag(ui_PanelCanvasPopupCameraInterval, LV_OBJ_FLAG_HIDDEN);
 
+        lv_obj_clear_flag(ui_PanelCanvasMaskCameraInterval, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_clear_flag(ui_LabelCanvasFactor, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_clear_flag(ui_LabelCanvas5mplus, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_clear_flag(ui_LabelCanvas5mSub, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_clear_flag(ui_ImageCanvasMenu, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_clear_flag(ui_LabelCanvasInvervalTime, LV_OBJ_FLAG_HIDDEN);
+    } else if(timer->user_data == ui_PanelCanvasPopupVideoMode) {
+        lv_obj_add_flag(ui_PanelCanvasPopupVideoMode, LV_OBJ_FLAG_HIDDEN);
+
+        lv_obj_clear_flag(ui_PanelCanvasMaskVideoMode, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_clear_flag(ui_ImageCanvasMenu, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_clear_flag(ui_LabelCanvas2X, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_clear_flag(ui_LabelCanvas3X, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_clear_flag(ui_LabelCanvasFactor, LV_OBJ_FLAG_HIDDEN);
+    }
+
+    lv_timer_del(timer);
+}
+
+static void ui_extra_redirect_to_main_page(void)
+{
+    current_page = UI_PAGE_MAIN;
+
+    ui_extra_clear_page();
+
+    lv_obj_clear_flag(scroll_cont, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_clear_flag(info_label, LV_OBJ_FLAG_HIDDEN);
     lv_obj_clear_flag(ui_ImageCanvasSelect, LV_OBJ_FLAG_HIDDEN);
     lv_obj_clear_flag(ui_ImageCanvasUp, LV_OBJ_FLAG_HIDDEN);
     lv_obj_clear_flag(ui_ImageCanvasDown, LV_OBJ_FLAG_HIDDEN);
     lv_obj_clear_flag(ui_PanelCanvasMaskLarge, LV_OBJ_FLAG_HIDDEN);
 }
 
+static void ui_extra_redirect_to_camera_page(void)
+{
+    current_page = UI_PAGE_CAMERA;
+
+    ui_extra_clear_page();
+
+    lv_obj_clear_flag(ui_PanelCanvasPopupCamera, LV_OBJ_FLAG_HIDDEN);
+    lv_timer_create(pop_up_timer_callback, 5000, ui_PanelCanvasPopupCamera);
+}
+
+static void ui_extra_redirect_to_interval_camera_page(void)
+{
+    current_page = UI_PAGE_INTERVAL_CAM;
+
+    ui_extra_clear_page();
+
+    lv_obj_clear_flag(ui_PanelCanvasPopupCameraInterval, LV_OBJ_FLAG_HIDDEN);
+    lv_timer_create(pop_up_timer_callback, 5000, ui_PanelCanvasPopupCameraInterval);
+}
+
+static void ui_extra_redirect_to_video_mode_page(void)
+{
+    current_page = UI_PAGE_VIDEO_MODE;
+
+    ui_extra_clear_page();
+    
+    lv_obj_clear_flag(ui_PanelCanvasPopupVideoMode, LV_OBJ_FLAG_HIDDEN);
+    lv_timer_create(pop_up_timer_callback, 5000, ui_PanelCanvasPopupVideoMode);
+}
+
+static void ui_extra_redirect_to_album_page(void)
+{
+    current_page = UI_PAGE_ALBUM;
+
+    ui_extra_clear_page();
+    
+    _ui_screen_change(&ui_ScreenAlbum, LV_SCR_LOAD_ANIM_NONE, 0, 0, ui_ScreenAlbum_screen_init);
+}
+
+static void ui_extra_redirect_to_usb_disk_page(void)
+{
+    current_page = UI_PAGE_USB_DISK;
+
+    ui_extra_clear_page();
+    
+    _ui_screen_change(&ui_ScreenUSB, LV_SCR_LOAD_ANIM_NONE, 0, 0, ui_ScreenUSB_screen_init);
+}
+
+static void ui_extra_redirect_to_settings_page(void)
+{
+    current_page = UI_PAGE_SETTINGS;
+
+    ui_extra_clear_page();
+    
+    lv_obj_clear_flag(ui_PanelSettings, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_clear_flag(ui_PanelSettingsMenu, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_clear_flag(ui_ImageCanvasSelect, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_clear_flag(ui_ImageCanvasUp, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_clear_flag(ui_ImageCanvasDown, LV_OBJ_FLAG_HIDDEN);
+}
+
+void ui_extra_goto_page(ui_page_t page)
+{
+    // save the current page
+    current_page = page;
+    
+    // redirect to the page
+    switch(page) {
+        case UI_PAGE_MAIN:
+            ui_extra_redirect_to_main_page();
+            break;
+        case UI_PAGE_CAMERA:
+            ui_extra_redirect_to_camera_page();
+            break;
+        case UI_PAGE_INTERVAL_CAM:
+            ui_extra_redirect_to_interval_camera_page();
+            break;
+        case UI_PAGE_VIDEO_MODE:
+            ui_extra_redirect_to_video_mode_page();
+            break;
+        case UI_PAGE_ALBUM:
+            ui_extra_redirect_to_album_page();
+            break;
+        case UI_PAGE_USB_DISK:
+            ui_extra_redirect_to_usb_disk_page();
+            break;
+        case UI_PAGE_SETTINGS:
+            ui_extra_redirect_to_settings_page();
+            break;
+        default:
+            ui_extra_redirect_to_main_page();
+            break;
+    }   
+}
+
+ui_page_t ui_extra_get_current_page(void)
+{
+    return current_page;
+}
+
+void ui_extra_init(void)
+{
+    ui_init();
+
+    lv_scroll_create();
+
+    // redirect to the main page
+    ui_extra_goto_page(UI_PAGE_MAIN);
+}
+
 void ui_extra_scroll_up(void)
 {
     lv_obj_scroll_by(scroll_cont, 0, 40, LV_ANIM_ON);
     lv_event_send(scroll_cont, LV_EVENT_SCROLL, NULL);
+
     lv_obj_add_flag(info_label, LV_OBJ_FLAG_HIDDEN);
 }
 
@@ -288,6 +473,7 @@ void ui_extra_scroll_down(void)
 {
     lv_obj_scroll_by(scroll_cont, 0, -40, LV_ANIM_ON);
     lv_event_send(scroll_cont, LV_EVENT_SCROLL, NULL);
+    
     lv_obj_add_flag(info_label, LV_OBJ_FLAG_HIDDEN);
 }
 
