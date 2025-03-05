@@ -10,7 +10,7 @@ void ui_ScreenCamera_screen_init(void)
     ui_ScreenCamera = lv_obj_create(NULL);
     lv_obj_clear_flag(ui_ScreenCamera, LV_OBJ_FLAG_SCROLLABLE);      /// Flags
 
-    ui_PanelCanvas = lv_obj_create(ui_ScreenCamera);
+    ui_PanelCanvas = lv_canvas_create(ui_ScreenCamera);
     lv_obj_set_width(ui_PanelCanvas, 240);
     lv_obj_set_height(ui_PanelCanvas, 240);
     lv_obj_set_align(ui_PanelCanvas, LV_ALIGN_CENTER);
