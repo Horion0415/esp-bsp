@@ -11,6 +11,13 @@
 
 static const char * TAG = "ui_extra";
 
+// language options
+static const char* language_options[] = {"English", "中文"};
+// resolution options
+static const char* resolution_options[] = {"720P", "1080P", "480P"};
+// flash options
+static const char* flash_options[] = {"Off", "On"};
+
 static lv_coord_t btn_width = 0;
 static lv_coord_t btn_height = 0;
 
@@ -20,6 +27,94 @@ static lv_obj_t * scroll_cont = NULL;
 static lv_obj_t * info_label = NULL;  
 
 static ui_page_t current_page = UI_PAGE_MAIN;
+static int current_settings_item = 0;
+
+typedef struct {
+    const char** options;  // 选项数组
+    int option_count;      // 选项数量
+    int current_option;    // 当前选中的选项索引
+    lv_obj_t* label;       // 显示选项的标签对象
+} setting_options_t;
+
+// All settings options
+static setting_options_t settings_options[4];
+
+static lv_obj_t* settings_items[4]; // 存储设置面板的项目
+
+static settings_info_t current_settings;
+
+typedef struct {
+    const char *name;
+    int page;
+} PageMapping;
+
+PageMapping page_map[] = {
+    {"CAMERA", UI_PAGE_CAMERA},
+    {"INTERVAL CAM", UI_PAGE_INTERVAL_CAM},
+    {"VIDEO MODE", UI_PAGE_VIDEO_MODE},
+    {"ALBUM", UI_PAGE_ALBUM},
+    {"USB DISK", UI_PAGE_USB_DISK},
+    {"SETTINGS", UI_PAGE_SETTINGS},
+    {NULL, -1}  
+};
+
+static void update_setting_display(int setting_index) {
+    setting_options_t* opt = &settings_options[setting_index];
+    const char* current_text = opt->options[opt->current_option];
+    
+    // update the label text
+    if (opt->label) {
+        lv_label_set_text(opt->label, current_text);
+    }
+    
+    // update the current settings info
+    if (setting_index == 0) {
+        current_settings.language = current_text;
+    } else if (setting_index == 1) {
+        current_settings.resolution = current_text;
+    } else if (setting_index == 2) {
+        current_settings.flash = current_text;
+    }
+    
+    ESP_LOGD(TAG, "Setting %d updated to: %s", setting_index, current_text);
+}
+
+static void init_settings_options(void) {
+    // language options
+    settings_options[0].options = language_options;
+    settings_options[0].option_count = sizeof(language_options) / sizeof(language_options[0]);
+    settings_options[0].current_option = 0;
+    settings_options[0].label = ui_LabelPanelPanelSettingsLanguageBody;
+    
+    // resolution options
+    settings_options[1].options = resolution_options;
+    settings_options[1].option_count = sizeof(resolution_options) / sizeof(resolution_options[0]);
+    settings_options[1].current_option = 0;
+    settings_options[1].label = ui_LabelPanelPanelSettingsResBody;
+    
+    // flash options
+    settings_options[2].options = flash_options;
+    settings_options[2].option_count = sizeof(flash_options) / sizeof(flash_options[0]);
+    settings_options[2].current_option = 0;
+    settings_options[2].label = ui_LabelPanelPanelSettingsFlashBody;
+    
+    // menu options
+    settings_options[3].options = NULL;
+    settings_options[3].option_count = 0;
+    settings_options[3].current_option = 0;
+    settings_options[3].label = ui_LabelPanelSettingsMenu;
+    
+    // initialize the current settings info
+    current_settings.language = language_options[0];
+    current_settings.resolution = resolution_options[0];
+    current_settings.flash = flash_options[0];
+}
+
+static void init_settings_display(void) {
+    for (int i = 0; i < 3; i++) {  // only update the first three settings items
+        update_setting_display(i);
+    }
+}
 
 static lv_obj_t * create_img_button(lv_obj_t *parent, const void *img_src, const char *btn_text) {
     lv_obj_t * btn = lv_btn_create(parent);
@@ -337,6 +432,19 @@ static void pop_up_timer_callback(lv_timer_t * timer)
     lv_timer_del(timer);
 }
 
+static void update_settings_focus(int new_item)
+{
+    // 先取消所有设置项的焦点
+    for (int i = 0; i < 4; i++) {
+        lv_event_send(settings_items[i], LV_EVENT_DEFOCUSED, NULL);
+    }
+    
+    // 设置新选中项的焦点
+    current_settings_item = new_item;
+    lv_event_send(settings_items[current_settings_item], LV_EVENT_FOCUSED, NULL);
+    ESP_LOGD(TAG, "Settings: selected item %d", current_settings_item);
+}
+
 static void ui_extra_redirect_to_main_page(void)
 {
     current_page = UI_PAGE_MAIN;
@@ -410,6 +518,19 @@ static void ui_extra_redirect_to_settings_page(void)
     lv_obj_clear_flag(ui_ImageCanvasSelect, LV_OBJ_FLAG_HIDDEN);
     lv_obj_clear_flag(ui_ImageCanvasUp, LV_OBJ_FLAG_HIDDEN);
     lv_obj_clear_flag(ui_ImageCanvasDown, LV_OBJ_FLAG_HIDDEN);
+
+    // Initialize settings items
+    settings_items[0] = ui_PanelPanelSettingsLanguage;
+    settings_items[1] = ui_PanelPanelSettingsRes;
+    settings_items[2] = ui_PanelPanelSettingsFlash;
+    settings_items[3] = ui_PanelSettingsMenu;
+    
+    // Initialize the settings display
+    init_settings_display();
+    
+    // reset the current selected item and focus the first item
+    current_settings_item = 0;
+    update_settings_focus(current_settings_item);
 }
 
 void ui_extra_goto_page(ui_page_t page)
@@ -451,29 +572,85 @@ ui_page_t ui_extra_get_current_page(void)
     return current_page;
 }
 
+ui_page_t ui_extra_get_choosed_page(void)
+{
+    const char * user_data = lv_obj_get_user_data(selected_btn);
+
+    for (int i = 0; page_map[i].name != NULL; i++) {
+        if (strcmp(user_data, page_map[i].name) == 0) {
+            return page_map[i].page;
+        }
+    }
+
+    return UI_PAGE_MAIN;
+}
+
+settings_info_t* ui_extra_get_settings(void)
+{
+    return &current_settings;
+}
+
+
+void ui_extra_btn_up(void)
+{
+    if(current_page == UI_PAGE_MAIN) {
+        lv_obj_scroll_by(scroll_cont, 0, 40, LV_ANIM_ON);
+        lv_event_send(scroll_cont, LV_EVENT_SCROLL, NULL);
+        
+        lv_obj_add_flag(info_label, LV_OBJ_FLAG_HIDDEN);
+    } else if(current_page == UI_PAGE_SETTINGS) {
+        // get the current settings item options
+        setting_options_t* opt = &settings_options[current_settings_item];
+        
+        // only handle the first three settings items
+        if(current_settings_item < 3 && opt->option_count > 0) {
+            // switch to the left option (decrease the index)
+            if(opt->current_option > 0) {
+                opt->current_option--;
+                update_setting_display(current_settings_item);
+            }
+        }
+    }
+}
+
+void ui_extra_btn_down(void)
+{
+    if(current_page == UI_PAGE_MAIN) {
+        lv_obj_scroll_by(scroll_cont, 0, -40, LV_ANIM_ON);
+        lv_event_send(scroll_cont, LV_EVENT_SCROLL, NULL);
+        
+        lv_obj_add_flag(info_label, LV_OBJ_FLAG_HIDDEN);
+    } else if(current_page == UI_PAGE_SETTINGS) {
+        // get the current settings item options
+        setting_options_t* opt = &settings_options[current_settings_item];
+        
+        // only handle the first three settings items
+        if(current_settings_item < 3 && opt->option_count > 0) {
+            // switch to the right option (increase the index)
+            if(opt->current_option < opt->option_count - 1) {
+                opt->current_option++;
+                update_setting_display(current_settings_item);
+            }
+        }
+    }
+}
+
+void ui_extra_btn_menu(void)
+{
+    if(current_page == UI_PAGE_MAIN) {
+        ui_extra_goto_page(ui_extra_get_choosed_page());
+    }
+}
+
 void ui_extra_init(void)
 {
     ui_init();
 
+    init_settings_options();
+
     lv_scroll_create();
 
     // redirect to the main page
-    ui_extra_goto_page(UI_PAGE_MAIN);
+    // ui_extra_goto_page(UI_PAGE_MAIN);
+    ui_extra_goto_page(UI_PAGE_SETTINGS);
 }
-
-void ui_extra_scroll_up(void)
-{
-    lv_obj_scroll_by(scroll_cont, 0, 40, LV_ANIM_ON);
-    lv_event_send(scroll_cont, LV_EVENT_SCROLL, NULL);
-
-    lv_obj_add_flag(info_label, LV_OBJ_FLAG_HIDDEN);
-}
-
-void ui_extra_scroll_down(void)
-{
-    lv_obj_scroll_by(scroll_cont, 0, -40, LV_ANIM_ON);
-    lv_event_send(scroll_cont, LV_EVENT_SCROLL, NULL);
-    
-    lv_obj_add_flag(info_label, LV_OBJ_FLAG_HIDDEN);
-}
-

@@ -14,9 +14,9 @@
 static void btn_handler(void *arg, void *data)
 {
     if((int)data == BSP_BUTTON_2) {
-        ui_extra_scroll_up();
+        ui_extra_btn_up();
     } else if((int)data == BSP_BUTTON_3) {
-        ui_extra_scroll_down();
+        ui_extra_btn_down();
     }
 }
 

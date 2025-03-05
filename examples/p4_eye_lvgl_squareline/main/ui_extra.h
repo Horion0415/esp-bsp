@@ -12,9 +12,15 @@ typedef enum {
     UI_PAGE_MAX             // page count
 } ui_page_t;
 
+typedef struct {
+    const char* language;
+    const char* resolution;
+    const char* flash;
+} settings_info_t;
+
 void ui_extra_init(void);
 
-void ui_extra_scroll_up(void);
-void ui_extra_scroll_down(void);
+void ui_extra_btn_up(void);
+void ui_extra_btn_down(void);
 
 #endif
