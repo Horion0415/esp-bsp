@@ -23,14 +23,14 @@ lv_obj_t * create_img_button(lv_obj_t *parent, const void *img_src, const char *
     lv_obj_set_user_data(btn, (void *)btn_text);
     
     // Set the button style
-    lv_obj_set_style_bg_opa(btn, LV_OPA_TRANSP, 0);
-    lv_obj_set_style_border_opa(btn, LV_OPA_TRANSP, 0);
-    lv_obj_set_style_border_width(btn, 0, 0);
-    lv_obj_set_style_shadow_width(btn, 0, 0);
-    lv_obj_set_style_shadow_spread(btn, 0, 0);
-    lv_obj_set_style_shadow_opa(btn, LV_OPA_TRANSP, 0);
-    lv_obj_set_style_shadow_ofs_x(btn, 0, 0);
-    lv_obj_set_style_shadow_ofs_y(btn, 0, 0);
+    // lv_obj_set_style_bg_opa(btn, LV_OPA_TRANSP, 0);
+    // lv_obj_set_style_border_opa(btn, LV_OPA_TRANSP, 0);
+    // lv_obj_set_style_border_width(btn, 0, 0);
+    // lv_obj_set_style_shadow_width(btn, 0, 0);
+    // lv_obj_set_style_shadow_spread(btn, 0, 0);
+    // lv_obj_set_style_shadow_opa(btn, LV_OPA_TRANSP, 0);
+    // lv_obj_set_style_shadow_ofs_x(btn, 0, 0);
+    // lv_obj_set_style_shadow_ofs_y(btn, 0, 0);
     
     lv_obj_set_width(btn, lv_pct(100));
     lv_obj_set_height(btn, 30);
