@@ -11,6 +11,9 @@
 
 static const char * TAG = "ui_extra";
 
+static uint16_t magnification_factor = 1;
+static uint16_t interval_time = 30;
+
 // language options
 static const char* language_options[] = {"English", "Chinese"};
 // resolution options
@@ -590,6 +593,36 @@ settings_info_t* ui_extra_get_settings(void)
     return &current_settings;
 }
 
+void app_extra_set_magnification_factor(uint16_t factor)
+{
+    magnification_factor = factor;
+
+    lv_label_set_text_fmt(ui_LabelCanvasFactor, "%dX", magnification_factor);
+}
+
+uint16_t app_extra_get_magnification_factor(void)
+{
+    return magnification_factor;
+}
+
+void app_extra_set_interval_time(uint16_t time)
+{
+    if(time > 120) {
+        time = 120;
+    } else if(time < 5) {
+        time = 5;
+    }
+
+    interval_time = time;
+
+    lv_label_set_text_fmt(ui_LabelCanvasInvervalTime, "%dmin", interval_time);
+}
+
+uint16_t app_extra_get_interval_time(void)
+{
+    return interval_time;
+}
+
 void ui_extra_btn_up(void)
 {
     if(current_page == UI_PAGE_MAIN) {
@@ -601,6 +634,10 @@ void ui_extra_btn_up(void)
         if(current_settings_item > 0) {
             update_settings_focus(current_settings_item - 1);
         }
+    } else if(current_page == UI_PAGE_CAMERA || current_page == UI_PAGE_VIDEO_MODE) {
+        app_extra_set_magnification_factor(2);
+    } else if(current_page == UI_PAGE_INTERVAL_CAM) {
+        app_extra_set_interval_time(interval_time + 5);
     }
 }
 
@@ -615,6 +652,10 @@ void ui_extra_btn_down(void)
         if(current_settings_item < 3) {
             update_settings_focus(current_settings_item + 1);
         }
+    } else if(current_page == UI_PAGE_CAMERA || current_page == UI_PAGE_VIDEO_MODE) {
+        app_extra_set_magnification_factor(3);
+    } else if(current_page == UI_PAGE_INTERVAL_CAM) {
+        app_extra_set_interval_time(interval_time - 5);
     }
 }
 
