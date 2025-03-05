@@ -4,10 +4,10 @@
 
 #include "ui.h"
 
-#define BASE_ZOOM 60
-#define ZOOM_FACTOR 2.3
+#define BASE_ZOOM       60
+#define ZOOM_FACTOR     2.3
 #define IMG_ZOOM_FACTOR 2.4
-#define ZOOM_OFFSET -80
+#define ZOOM_OFFSET     -80
 
 static const char * TAG = "ui_extra";
 
@@ -33,11 +33,12 @@ lv_obj_t * create_img_button(lv_obj_t *parent, const void *img_src, const char *
     lv_obj_set_style_shadow_ofs_y(btn, 0, 0);
     
     lv_obj_set_width(btn, lv_pct(100));
-    lv_obj_set_height(btn, 38);
+    lv_obj_set_height(btn, 30);
 
     // Create and configure the icon
     lv_obj_t * img = lv_img_create(btn);
     lv_img_set_src(img, img_src);
+    lv_obj_set_size(img, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
     lv_obj_align(img, LV_ALIGN_CENTER, 0, 0);
     lv_img_set_zoom(img, BASE_ZOOM);
     lv_obj_refr_size(img);
@@ -198,10 +199,10 @@ void lv_scroll_create(void)
     // Create main container
     scroll_cont = lv_obj_create(ui_PanelCanvas);
     lv_obj_set_size(scroll_cont, 240, 240);
-    lv_obj_set_pos(scroll_cont, -50, 0);
+    lv_obj_align(scroll_cont, LV_ALIGN_CENTER, -50, 0);
     
     // Set container properties
-    lv_obj_set_style_pad_row(scroll_cont, 0, 0);
+    lv_obj_set_style_pad_row(scroll_cont, 10, 0);
     lv_obj_set_flex_flow(scroll_cont, LV_FLEX_FLOW_COLUMN);
     lv_obj_set_style_radius(scroll_cont, LV_RADIUS_CIRCLE, 0);
     lv_obj_set_style_clip_corner(scroll_cont, true, 0);
@@ -219,7 +220,7 @@ void lv_scroll_create(void)
     lv_obj_set_style_bg_opa(scroll_cont, LV_OPA_TRANSP, 0);
     lv_obj_set_style_border_opa(scroll_cont, LV_OPA_TRANSP, 0);
 
-    info_label = lv_label_create(lv_scr_act());
+    info_label = lv_label_create(ui_PanelCanvas);
     lv_obj_set_style_text_font(info_label, &lv_font_montserrat_16, 0);
     lv_obj_set_style_text_color(info_label, lv_color_hex(0x000000), 0);
     lv_obj_align(info_label, LV_ALIGN_CENTER, 3, 50);
