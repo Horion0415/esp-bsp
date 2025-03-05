@@ -23,14 +23,14 @@ lv_obj_t * create_img_button(lv_obj_t *parent, const void *img_src, const char *
     lv_obj_set_user_data(btn, (void *)btn_text);
     
     // Set the button style
-    // lv_obj_set_style_bg_opa(btn, LV_OPA_TRANSP, 0);
-    // lv_obj_set_style_border_opa(btn, LV_OPA_TRANSP, 0);
-    // lv_obj_set_style_border_width(btn, 0, 0);
-    // lv_obj_set_style_shadow_width(btn, 0, 0);
-    // lv_obj_set_style_shadow_spread(btn, 0, 0);
-    // lv_obj_set_style_shadow_opa(btn, LV_OPA_TRANSP, 0);
-    // lv_obj_set_style_shadow_ofs_x(btn, 0, 0);
-    // lv_obj_set_style_shadow_ofs_y(btn, 0, 0);
+    lv_obj_set_style_bg_opa(btn, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_border_opa(btn, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_border_width(btn, 0, 0);
+    lv_obj_set_style_shadow_width(btn, 0, 0);
+    lv_obj_set_style_shadow_spread(btn, 0, 0);
+    lv_obj_set_style_shadow_opa(btn, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_shadow_ofs_x(btn, 0, 0);
+    lv_obj_set_style_shadow_ofs_y(btn, 0, 0);
     
     lv_obj_set_width(btn, lv_pct(100));
     lv_obj_set_height(btn, 30);
@@ -84,7 +84,6 @@ static void scroll_event_cb(lv_event_t * e)
         lv_coord_t x = (diff_y >= r) ? r : sqrt_res.i - r;
 
         // // Apply transformations
-        ESP_LOGW(TAG, "i: %d, x: %d, diff_y: %d, r: %d", i, x, diff_y, r);
         lv_obj_set_style_translate_x(child, x, 0);
         lv_obj_set_style_opa(child, LV_OPA_COVER - lv_map(x, 0, r, LV_OPA_TRANSP, LV_OPA_COVER), 0);
         lv_obj_set_size(child, btn_width, btn_height);
@@ -103,8 +102,8 @@ static void scroll_event_cb(lv_event_t * e)
         lv_obj_set_size(closest_child, btn_width * ZOOM_FACTOR, btn_height * ZOOM_FACTOR);
         lv_obj_t * img = lv_obj_get_child(closest_child, 0);
         if(img) {
-            lv_img_set_zoom(img, BASE_ZOOM * IMG_ZOOM_FACTOR);
-            lv_obj_refr_size(img);
+            // lv_img_set_zoom(img, BASE_ZOOM * IMG_ZOOM_FACTOR * 0.5);
+            // lv_obj_refr_size(img);
             lv_obj_set_pos(img, ZOOM_OFFSET, 0);
         }
     }
