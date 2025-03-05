@@ -203,7 +203,6 @@ static void scroll_event_cb(lv_event_t * e)
         if(img) {
             // lv_img_set_zoom(img, BASE_ZOOM * IMG_ZOOM_FACTOR * 0.5);
             // lv_obj_refr_size(img);
-            // lv_obj_set_style_transform_zoom(img, 256 * IMG_ZOOM_FACTOR, 0);
             lv_obj_set_pos(img, ZOOM_OFFSET, 0);
         }
     }
