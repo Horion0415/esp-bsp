@@ -10,10 +10,12 @@ images/ui_img_button_select_png.c
 images/ui_img_up_button_png.c
 images/ui_img_button_down_png.c
 images/ui_img_sdcard_no_png.c
+images/ui_img_sdcard_yes_png.c
 images/ui_img_button_menu_png.c
 images/ui_img_camera_small_png.c
 images/ui_img_interval_small_png.c
 images/ui_img_video_small_png.c
+images/ui_img_reddot_recording_png.c
 images/ui_img_usb_page1_png.c
 images/ui_img_usb_page2_png.c
 images/ui_img_album_big_png.c
@@ -22,7 +24,7 @@ images/ui_img_interval_big_png.c
 images/ui_img_video_big_png.c
 images/ui_img_usb_big_png.c
 images/ui_img_settings_big_png.c
-fonts/ui_font_FontKoHoBold18.c
 fonts/ui_font_FontKoHoBold14.c
 fonts/ui_font_FontKoHoBold16.c
+fonts/ui_font_FontKoHoBold18.c
 fonts/ui_font_FontKoHoMiniBold14.c

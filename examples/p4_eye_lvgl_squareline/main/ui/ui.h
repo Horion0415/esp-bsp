@@ -27,6 +27,7 @@ extern lv_obj_t * ui_PanelCanvasPopupCamera;
 extern lv_obj_t * ui_LabelPanelCanvasPopupCameraTop;
 extern lv_obj_t * ui_PanelCanvasPopupCameraLine;
 extern lv_obj_t * ui_LabelPanelCanvasPopupCameraDown;
+extern lv_obj_t * ui_ImageCanvasNOSDcard;
 extern lv_obj_t * ui_ImageCanvasSDcard;
 extern lv_obj_t * ui_ImageCanvasMenu;
 extern lv_obj_t * ui_LabelCanvas2X;
@@ -49,6 +50,35 @@ extern lv_obj_t * ui_PanelCanvasPopupVideoModeLine;
 extern lv_obj_t * ui_LabelPanelCanvasPopupVideoModeDown;
 extern lv_obj_t * ui_PanelCanvasMaskVideoMode;
 extern lv_obj_t * ui_ImagePanelCanvasMaskVideoMode;
+extern lv_obj_t * ui_PanelCanvasPopupSDWarning;
+extern lv_obj_t * ui_LabelPanelCanvasPopupSDWarning;
+extern lv_obj_t * ui_PanelCanvasPopupCameraSDWarning;
+extern lv_obj_t * ui_LabelPanelCanvasPopupCameraSDWarning;
+extern lv_obj_t * ui_PanelCanvasPopupIntervalTimerWarning;
+extern lv_obj_t * ui_LabelPanelCanvasPopupIntervalTimerWarning;
+extern lv_obj_t * ui_PanelCanvasPopupCameraIntervalTimerWarning;
+extern lv_obj_t * ui_LabelPanelCanvasPopupCameraIntervalTimerWarning;
+extern lv_obj_t * ui_LabelPanelCanvasPopupIntervalTimer;
+extern lv_obj_t * ui_PanelCanvasPopupIntervalTimerWarningEnd;
+extern lv_obj_t * ui_LabelPanelCanvasPopupIntervalTimerWarningEnd;
+extern lv_obj_t * ui_PanelCanvasPopupCameraIntervalTimerWarningEnd;
+extern lv_obj_t * ui_LabelPanelCanvasPopupCameraIntervalTimerWarningEnd;
+extern lv_obj_t * ui_LabelPanelCanvasPopupIntervalTimerEnd;
+extern lv_obj_t * ui_ImageRedDot;
+extern lv_obj_t * ui_LabelRedDotTime;
+extern lv_obj_t * ui_PanelSettings;
+extern lv_obj_t * ui_LabelPanelSettings;
+extern lv_obj_t * ui_PanelPanelSettingsLanguage;
+extern lv_obj_t * ui_LabelPanelPanelSettingsLanguageItem;
+extern lv_obj_t * ui_LabelPanelPanelSettingsLanguageBody;
+extern lv_obj_t * ui_PanelPanelSettingsRes;
+extern lv_obj_t * ui_LabelPanelPanelSettingsResItem;
+extern lv_obj_t * ui_LabelPanelPanelSettingsResBody;
+extern lv_obj_t * ui_PanelPanelSettingsFlash;
+extern lv_obj_t * ui_LabelPanelPanelSettingsFlashItem;
+extern lv_obj_t * ui_LabelPanelPanelSettingsFlashBody;
+extern lv_obj_t * ui_PanelSettingsMenu;
+extern lv_obj_t * ui_LabelPanelSettingsMenu;
 // SCREEN: ui_ScreenAlbum
 void ui_ScreenAlbum_screen_init(void);
 extern lv_obj_t * ui_ScreenAlbum;
@@ -76,10 +106,12 @@ LV_IMG_DECLARE(ui_img_button_select_png);    // assets/button_select.png
 LV_IMG_DECLARE(ui_img_up_button_png);    // assets/up_button.png
 LV_IMG_DECLARE(ui_img_button_down_png);    // assets/button_down.png
 LV_IMG_DECLARE(ui_img_sdcard_no_png);    // assets/sdcard_no.png
+LV_IMG_DECLARE(ui_img_sdcard_yes_png);    // assets/sdcard_yes.png
 LV_IMG_DECLARE(ui_img_button_menu_png);    // assets/button_menu.png
 LV_IMG_DECLARE(ui_img_camera_small_png);    // assets/camera_small.png
 LV_IMG_DECLARE(ui_img_interval_small_png);    // assets/interval_small.png
 LV_IMG_DECLARE(ui_img_video_small_png);    // assets/video_small.png
+LV_IMG_DECLARE(ui_img_reddot_recording_png);    // assets/reddot_recording.png
 LV_IMG_DECLARE(ui_img_usb_page1_png);    // assets/usb_page1.png
 LV_IMG_DECLARE(ui_img_usb_page2_png);    // assets/usb_page2.png
 LV_IMG_DECLARE(ui_img_album_big_png);    // assets/album_big.png
@@ -90,9 +122,9 @@ LV_IMG_DECLARE(ui_img_usb_big_png);    // assets/usb_big.png
 LV_IMG_DECLARE(ui_img_settings_big_png);    // assets/settings_big.png
 
 
-LV_FONT_DECLARE(ui_font_FontKoHoBold18);
 LV_FONT_DECLARE(ui_font_FontKoHoBold14);
 LV_FONT_DECLARE(ui_font_FontKoHoBold16);
+LV_FONT_DECLARE(ui_font_FontKoHoBold18);
 LV_FONT_DECLARE(ui_font_FontKoHoMiniBold14);
 
 
