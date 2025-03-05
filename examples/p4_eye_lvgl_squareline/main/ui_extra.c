@@ -455,6 +455,8 @@ static void ui_extra_redirect_to_main_page(void)
     lv_obj_clear_flag(ui_ImageCanvasUp, LV_OBJ_FLAG_HIDDEN);
     lv_obj_clear_flag(ui_ImageCanvasDown, LV_OBJ_FLAG_HIDDEN);
     lv_obj_clear_flag(ui_PanelCanvasMaskLarge, LV_OBJ_FLAG_HIDDEN);
+
+    _ui_screen_change(&ui_ScreenCamera, LV_SCR_LOAD_ANIM_NONE, 0, 0, ui_ScreenCamera_screen_init);
 }
 
 static void ui_extra_redirect_to_camera_page(void)
@@ -631,6 +633,8 @@ void ui_extra_btn_menu(void)
             update_setting_display(current_settings_item);
             settings_info_t* info = &current_settings;
         }
+    } else {
+        ui_extra_goto_page(UI_PAGE_MAIN);
     }
 }
 
@@ -643,6 +647,5 @@ void ui_extra_init(void)
     lv_scroll_create();
 
     // redirect to the main page
-    // ui_extra_goto_page(UI_PAGE_MAIN);
-    ui_extra_goto_page(UI_PAGE_SETTINGS);
+    ui_extra_goto_page(UI_PAGE_MAIN);
 }
