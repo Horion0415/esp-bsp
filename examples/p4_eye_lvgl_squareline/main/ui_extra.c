@@ -12,7 +12,7 @@
 static const char * TAG = "ui_extra";
 
 // language options
-static const char* language_options[] = {"English", "中文"};
+static const char* language_options[] = {"English", "Chinese"};
 // resolution options
 static const char* resolution_options[] = {"720P", "1080P", "480P"};
 // flash options
@@ -30,17 +30,15 @@ static ui_page_t current_page = UI_PAGE_MAIN;
 static int current_settings_item = 0;
 
 typedef struct {
-    const char** options;  // 选项数组
-    int option_count;      // 选项数量
-    int current_option;    // 当前选中的选项索引
-    lv_obj_t* label;       // 显示选项的标签对象
+    const char** options;  
+    int option_count;      
+    int current_option;    
+    lv_obj_t* label;       
 } setting_options_t;
 
 // All settings options
+static lv_obj_t* settings_items[4]; 
 static setting_options_t settings_options[4];
-
-static lv_obj_t* settings_items[4]; // 存储设置面板的项目
-
 static settings_info_t current_settings;
 
 typedef struct {
@@ -599,16 +597,8 @@ void ui_extra_btn_up(void)
         
         lv_obj_add_flag(info_label, LV_OBJ_FLAG_HIDDEN);
     } else if(current_page == UI_PAGE_SETTINGS) {
-        // get the current settings item options
-        setting_options_t* opt = &settings_options[current_settings_item];
-        
-        // only handle the first three settings items
-        if(current_settings_item < 3 && opt->option_count > 0) {
-            // switch to the left option (decrease the index)
-            if(opt->current_option > 0) {
-                opt->current_option--;
-                update_setting_display(current_settings_item);
-            }
+        if(current_settings_item > 0) {
+            update_settings_focus(current_settings_item - 1);
         }
     }
 }
@@ -621,16 +611,8 @@ void ui_extra_btn_down(void)
         
         lv_obj_add_flag(info_label, LV_OBJ_FLAG_HIDDEN);
     } else if(current_page == UI_PAGE_SETTINGS) {
-        // get the current settings item options
-        setting_options_t* opt = &settings_options[current_settings_item];
-        
-        // only handle the first three settings items
-        if(current_settings_item < 3 && opt->option_count > 0) {
-            // switch to the right option (increase the index)
-            if(opt->current_option < opt->option_count - 1) {
-                opt->current_option++;
-                update_setting_display(current_settings_item);
-            }
+        if(current_settings_item < 3) {
+            update_settings_focus(current_settings_item + 1);
         }
     }
 }
@@ -639,6 +621,10 @@ void ui_extra_btn_menu(void)
 {
     if(current_page == UI_PAGE_MAIN) {
         ui_extra_goto_page(ui_extra_get_choosed_page());
+    } else if(current_page == UI_PAGE_SETTINGS) {
+        setting_options_t* opt = &settings_options[current_settings_item];
+        opt->current_option++;
+        update_setting_display(current_settings_item);
     }
 }
 

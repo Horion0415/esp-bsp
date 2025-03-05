@@ -13,7 +13,9 @@
 
 static void btn_handler(void *arg, void *data)
 {
-    if((int)data == BSP_BUTTON_2) {
+    if((int)data == BSP_BUTTON_1) {
+        ui_extra_btn_menu();
+    } else if((int)data == BSP_BUTTON_2) {
         ui_extra_btn_up();
     } else if((int)data == BSP_BUTTON_3) {
         ui_extra_btn_down();
@@ -34,6 +36,7 @@ void app_main(void)
 
     button_handle_t btns[BSP_BUTTON_NUM];
     ESP_ERROR_CHECK(bsp_iot_button_create(btns, NULL, BSP_BUTTON_NUM));
+    ESP_ERROR_CHECK(iot_button_register_cb(btns[BSP_BUTTON_1], BUTTON_PRESS_DOWN, btn_handler, (void *) BSP_BUTTON_1));
     ESP_ERROR_CHECK(iot_button_register_cb(btns[BSP_BUTTON_2], BUTTON_PRESS_DOWN, btn_handler, (void *) BSP_BUTTON_2));
     ESP_ERROR_CHECK(iot_button_register_cb(btns[BSP_BUTTON_3], BUTTON_PRESS_DOWN, btn_handler, (void *) BSP_BUTTON_3));
 }

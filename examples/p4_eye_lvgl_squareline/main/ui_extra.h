@@ -20,6 +20,7 @@ typedef struct {
 
 void ui_extra_init(void);
 
+void ui_extra_btn_menu(void);
 void ui_extra_btn_up(void);
 void ui_extra_btn_down(void);
 
