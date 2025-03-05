@@ -83,7 +83,8 @@ static void scroll_event_cb(lv_event_t * e)
         lv_sqrt(r * r - diff_y * diff_y, &sqrt_res, 0x8000);
         lv_coord_t x = (diff_y >= r) ? r : sqrt_res.i - r;
 
-        // Apply transformations
+        // // Apply transformations
+        ESP_LOGW(TAG, "i: %d, x: %d, diff_y: %d, r: %d", i, x, diff_y, r);
         lv_obj_set_style_translate_x(child, x, 0);
         lv_obj_set_style_opa(child, LV_OPA_COVER - lv_map(x, 0, r, LV_OPA_TRANSP, LV_OPA_COVER), 0);
         lv_obj_set_size(child, btn_width, btn_height);
