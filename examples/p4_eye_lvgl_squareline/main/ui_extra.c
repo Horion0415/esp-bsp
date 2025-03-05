@@ -621,9 +621,16 @@ void ui_extra_btn_menu(void)
     if(current_page == UI_PAGE_MAIN) {
         ui_extra_goto_page(ui_extra_get_choosed_page());
     } else if(current_page == UI_PAGE_SETTINGS) {
-        setting_options_t* opt = &settings_options[current_settings_item];
-        opt->current_option = (opt->current_option + 1) % opt->option_count;
-        update_setting_display(current_settings_item);
+        if(current_settings_item == 3 && settings_items[current_settings_item] == ui_PanelSettingsMenu) {
+            // If the current settings item is the menu item, go back to the main page
+            ui_extra_goto_page(UI_PAGE_MAIN);
+        } else {
+            // Otherwise, cycle through the options
+            setting_options_t* opt = &settings_options[current_settings_item];
+            opt->current_option = (opt->current_option + 1) % opt->option_count;
+            update_setting_display(current_settings_item);
+            settings_info_t* info = &current_settings;
+        }
     }
 }
 
