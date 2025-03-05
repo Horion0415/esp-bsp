@@ -588,7 +588,6 @@ settings_info_t* ui_extra_get_settings(void)
     return &current_settings;
 }
 
-
 void ui_extra_btn_up(void)
 {
     if(current_page == UI_PAGE_MAIN) {
@@ -623,7 +622,7 @@ void ui_extra_btn_menu(void)
         ui_extra_goto_page(ui_extra_get_choosed_page());
     } else if(current_page == UI_PAGE_SETTINGS) {
         setting_options_t* opt = &settings_options[current_settings_item];
-        opt->current_option++;
+        opt->current_option = (opt->current_option + 1) % opt->option_count;
         update_setting_display(current_settings_item);
     }
 }
