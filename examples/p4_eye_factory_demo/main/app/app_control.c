@@ -30,7 +30,7 @@ static void btn_handler(void *arg, void *data)
     bsp_display_unlock();
 }
 
-static void knob_left_cb(void *arg, void *data)
+static void knob_right_cb(void *arg, void *data)
 {
     if(ui_extra_get_current_page() == UI_PAGE_ALBUM || ui_extra_get_current_page() == UI_PAGE_USB_DISK) {
         return;
@@ -61,7 +61,7 @@ static void knob_left_cb(void *arg, void *data)
     }
 }
 
-static void knob_right_cb(void *arg, void *data)
+static void knob_left_cb(void *arg, void *data)
 {
     if(ui_extra_get_current_page() == UI_PAGE_ALBUM || ui_extra_get_current_page() == UI_PAGE_USB_DISK) {
         return;
