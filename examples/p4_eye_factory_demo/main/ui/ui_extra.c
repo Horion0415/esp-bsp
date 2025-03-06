@@ -503,9 +503,9 @@ static void pop_up_timer_callback(lv_timer_t * timer)
         is_sd_card_mounted ? lv_obj_clear_flag(ui_ImageCanvasSDcard, LV_OBJ_FLAG_HIDDEN) : lv_obj_clear_flag(ui_ImageCanvasNOSDcard, LV_OBJ_FLAG_HIDDEN);
     }
 
-    if(timer){
-        lv_timer_del(timer);
-        timer = NULL;
+    if(lv_popup_timer){
+        lv_timer_del(lv_popup_timer);
+        lv_popup_timer = NULL;
     }
 }
 
@@ -525,9 +525,9 @@ static void pop_up_additional_photo_callback(lv_timer_t * timer)
         is_sd_card_mounted ? lv_obj_clear_flag(ui_ImageCanvasSDcard, LV_OBJ_FLAG_HIDDEN) : lv_obj_clear_flag(ui_ImageCanvasNOSDcard, LV_OBJ_FLAG_HIDDEN);
     }
 
-    if(timer){
-        lv_timer_del(timer);
-        timer = NULL;
+    if(lv_additional_photo_timer){
+        lv_timer_del(lv_additional_photo_timer);
+        lv_additional_photo_timer = NULL;
     }
 }
 
