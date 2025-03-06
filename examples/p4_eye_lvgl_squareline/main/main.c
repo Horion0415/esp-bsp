@@ -34,8 +34,6 @@ static void btn_handler(void *arg, void *data)
     } else if((int)data == BSP_BUTTON_3) {
         ui_extra_btn_down();
     }
-
-    ui_extra_clear_popup_window();
 }
 
 void app_main(void)
