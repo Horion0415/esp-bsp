@@ -43,6 +43,7 @@ static lv_timer_t *lv_popup_timer = NULL;
 static lv_timer_t *lv_additional_photo_timer = NULL;
 
 static bool is_sd_card_mounted = false;
+static bool is_usb_disk_mounted = false;
 
 typedef struct {
     const char** options;  
@@ -597,6 +598,14 @@ static void ui_extra_redirect_to_usb_disk_page(void)
     ui_extra_clear_page();
     
     _ui_screen_change(&ui_ScreenUSB, LV_SCR_LOAD_ANIM_NONE, 0, 0, ui_ScreenUSB_screen_init);
+
+    if(is_usb_disk_mounted) {
+        lv_obj_add_flag(ui_ImageScreenUSB, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_clear_flag(ui_ImageScreenUSBSuccess, LV_OBJ_FLAG_HIDDEN);
+    } else {
+        lv_obj_clear_flag(ui_ImageScreenUSB, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_add_flag(ui_ImageScreenUSBSuccess, LV_OBJ_FLAG_HIDDEN);
+    }
 }
 
 static void ui_extra_redirect_to_settings_page(void)
@@ -760,6 +769,16 @@ void ui_extra_set_sd_card_mounted(bool mounted)
 bool ui_extra_get_sd_card_mounted(void)
 {
     return is_sd_card_mounted;
+}
+
+void ui_extra_set_usb_disk_mounted(bool mounted)
+{
+    is_usb_disk_mounted = mounted;
+}
+
+bool ui_extra_get_usb_disk_mounted(void)
+{
+    return is_usb_disk_mounted;
 }
 
 void ui_extra_popup_interval_timer_warning(void)
