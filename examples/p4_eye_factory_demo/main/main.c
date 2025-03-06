@@ -34,6 +34,8 @@ static void btn_handler(void *arg, void *data)
         ui_extra_btn_up();
     } else if((int)data == BSP_BUTTON_3) {
         ui_extra_btn_down();
+    } else if((int)data == BSP_BUTTON_ED) {
+        ui_extra_btn_encoder();
     }
     bsp_display_unlock();
 }
@@ -55,6 +57,7 @@ void app_main(void)
     ESP_ERROR_CHECK(iot_button_register_cb(btns[BSP_BUTTON_1], BUTTON_PRESS_DOWN, btn_handler, (void *) BSP_BUTTON_1));
     ESP_ERROR_CHECK(iot_button_register_cb(btns[BSP_BUTTON_2], BUTTON_PRESS_DOWN, btn_handler, (void *) BSP_BUTTON_2));
     ESP_ERROR_CHECK(iot_button_register_cb(btns[BSP_BUTTON_3], BUTTON_PRESS_DOWN, btn_handler, (void *) BSP_BUTTON_3));
+    ESP_ERROR_CHECK(iot_button_register_cb(btns[BSP_BUTTON_ED], BUTTON_PRESS_UP, btn_handler, (void *) BSP_BUTTON_ED));
 
     // Initialize the PPA
     ppa_client_config_t ppa_srm_config = {

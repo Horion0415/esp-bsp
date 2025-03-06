@@ -14,11 +14,13 @@
 
 #define DEFAULT_MAGNIFICATION_FACTOR 1
 #define DEFAULT_INTERVAL_TIME 30
+#define DEFAULT_SAVED_PHOTO_COUNT 0
 
 static const char * TAG = "ui_extra";
 
 static uint16_t magnification_factor = DEFAULT_MAGNIFICATION_FACTOR;
 static uint16_t interval_time = DEFAULT_INTERVAL_TIME;
+static uint16_t saved_photo_count = DEFAULT_SAVED_PHOTO_COUNT;
 
 // language options
 static const char* const language_options[] = {"English", "Chinese"};
@@ -38,6 +40,9 @@ static lv_obj_t * info_label = NULL;
 static ui_page_t current_page = UI_PAGE_MAIN;
 
 static lv_timer_t *lv_popup_timer = NULL;
+static lv_timer_t *lv_additional_photo_timer = NULL;
+
+static bool is_sd_card_mounted = false;
 
 typedef struct {
     const char** options;  
@@ -468,6 +473,9 @@ static void pop_up_timer_callback(lv_timer_t * timer)
         lv_obj_clear_flag(ui_LabelCanvas2X, LV_OBJ_FLAG_HIDDEN);
         lv_obj_clear_flag(ui_LabelCanvas3X, LV_OBJ_FLAG_HIDDEN);
         lv_obj_clear_flag(ui_ImageCanvasMenu, LV_OBJ_FLAG_HIDDEN);
+        
+        is_sd_card_mounted ? lv_obj_clear_flag(ui_ImageCanvasSDcard, LV_OBJ_FLAG_HIDDEN) : lv_obj_clear_flag(ui_ImageCanvasNOSDcard, LV_OBJ_FLAG_HIDDEN);
+
     } else if(timer->user_data == ui_PanelCanvasPopupCameraInterval) {
         lv_obj_add_flag(ui_PanelCanvasPopupCameraInterval, LV_OBJ_FLAG_HIDDEN);
 
@@ -477,6 +485,9 @@ static void pop_up_timer_callback(lv_timer_t * timer)
         lv_obj_clear_flag(ui_LabelCanvas5mSub, LV_OBJ_FLAG_HIDDEN);
         lv_obj_clear_flag(ui_ImageCanvasMenu, LV_OBJ_FLAG_HIDDEN);
         lv_obj_clear_flag(ui_LabelCanvasInvervalTime, LV_OBJ_FLAG_HIDDEN);
+
+        is_sd_card_mounted ? lv_obj_clear_flag(ui_ImageCanvasSDcard, LV_OBJ_FLAG_HIDDEN) : lv_obj_clear_flag(ui_ImageCanvasNOSDcard, LV_OBJ_FLAG_HIDDEN);
+
     } else if(timer->user_data == ui_PanelCanvasPopupVideoMode) {
         lv_obj_add_flag(ui_PanelCanvasPopupVideoMode, LV_OBJ_FLAG_HIDDEN);
 
@@ -485,9 +496,28 @@ static void pop_up_timer_callback(lv_timer_t * timer)
         lv_obj_clear_flag(ui_LabelCanvas2X, LV_OBJ_FLAG_HIDDEN);
         lv_obj_clear_flag(ui_LabelCanvas3X, LV_OBJ_FLAG_HIDDEN);
         lv_obj_clear_flag(ui_LabelCanvasFactor, LV_OBJ_FLAG_HIDDEN);
+
+        is_sd_card_mounted ? lv_obj_clear_flag(ui_ImageCanvasSDcard, LV_OBJ_FLAG_HIDDEN) : lv_obj_clear_flag(ui_ImageCanvasNOSDcard, LV_OBJ_FLAG_HIDDEN);
     }
 
     lv_timer_del(timer);
+}
+
+static void pop_up_additional_photo_callback(lv_timer_t * timer)
+{
+    if(timer->user_data == ui_PanelCanvasPopupCameraInterval) {
+        lv_obj_add_flag(ui_PanelCanvasPopupIntervalTimerWarning, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_add_flag(ui_PanelCanvasPopupIntervalTimerWarningEnd, LV_OBJ_FLAG_HIDDEN);
+
+        lv_obj_clear_flag(ui_PanelCanvasMaskCameraInterval, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_clear_flag(ui_LabelCanvasFactor, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_clear_flag(ui_LabelCanvas5mplus, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_clear_flag(ui_LabelCanvas5mSub, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_clear_flag(ui_ImageCanvasMenu, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_clear_flag(ui_LabelCanvasInvervalTime, LV_OBJ_FLAG_HIDDEN);
+
+        is_sd_card_mounted ? lv_obj_clear_flag(ui_ImageCanvasSDcard, LV_OBJ_FLAG_HIDDEN) : lv_obj_clear_flag(ui_ImageCanvasNOSDcard, LV_OBJ_FLAG_HIDDEN);
+    }
 }
 
 static void update_settings_focus(int new_item)
@@ -593,6 +623,34 @@ static void ui_extra_redirect_to_settings_page(void)
     update_settings_focus(current_settings_item);
 }
 
+static void ui_extra_clear_popup_window(void)
+{
+    if(!lv_obj_has_flag(ui_PanelCanvasPopupCamera, LV_OBJ_FLAG_HIDDEN) || 
+       !lv_obj_has_flag(ui_PanelCanvasPopupCameraInterval, LV_OBJ_FLAG_HIDDEN) ||
+       !lv_obj_has_flag(ui_PanelCanvasPopupVideoMode, LV_OBJ_FLAG_HIDDEN) ||
+       !lv_obj_has_flag(ui_PanelCanvasPopupSDWarning, LV_OBJ_FLAG_HIDDEN) ||
+       !lv_obj_has_flag(ui_PanelCanvasPopupIntervalTimerWarning, LV_OBJ_FLAG_HIDDEN) ||
+       !lv_obj_has_flag(ui_PanelCanvasPopupIntervalTimerWarningEnd, LV_OBJ_FLAG_HIDDEN) ||
+       !lv_obj_has_flag(ui_PanelCanvasPopupSDWarning, LV_OBJ_FLAG_HIDDEN)) {
+
+            if(lv_popup_timer) {
+                lv_timer_ready(lv_popup_timer);
+            }
+
+            if(lv_additional_photo_timer) {
+                lv_timer_ready(lv_additional_photo_timer);
+            }
+
+            lv_obj_add_flag(ui_PanelCanvasPopupCamera, LV_OBJ_FLAG_HIDDEN);
+            lv_obj_add_flag(ui_PanelCanvasPopupCameraInterval, LV_OBJ_FLAG_HIDDEN);
+            lv_obj_add_flag(ui_PanelCanvasPopupVideoMode, LV_OBJ_FLAG_HIDDEN);
+            lv_obj_add_flag(ui_PanelCanvasPopupSDWarning, LV_OBJ_FLAG_HIDDEN);
+            lv_obj_add_flag(ui_PanelCanvasPopupIntervalTimerWarning, LV_OBJ_FLAG_HIDDEN);
+            lv_obj_add_flag(ui_PanelCanvasPopupIntervalTimerWarningEnd, LV_OBJ_FLAG_HIDDEN);
+            lv_obj_add_flag(ui_PanelCanvasPopupSDWarning, LV_OBJ_FLAG_HIDDEN);
+    }
+}
+
 void ui_extra_goto_page(ui_page_t page)
 {
     // save the current page
@@ -625,27 +683,6 @@ void ui_extra_goto_page(ui_page_t page)
             ui_extra_redirect_to_main_page();
             break;
     }   
-}
-
-void ui_extra_clear_popup_window(void)
-{
-    if(!lv_obj_has_flag(ui_PanelCanvasPopupCamera, LV_OBJ_FLAG_HIDDEN) || 
-       !lv_obj_has_flag(ui_PanelCanvasPopupCameraInterval, LV_OBJ_FLAG_HIDDEN) ||
-       !lv_obj_has_flag(ui_PanelCanvasPopupVideoMode, LV_OBJ_FLAG_HIDDEN) ||
-       !lv_obj_has_flag(ui_PanelCanvasPopupSDWarning, LV_OBJ_FLAG_HIDDEN) ||
-       !lv_obj_has_flag(ui_PanelCanvasPopupIntervalTimerWarning, LV_OBJ_FLAG_HIDDEN) ||
-       !lv_obj_has_flag(ui_PanelCanvasPopupIntervalTimerWarningEnd, LV_OBJ_FLAG_HIDDEN)) {
-            
-            lv_timer_ready(lv_popup_timer);
-
-            lv_obj_add_flag(ui_PanelCanvasPopupCamera, LV_OBJ_FLAG_HIDDEN);
-            lv_obj_add_flag(ui_PanelCanvasPopupCameraInterval, LV_OBJ_FLAG_HIDDEN);
-            lv_obj_add_flag(ui_PanelCanvasPopupVideoMode, LV_OBJ_FLAG_HIDDEN);
-            lv_obj_add_flag(ui_PanelCanvasPopupSDWarning, LV_OBJ_FLAG_HIDDEN);
-            lv_obj_add_flag(ui_PanelCanvasPopupIntervalTimerWarning, LV_OBJ_FLAG_HIDDEN);
-            lv_obj_add_flag(ui_PanelCanvasPopupIntervalTimerWarningEnd, LV_OBJ_FLAG_HIDDEN);
-    
-    }
 }
 
 ui_page_t ui_extra_get_current_page(void)
@@ -681,6 +718,17 @@ void app_extra_set_magnification_factor(uint16_t factor)
 uint16_t app_extra_get_magnification_factor(void)
 {
     return magnification_factor;
+}   
+
+void app_extra_set_saved_photo_count(uint16_t count)
+{
+    saved_photo_count = count;
+    
+}
+
+uint16_t app_extra_get_saved_photo_count(void)
+{
+    return saved_photo_count;
 }
 
 void app_extra_set_interval_time(uint16_t time)
@@ -700,6 +748,26 @@ void app_extra_set_interval_time(uint16_t time)
 uint16_t app_extra_get_interval_time(void)
 {
     return interval_time;
+}
+
+void ui_extra_set_sd_card_mounted(bool mounted)
+{
+    is_sd_card_mounted = mounted;
+}
+
+bool ui_extra_get_sd_card_mounted(void)
+{
+    return is_sd_card_mounted;
+}
+
+void ui_extra_popup_interval_timer_warning(void)
+{
+    ui_extra_clear_page();
+    lv_label_set_text_fmt(ui_LabelPanelCanvasPopupIntervalTimerEnd, "Ended %d min", interval_time);
+    lv_label_set_text_fmt(ui_LabelPanelCanvasPopupCameraIntervalTimerWarningEnd, "%d photos saved to \n       SD Card", saved_photo_count);
+    lv_obj_clear_flag(ui_PanelCanvasPopupIntervalTimerWarningEnd, LV_OBJ_FLAG_HIDDEN);
+
+    lv_additional_photo_timer = lv_timer_create(pop_up_additional_photo_callback, 5000, ui_PanelCanvasPopupCameraInterval);
 }
 
 void ui_extra_btn_up(void)
@@ -797,6 +865,82 @@ void ui_extra_btn_menu(void)
             ui_extra_goto_page(UI_PAGE_MAIN);
             break;
     }
+}
+
+void ui_extra_btn_encoder(void)
+{
+    if(!lv_obj_has_flag(ui_PanelCanvasPopupSDWarning, LV_OBJ_FLAG_HIDDEN)) {
+        switch(current_page) {
+            case UI_PAGE_CAMERA:
+                ui_extra_goto_page(UI_PAGE_CAMERA);
+                break;
+            case UI_PAGE_INTERVAL_CAM:
+                ui_extra_goto_page(UI_PAGE_INTERVAL_CAM);
+                break;
+            case UI_PAGE_VIDEO_MODE:
+                ui_extra_goto_page(UI_PAGE_VIDEO_MODE);
+                break;
+            default:
+                break;
+        }
+       
+        ui_extra_clear_popup_window();
+        return;
+    }
+
+    if(!lv_obj_has_flag(ui_PanelCanvasPopupIntervalTimerWarning, LV_OBJ_FLAG_HIDDEN) || 
+       !lv_obj_has_flag(ui_PanelCanvasPopupIntervalTimerWarningEnd, LV_OBJ_FLAG_HIDDEN)) {
+        switch(current_page) {
+            case UI_PAGE_INTERVAL_CAM:
+                ui_extra_goto_page(UI_PAGE_INTERVAL_CAM);
+                break;
+            case UI_PAGE_VIDEO_MODE:
+                ui_extra_goto_page(UI_PAGE_VIDEO_MODE);
+                break;
+            default:
+                break;
+        }
+       
+        ui_extra_clear_popup_window();
+        return;
+    }
+
+    if(!is_sd_card_mounted) {
+        switch(current_page) {
+            case UI_PAGE_CAMERA:
+            case UI_PAGE_INTERVAL_CAM:
+            case UI_PAGE_VIDEO_MODE:
+                ui_extra_clear_page();
+                lv_obj_clear_flag(ui_PanelCanvasPopupSDWarning, LV_OBJ_FLAG_HIDDEN);
+                break;
+            default:
+                break;
+        }
+        return;
+    }
+
+    switch(current_page) {
+        case UI_PAGE_MAIN:
+            ui_extra_btn_menu();
+            break;
+        case UI_PAGE_CAMERA:
+            ui_extra_clear_page();
+            lv_label_set_text_fmt(ui_LabelPanelCanvasPopupIntervalTimer, "Starting %d min", interval_time);
+            lv_obj_clear_flag(ui_PanelCanvasPopupIntervalTimerWarning, LV_OBJ_FLAG_HIDDEN);
+            
+            lv_additional_photo_timer = lv_timer_create(pop_up_additional_photo_callback, 5000, ui_PanelCanvasPopupCameraInterval);
+            break;
+        case UI_PAGE_INTERVAL_CAM:
+            break;
+        case UI_PAGE_VIDEO_MODE:
+            break;
+        case UI_PAGE_SETTINGS:
+            break;
+        default:
+            break;
+    }
+
+    return;
 }
 
 void ui_extra_init(void)

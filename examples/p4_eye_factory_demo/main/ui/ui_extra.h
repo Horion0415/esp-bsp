@@ -2,15 +2,17 @@
 #define UI_EXTRA_H
 
 #include "ui.h"
+#include <stdbool.h>
+
 typedef enum {
-    UI_PAGE_MAIN,           // main page
-    UI_PAGE_CAMERA,         // camera page
-    UI_PAGE_INTERVAL_CAM,   // interval camera page
-    UI_PAGE_VIDEO_MODE,     // video mode page
-    UI_PAGE_ALBUM,          // album page
-    UI_PAGE_USB_DISK,       // usb disk page
-    UI_PAGE_SETTINGS,       // settings page
-    UI_PAGE_MAX             // page count
+    UI_PAGE_MAIN,           // Main page
+    UI_PAGE_CAMERA,         // Camera page
+    UI_PAGE_INTERVAL_CAM,   // Interval camera page
+    UI_PAGE_VIDEO_MODE,     // Video mode page
+    UI_PAGE_ALBUM,          // Album page
+    UI_PAGE_USB_DISK,       // USB disk page
+    UI_PAGE_SETTINGS,       // Settings page
+    UI_PAGE_MAX             // Page count
 } ui_page_t;
 
 typedef struct {
@@ -19,18 +21,89 @@ typedef struct {
     const char* flash;
 } settings_info_t;
 
+/**
+ * @brief Initialize UI extra functionality
+ */
 void ui_extra_init(void);
 
+/**
+ * @brief Menu button handler
+ */
 void ui_extra_btn_menu(void);
+
+/**
+ * @brief Up button handler
+ */
 void ui_extra_btn_up(void);
+
+/**
+ * @brief Down button handler
+ */
 void ui_extra_btn_down(void);
-void ui_extra_clear_popup_window(void);
+
+/**
+ * @brief Encoder button handler
+ */
+void ui_extra_btn_encoder(void);
+
+/**
+ * @brief Get current page
+ * @return Current page enum value
+ */
 ui_page_t ui_extra_get_current_page(void);
+
+/**
+ * @brief Get chosen page
+ * @return Chosen page enum value
+ */
 ui_page_t ui_extra_get_choosed_page(void);
-settings_info_t ui_extra_get_settings_info(void);
-void ui_extra_set_magnification_factor(uint16_t factor);
-uint16_t ui_extra_get_magnification_factor(void);
-void ui_extra_set_interval_time(uint16_t time);
-uint16_t ui_extra_get_interval_time(void);
+
+/**
+ * @brief Navigate to specified page
+ * @param page Target page enum value
+ */
+void ui_extra_goto_page(ui_page_t page);
+
+/**
+ * @brief Get current settings information
+ * @return Pointer to settings information structure
+ */
+settings_info_t* ui_extra_get_settings(void);
+
+/**
+ * @brief Set magnification factor
+ * @param factor Magnification factor value
+ */
+void app_extra_set_magnification_factor(uint16_t factor);
+
+/**
+ * @brief Get magnification factor
+ * @return Current magnification factor value
+ */
+uint16_t app_extra_get_magnification_factor(void);
+
+/**
+ * @brief Set interval time
+ * @param time Interval time in minutes
+ */
+void app_extra_set_interval_time(uint16_t time);
+
+/**
+ * @brief Get interval time
+ * @return Current interval time in minutes
+ */
+uint16_t app_extra_get_interval_time(void);
+
+/**
+ * @brief Set SD card mount status
+ * @param mounted Whether SD card is mounted
+ */
+void ui_extra_set_sd_card_mounted(bool mounted);
+
+/**
+ * @brief Get SD card mount status
+ * @return Whether SD card is mounted
+ */
+bool ui_extra_get_sd_card_mounted(void);
 
 #endif
