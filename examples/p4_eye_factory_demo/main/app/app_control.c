@@ -59,11 +59,13 @@ static void knob_right_cb(void *arg, void *data)
 
         knob_step_counter = 0;  // Reset counter
         
+        bsp_display_lock(0);
         if(ui_extra_get_current_page() == UI_PAGE_CAMERA || ui_extra_get_current_page() == UI_PAGE_INTERVAL_CAM || ui_extra_get_current_page() == UI_PAGE_VIDEO_MODE) {
             app_extra_set_magnification_factor(app_extra_get_magnification_factor() - 1);
         } else if(ui_extra_get_current_page() == UI_PAGE_MAIN) {
             ui_extra_btn_up();
         }
+        bsp_display_unlock();
     }
 }
 
@@ -92,11 +94,13 @@ static void knob_left_cb(void *arg, void *data)
         
         ESP_LOGD(TAG, "Continuous right rotation detected: %d steps, value +1", knob_step_counter);
         
+        bsp_display_lock(0);
         if(ui_extra_get_current_page() == UI_PAGE_CAMERA || ui_extra_get_current_page() == UI_PAGE_INTERVAL_CAM || ui_extra_get_current_page() == UI_PAGE_VIDEO_MODE) {
             app_extra_set_magnification_factor(app_extra_get_magnification_factor() + 1);
         } else if(ui_extra_get_current_page() == UI_PAGE_MAIN) {
             ui_extra_btn_down();
         }
+        bsp_display_unlock();
     }
 }
 

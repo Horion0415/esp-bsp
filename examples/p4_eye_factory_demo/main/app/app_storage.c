@@ -81,11 +81,14 @@ esp_err_t app_storage_init(void){
     esp_err_t ret = bsp_sdcard_mount();
     if(ret != ESP_OK){
         ESP_LOGW(TAG, "Failed to mount the SD card");
+        bsp_display_lock(0);
         ui_extra_set_sd_card_mounted(false);
+        bsp_display_unlock();
     } else {
         ESP_LOGI(TAG, "SD card mounted successfully");
+        bsp_display_lock(0);
         ui_extra_set_sd_card_mounted(true);
-
+        bsp_display_unlock();
         // Create directory for saving pictures if it doesn't exist
         char folder_path[64];
         sprintf(folder_path, "%s/%s", BSP_SD_MOUNT_POINT, PIC_FOLDER_NAME);
@@ -109,6 +112,7 @@ esp_err_t app_storage_init(void){
         }
 
         ESP_LOGI(TAG, "USB MSC initialization");
+        
         const tinyusb_config_t tusb_cfg = {0};
         ESP_ERROR_CHECK(tinyusb_driver_install(&tusb_cfg));
         
@@ -137,7 +141,9 @@ void tud_mount_cb(void)
     }
 
     ESP_LOGI(TAG, "USB MSC mounted");
+    bsp_display_lock(0);
     ui_extra_set_usb_disk_mounted(true);
+    bsp_display_unlock();
 }
 
 // Invoked when device is unmounted
@@ -152,7 +158,9 @@ void tud_umount_cb(void)
 void tud_suspend_cb(bool remote_wakeup_en)
 {
     ESP_LOGI(TAG, "USB MSC suspended");
+    bsp_display_lock(0);
     ui_extra_set_usb_disk_mounted(false);
+    bsp_display_unlock();
 }
 
 // Invoked when usb bus is resumed
