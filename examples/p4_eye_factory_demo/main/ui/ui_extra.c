@@ -3,22 +3,29 @@
 #include "lvgl.h"
 
 #include "ui_extra.h"
-#define BASE_ZOOM       60
-#define ZOOM_FACTOR     2.3
-#define IMG_ZOOM_FACTOR 2.4
-#define ZOOM_OFFSET     -80
+#define IMG_BASE_ZOOM       60
+#define BTN_ZOOM_FACTOR     2.3
+#define IMG_ZOOM_FACTOR     2.4
+#define IMG_ZOOM_OFFSET     -80
+
+#define MIN_INTERVAL_TIME   5
+#define MAX_INTERVAL_TIME   120
+#define INTERVAL_TIME_STEP  5
+
+#define DEFAULT_MAGNIFICATION_FACTOR 1
+#define DEFAULT_INTERVAL_TIME 30
 
 static const char * TAG = "ui_extra";
 
-static uint16_t magnification_factor = 1;
-static uint16_t interval_time = 30;
+static uint16_t magnification_factor = DEFAULT_MAGNIFICATION_FACTOR;
+static uint16_t interval_time = DEFAULT_INTERVAL_TIME;
 
 // language options
-static const char* language_options[] = {"English", "Chinese"};
+static const char* const language_options[] = {"English", "Chinese"};
 // resolution options
-static const char* resolution_options[] = {"720P", "1080P", "480P"};
+static const char* const resolution_options[] = {"720P", "1080P", "480P"};
 // flash options
-static const char* flash_options[] = {"Off", "On"};
+static const char* const flash_options[] = {"Off", "On"};
 
 static lv_coord_t btn_width = 0;
 static lv_coord_t btn_height = 0;
@@ -50,7 +57,7 @@ typedef struct {
     int page;
 } PageMapping;
 
-PageMapping page_map[] = {
+static const PageMapping page_map[] = {
     {"CAMERA", UI_PAGE_CAMERA},
     {"INTERVAL CAM", UI_PAGE_INTERVAL_CAM},
     {"VIDEO MODE", UI_PAGE_VIDEO_MODE},
@@ -61,6 +68,11 @@ PageMapping page_map[] = {
 };
 
 static void update_setting_display(int setting_index) {
+    if (setting_index < 0 || setting_index >= 4) {
+        ESP_LOGW(TAG, "Invalid setting index: %d", setting_index);
+        return;
+    }
+    
     setting_options_t* opt = &settings_options[setting_index];
     const char* current_text = opt->options[opt->current_option];
     
@@ -70,12 +82,16 @@ static void update_setting_display(int setting_index) {
     }
     
     // update the current settings info
-    if (setting_index == 0) {
-        current_settings.language = current_text;
-    } else if (setting_index == 1) {
-        current_settings.resolution = current_text;
-    } else if (setting_index == 2) {
-        current_settings.flash = current_text;
+    switch (setting_index) {
+        case 0:
+            current_settings.language = current_text;
+            break;
+        case 1:
+            current_settings.resolution = current_text;
+            break;
+        case 2:
+            current_settings.flash = current_text;
+            break;
     }
     
     ESP_LOGD(TAG, "Setting %d updated to: %s", setting_index, current_text);
@@ -120,6 +136,8 @@ static void init_settings_display(void) {
 
 static void app_extra_img_set_zoom(lv_obj_t * obj, uint16_t zoom)
 {
+    if (!obj) return;
+    
     lv_img_t * img = (lv_img_t *)obj;
     if(zoom == img->zoom) return;
 
@@ -153,6 +171,11 @@ static void app_extra_img_set_zoom(lv_obj_t * obj, uint16_t zoom)
 }
 
 static lv_obj_t * create_img_button(lv_obj_t *parent, const void *img_src, const char *btn_text) {
+    if (!parent || !img_src || !btn_text) {
+        ESP_LOGW(TAG, "Invalid parameters for create_img_button");
+        return NULL;
+    }
+    
     lv_obj_t * btn = lv_btn_create(parent);
     
     lv_obj_set_user_data(btn, (void *)btn_text);
@@ -175,7 +198,7 @@ static lv_obj_t * create_img_button(lv_obj_t *parent, const void *img_src, const
     lv_img_set_src(img, img_src);
     lv_obj_set_size(img, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
     lv_obj_align(img, LV_ALIGN_CENTER, 0, 0);
-    lv_img_set_zoom(img, BASE_ZOOM);
+    lv_img_set_zoom(img, IMG_BASE_ZOOM);
     lv_obj_refr_size(img);
     lv_img_set_size_mode(img, LV_IMG_SIZE_MODE_REAL);
     lv_obj_add_flag(img, LV_OBJ_FLAG_FLOATING);
@@ -226,7 +249,7 @@ static void scroll_event_cb(lv_event_t * e)
         // Reset icon position
         lv_obj_t * img = lv_obj_get_child(child, 0);
         if(img) {
-            app_extra_img_set_zoom(img, BASE_ZOOM);
+            app_extra_img_set_zoom(img, IMG_BASE_ZOOM);
             lv_obj_refr_size(img);
             lv_obj_align(img, LV_ALIGN_CENTER, 0, 0);
         }
@@ -234,12 +257,12 @@ static void scroll_event_cb(lv_event_t * e)
     
     // Apply special effects to closest child
     if(closest_child) {
-        lv_obj_set_size(closest_child, btn_width * ZOOM_FACTOR, btn_height * ZOOM_FACTOR);
+        lv_obj_set_size(closest_child, btn_width * BTN_ZOOM_FACTOR, btn_height * BTN_ZOOM_FACTOR);
         lv_obj_t * img = lv_obj_get_child(closest_child, 0);
         if(img) {
-            app_extra_img_set_zoom(img, BASE_ZOOM * IMG_ZOOM_FACTOR);
+            app_extra_img_set_zoom(img, IMG_BASE_ZOOM * IMG_ZOOM_FACTOR);
             lv_obj_refr_size(img);
-            lv_obj_set_pos(img, ZOOM_OFFSET, 0);
+            lv_obj_set_pos(img, IMG_ZOOM_OFFSET, 0);
         }
     }
 }
@@ -310,21 +333,21 @@ static void scroll_end_event_cb(lv_event_t * e)
             // reset the icon position to the default position
             lv_obj_t * img = lv_obj_get_child(child, 0);
             if(img) {
-                lv_img_set_zoom(img, BASE_ZOOM);
+                lv_img_set_zoom(img, IMG_BASE_ZOOM);
                 lv_obj_refr_size(img);
                 lv_obj_align(img, LV_ALIGN_CENTER, 0, 0);
             }
         }
         
         // zoom the selected child
-        lv_obj_set_size(closest_child, btn_width * ZOOM_FACTOR, btn_height * ZOOM_FACTOR);
+        lv_obj_set_size(closest_child, btn_width * BTN_ZOOM_FACTOR, btn_height * BTN_ZOOM_FACTOR);
 
         // set the special position for the center button
         lv_obj_t * img = lv_obj_get_child(closest_child, 0);
         if(img) {
-            lv_img_set_zoom(img, BASE_ZOOM * IMG_ZOOM_FACTOR);
+            lv_img_set_zoom(img, IMG_BASE_ZOOM * IMG_ZOOM_FACTOR);
             lv_obj_refr_size(img);
-            lv_obj_set_pos(img, ZOOM_OFFSET, 0);
+            lv_obj_set_pos(img, IMG_ZOOM_OFFSET, 0);
         }
         
         // scroll to the view
@@ -469,12 +492,12 @@ static void pop_up_timer_callback(lv_timer_t * timer)
 
 static void update_settings_focus(int new_item)
 {
-    // 先取消所有设置项的焦点
+    // Clear the focus of all settings items
     for (int i = 0; i < 4; i++) {
         lv_event_send(settings_items[i], LV_EVENT_DEFOCUSED, NULL);
     }
     
-    // 设置新选中项的焦点
+    // Set the focus of the new selected item
     current_settings_item = new_item;
     lv_event_send(settings_items[current_settings_item], LV_EVENT_FOCUSED, NULL);
     ESP_LOGD(TAG, "Settings: selected item %d", current_settings_item);
@@ -662,10 +685,11 @@ uint16_t app_extra_get_magnification_factor(void)
 
 void app_extra_set_interval_time(uint16_t time)
 {
-    if(time > 120) {
-        time = 120;
-    } else if(time < 5) {
-        time = 5;
+    // Limit time range
+    if(time > MAX_INTERVAL_TIME) {
+        time = MAX_INTERVAL_TIME;
+    } else if(time < MIN_INTERVAL_TIME) {
+        time = MIN_INTERVAL_TIME;
     }
 
     interval_time = time;
@@ -680,42 +704,65 @@ uint16_t app_extra_get_interval_time(void)
 
 void ui_extra_btn_up(void)
 {
-    if(current_page == UI_PAGE_MAIN) {
-        lv_obj_scroll_by(scroll_cont, 0, 40, LV_ANIM_ON);
-        lv_event_send(scroll_cont, LV_EVENT_SCROLL, NULL);
-        
-        lv_obj_add_flag(info_label, LV_OBJ_FLAG_HIDDEN);
-    } else if(current_page == UI_PAGE_SETTINGS) {
-        if(current_settings_item > 0) {
-            update_settings_focus(current_settings_item - 1);
-        }
-    } else if(current_page == UI_PAGE_CAMERA || current_page == UI_PAGE_VIDEO_MODE) {
-        app_extra_set_magnification_factor(2);
-    } else if(current_page == UI_PAGE_INTERVAL_CAM) {
-        app_extra_set_interval_time(interval_time + 5);
+    switch(current_page) {
+        case UI_PAGE_MAIN:
+            lv_obj_scroll_by(scroll_cont, 0, 40, LV_ANIM_ON);
+            lv_event_send(scroll_cont, LV_EVENT_SCROLL, NULL);
+            lv_obj_add_flag(info_label, LV_OBJ_FLAG_HIDDEN);
+            break;
+            
+        case UI_PAGE_SETTINGS:
+            if(current_settings_item > 0) {
+                update_settings_focus(current_settings_item - 1);
+            }
+            break;
+            
+        case UI_PAGE_CAMERA:
+        case UI_PAGE_VIDEO_MODE:
+            app_extra_set_magnification_factor(2);
+            break;
+            
+        case UI_PAGE_INTERVAL_CAM:
+            app_extra_set_interval_time(interval_time + INTERVAL_TIME_STEP);
+            break;
+            
+        default:
+            break;
     }
 }
 
 void ui_extra_btn_down(void)
 {
-    if(current_page == UI_PAGE_MAIN) {
-        lv_obj_scroll_by(scroll_cont, 0, -40, LV_ANIM_ON);
-        lv_event_send(scroll_cont, LV_EVENT_SCROLL, NULL);
-        
-        lv_obj_add_flag(info_label, LV_OBJ_FLAG_HIDDEN);
-    } else if(current_page == UI_PAGE_SETTINGS) {
-        if(current_settings_item < 3) {
-            update_settings_focus(current_settings_item + 1);
-        }
-    } else if(current_page == UI_PAGE_CAMERA || current_page == UI_PAGE_VIDEO_MODE) {
-        app_extra_set_magnification_factor(3);
-    } else if(current_page == UI_PAGE_INTERVAL_CAM) {
-        app_extra_set_interval_time(interval_time - 5);
+    switch(current_page) {
+        case UI_PAGE_MAIN:
+            lv_obj_scroll_by(scroll_cont, 0, -40, LV_ANIM_ON);
+            lv_event_send(scroll_cont, LV_EVENT_SCROLL, NULL);
+            lv_obj_add_flag(info_label, LV_OBJ_FLAG_HIDDEN);
+            break;
+            
+        case UI_PAGE_SETTINGS:
+            if(current_settings_item < 3) {
+                update_settings_focus(current_settings_item + 1);
+            }
+            break;
+            
+        case UI_PAGE_CAMERA:
+        case UI_PAGE_VIDEO_MODE:
+            app_extra_set_magnification_factor(3);
+            break;
+            
+        case UI_PAGE_INTERVAL_CAM:
+            app_extra_set_interval_time(interval_time - INTERVAL_TIME_STEP);
+            break;
+            
+        default:
+            break;
     }
 }
 
 void ui_extra_btn_menu(void)
 {
+    // Check if there are any popup windows that need to be cleared
     if(!lv_obj_has_flag(ui_PanelCanvasPopupCamera, LV_OBJ_FLAG_HIDDEN) || 
        !lv_obj_has_flag(ui_PanelCanvasPopupCameraInterval, LV_OBJ_FLAG_HIDDEN) ||
        !lv_obj_has_flag(ui_PanelCanvasPopupVideoMode, LV_OBJ_FLAG_HIDDEN) ||
@@ -727,21 +774,28 @@ void ui_extra_btn_menu(void)
         return;
     }
 
-    if(current_page == UI_PAGE_MAIN) {
-        ui_extra_goto_page(ui_extra_get_choosed_page());
-    } else if(current_page == UI_PAGE_SETTINGS) {
-        if(current_settings_item == 3 && settings_items[current_settings_item] == ui_PanelSettingsMenu) {
-            // If the current settings item is the menu item, go back to the main page
+    // Perform different actions based on current page
+    switch(current_page) {
+        case UI_PAGE_MAIN:
+            ui_extra_goto_page(ui_extra_get_choosed_page());
+            break;
+            
+        case UI_PAGE_SETTINGS:
+            if(current_settings_item == 3 && settings_items[current_settings_item] == ui_PanelSettingsMenu) {
+                // If current setting item is menu item, return to main page
+                ui_extra_goto_page(UI_PAGE_MAIN);
+            } else {
+                // Otherwise, cycle through options
+                setting_options_t* opt = &settings_options[current_settings_item];
+                opt->current_option = (opt->current_option + 1) % opt->option_count;
+                update_setting_display(current_settings_item);
+            }
+            break;
+            
+        default:
+            // For other pages, return to main page
             ui_extra_goto_page(UI_PAGE_MAIN);
-        } else {
-            // Otherwise, cycle through the options
-            setting_options_t* opt = &settings_options[current_settings_item];
-            opt->current_option = (opt->current_option + 1) % opt->option_count;
-            update_setting_display(current_settings_item);
-            settings_info_t* info = &current_settings;
-        }
-    } else {
-        ui_extra_goto_page(UI_PAGE_MAIN);
+            break;
     }
 }
 
