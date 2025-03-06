@@ -44,7 +44,6 @@ static lv_timer_t *lv_additional_photo_timer = NULL;
 
 static bool is_sd_card_mounted = false;
 static bool is_usb_disk_mounted = false;
-
 typedef struct {
     const char** options;  
     int option_count;      
@@ -73,6 +72,7 @@ static const PageMapping page_map[] = {
     {NULL, -1}  
 };
 
+// Other functions
 static void update_setting_display(int setting_index) {
     if (setting_index < 0 || setting_index >= 4) {
         ESP_LOGW(TAG, "Invalid setting index: %d", setting_index);
@@ -536,6 +536,7 @@ static void update_settings_focus(int new_item)
     ESP_LOGD(TAG, "Settings: selected item %d", current_settings_item);
 }
 
+// Redirect to page functions
 static void ui_extra_redirect_to_main_page(void)
 {
     current_page = UI_PAGE_MAIN;
@@ -662,6 +663,20 @@ static void ui_extra_clear_popup_window(void)
     }
 }
 
+void ui_extra_popup_interval_timer_warning(void)
+{
+    if(!(current_page == UI_PAGE_INTERVAL_CAM)) {
+        return;
+    }
+
+    ui_extra_clear_page();
+    lv_label_set_text_fmt(ui_LabelPanelCanvasPopupIntervalTimerEnd, "Ended %d min", interval_time);
+    lv_label_set_text_fmt(ui_LabelPanelCanvasPopupCameraIntervalTimerWarningEnd, "%d photos saved to \n       SD Card", saved_photo_count);
+    lv_obj_clear_flag(ui_PanelCanvasPopupIntervalTimerWarningEnd, LV_OBJ_FLAG_HIDDEN);
+
+    lv_additional_photo_timer = lv_timer_create(pop_up_additional_photo_callback, 5000, ui_PanelCanvasPopupCameraInterval);
+}
+
 void ui_extra_goto_page(ui_page_t page)
 {
     // save the current page
@@ -696,6 +711,7 @@ void ui_extra_goto_page(ui_page_t page)
     }   
 }
 
+// Set and get functions
 ui_page_t ui_extra_get_current_page(void)
 {
     return current_page;
@@ -781,20 +797,7 @@ bool ui_extra_get_usb_disk_mounted(void)
     return is_usb_disk_mounted;
 }
 
-void ui_extra_popup_interval_timer_warning(void)
-{
-    if(!(current_page == UI_PAGE_INTERVAL_CAM)) {
-        return;
-    }
-
-    ui_extra_clear_page();
-    lv_label_set_text_fmt(ui_LabelPanelCanvasPopupIntervalTimerEnd, "Ended %d min", interval_time);
-    lv_label_set_text_fmt(ui_LabelPanelCanvasPopupCameraIntervalTimerWarningEnd, "%d photos saved to \n       SD Card", saved_photo_count);
-    lv_obj_clear_flag(ui_PanelCanvasPopupIntervalTimerWarningEnd, LV_OBJ_FLAG_HIDDEN);
-
-    lv_additional_photo_timer = lv_timer_create(pop_up_additional_photo_callback, 5000, ui_PanelCanvasPopupCameraInterval);
-}
-
+// Button event handler
 void ui_extra_btn_up(void)
 {
     switch(current_page) {
@@ -953,6 +956,7 @@ void ui_extra_btn_encoder(void)
     return;
 }
 
+// Initialize the UI extra module
 void ui_extra_init(void)
 {
     ui_init();
