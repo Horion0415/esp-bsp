@@ -13,7 +13,7 @@ static int knob_step_counter = 0;
 static int knob_last_direction = 0;  // 0: no direction, 1: right, -1: left
 static int64_t knob_last_time = 0;   // timestamp of last rotation
 static const int knob_timeout_ms = 500;  // timeout in milliseconds
-static int knob_step_threshold = 9;  // threshold for knob step counter
+static int knob_step_threshold = 6;  // threshold for knob step counter
 
 static void btn_handler(void *arg, void *data)
 {
@@ -57,6 +57,8 @@ static void knob_right_cb(void *arg, void *data)
         
         if(ui_extra_get_current_page() == UI_PAGE_CAMERA || ui_extra_get_current_page() == UI_PAGE_INTERVAL_CAM || ui_extra_get_current_page() == UI_PAGE_VIDEO_MODE) {
             app_extra_set_magnification_factor(app_extra_get_magnification_factor() - 1);
+        } else if(ui_extra_get_current_page() == UI_PAGE_MAIN) {
+            ui_extra_btn_up();
         }
     }
 }
@@ -88,6 +90,8 @@ static void knob_left_cb(void *arg, void *data)
         
         if(ui_extra_get_current_page() == UI_PAGE_CAMERA || ui_extra_get_current_page() == UI_PAGE_INTERVAL_CAM || ui_extra_get_current_page() == UI_PAGE_VIDEO_MODE) {
             app_extra_set_magnification_factor(app_extra_get_magnification_factor() + 1);
+        } else if(ui_extra_get_current_page() == UI_PAGE_MAIN) {
+            ui_extra_btn_down();
         }
     }
 }
