@@ -1,15 +1,81 @@
-#include <inttypes.h>
-#include "ff.h"
-#include "diskio.h"
 #include <stdio.h>
+#include <dirent.h> 
+#include <fcntl.h>
+#include <string.h>
 #include "esp_log.h"
 #include "bsp/esp-bsp.h"
+#include "nvs_flash.h"
+#include "nvs.h"
 
 #include "tinyusb.h"
+#include "diskio.h"
+#include "ff.h"
 
 #include "ui_extra.h"
 
+#define PIC_FOLDER_NAME "esp32_p4_pic_save"
+static uint32_t pic_num = 0;
+
 static const char *TAG = "app_storage";
+
+// Find the highest picture number in the directory to continue incrementing
+void app_storage_find_max_pic_num(void) {
+    DIR *dir = opendir(BSP_SD_MOUNT_POINT"/"PIC_FOLDER_NAME);
+    if (!dir) {
+        ESP_LOGE(TAG, "Failed to open directory %s/%s", BSP_SD_MOUNT_POINT, PIC_FOLDER_NAME);
+        return;
+    }
+
+    struct dirent *entry;
+    uint32_t max_num = 0;  
+
+    while ((entry = readdir(dir)) != NULL) {
+        if (strstr(entry->d_name, "pic_") && strstr(entry->d_name, ".jpg")) {
+            unsigned int index;
+            if (sscanf(entry->d_name, "pic_%u.jpg", &index) == 1) {
+                if (index > max_num) {
+                    max_num = index;  
+                }
+            }
+        }
+    }
+
+    closedir(dir);
+    pic_num = max_num + 1;  
+    ESP_LOGI(TAG, "Next picture number will be: %lu", pic_num);
+}
+
+// Save picture to SD card with filename pic_XXXX.jpg
+esp_err_t app_storage_save_picture(const uint8_t *data, size_t len) {
+    if (data == NULL || len == 0) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    
+    char filename[64];
+    sprintf(filename, "%s/%s/pic_%04lu.jpg", BSP_SD_MOUNT_POINT, PIC_FOLDER_NAME, pic_num);
+    
+    FILE *file = fopen(filename, "wb");
+    if (!file) {
+        ESP_LOGE(TAG, "Failed to open file for writing: %s", filename);
+        return ESP_FAIL;
+    }
+    
+    size_t bytes_written = fwrite(data, 1, len, file);
+    if (bytes_written != len) {
+        ESP_LOGE(TAG, "Failed to write to file: %s (written: %u/%u)", 
+                 filename, bytes_written, len);
+        fclose(file);
+        return ESP_FAIL;
+    }
+    
+    fclose(file);
+    ESP_LOGI(TAG, "Picture saved as %s (%u bytes)", filename, len);
+    
+    // Increment picture number for next image
+    pic_num++;
+    
+    return ESP_OK;
+}
 
 esp_err_t app_storage_init(void){
     esp_err_t ret = bsp_sdcard_mount();
@@ -19,6 +85,28 @@ esp_err_t app_storage_init(void){
     } else {
         ESP_LOGI(TAG, "SD card mounted successfully");
         ui_extra_set_sd_card_mounted(true);
+
+        // Create directory for saving pictures if it doesn't exist
+        char folder_path[64];
+        sprintf(folder_path, "%s/%s", BSP_SD_MOUNT_POINT, PIC_FOLDER_NAME);
+        
+        DIR *dir = opendir(folder_path);
+        if (dir) {
+            // Directory exists
+            closedir(dir);
+            ESP_LOGI(TAG, "Directory %s already exists", folder_path);
+            
+            // Find the highest picture number to continue incrementing
+            app_storage_find_max_pic_num();
+        } else {
+            // Directory doesn't exist, create it
+            if (mkdir(folder_path, 0755) != 0) {
+                ESP_LOGE(TAG, "Failed to create directory %s", folder_path);
+            } else {
+                ESP_LOGI(TAG, "Created directory: %s", folder_path);
+                pic_num = 1;  // Start with 1 for a new directory
+            }
+        }
 
         ESP_LOGI(TAG, "USB MSC initialization");
         const tinyusb_config_t tusb_cfg = {0};

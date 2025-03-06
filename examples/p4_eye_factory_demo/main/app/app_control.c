@@ -4,6 +4,7 @@
 #include "bsp/esp-bsp.h"
 
 #include "ui_extra.h"
+#include "app_video_stream.h"
 
 static const char *TAG = "app_control";
 
@@ -26,6 +27,9 @@ static void btn_handler(void *arg, void *data)
         ui_extra_btn_down();
     } else if((int)data == BSP_BUTTON_ED) {
         ui_extra_btn_encoder();
+        if(ui_extra_get_current_page() == UI_PAGE_CAMERA) {
+            app_video_stream_take_photo();
+        }
     }
     bsp_display_unlock();
 }

@@ -5,4 +5,4 @@ file(GLOB_RECURSE LV_UI_SOURCES ${LV_UI_DIR}/*.c)
 
 idf_component_register(SRCS "main.c" ${LV_UI_SOURCES} ${APP_SOURCES}
                     INCLUDE_DIRS "." ${LV_UI_DIR} ${APP_DIR}
-                    REQUIRES esp_driver_ppa)
+                    REQUIRES esp_driver_ppa nvs_flash)
