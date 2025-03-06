@@ -106,4 +106,33 @@ void ui_extra_set_sd_card_mounted(bool mounted);
  */
 bool ui_extra_get_sd_card_mounted(void);
 
+/**
+ * @brief Set saved photo count
+ * @param count Number of saved photos
+ */
+void app_extra_set_saved_photo_count(uint16_t count);
+
+/**
+ * @brief Get saved photo count
+ * @return Current saved photo count
+ */
+uint16_t app_extra_get_saved_photo_count(void);
+
+/**
+ * @brief Set USB disk mount status
+ * @param mounted Whether USB disk is mounted
+ */
+void ui_extra_set_usb_disk_mounted(bool mounted);
+
+/**
+ * @brief Get USB disk mount status
+ * @return Whether USB disk is mounted
+ */
+bool ui_extra_get_usb_disk_mounted(void);
+
+/**
+ * @brief Show interval timer warning popup
+ */
+void ui_extra_popup_interval_timer_warning(void);
+
 #endif
