@@ -503,7 +503,10 @@ static void pop_up_timer_callback(lv_timer_t * timer)
         is_sd_card_mounted ? lv_obj_clear_flag(ui_ImageCanvasSDcard, LV_OBJ_FLAG_HIDDEN) : lv_obj_clear_flag(ui_ImageCanvasNOSDcard, LV_OBJ_FLAG_HIDDEN);
     }
 
-    lv_timer_del(timer);
+    if(timer){
+        lv_timer_del(timer);
+        timer = NULL;
+    }
 }
 
 static void pop_up_additional_photo_callback(lv_timer_t * timer)
@@ -522,7 +525,10 @@ static void pop_up_additional_photo_callback(lv_timer_t * timer)
         is_sd_card_mounted ? lv_obj_clear_flag(ui_ImageCanvasSDcard, LV_OBJ_FLAG_HIDDEN) : lv_obj_clear_flag(ui_ImageCanvasNOSDcard, LV_OBJ_FLAG_HIDDEN);
     }
 
-    lv_timer_del(timer);
+    if(timer){
+        lv_timer_del(timer);
+        timer = NULL;
+    }
 }
 
 static void update_settings_focus(int new_item)
@@ -562,7 +568,9 @@ static void ui_extra_redirect_to_camera_page(void)
     ui_extra_clear_page();
 
     lv_obj_clear_flag(ui_PanelCanvasPopupCamera, LV_OBJ_FLAG_HIDDEN);
-    lv_popup_timer = lv_timer_create(pop_up_timer_callback, 5000, ui_PanelCanvasPopupCamera);
+    if(!lv_popup_timer){
+        lv_popup_timer = lv_timer_create(pop_up_timer_callback, 5000, ui_PanelCanvasPopupCamera);
+    }
 }
 
 static void ui_extra_redirect_to_interval_camera_page(void)
@@ -572,7 +580,9 @@ static void ui_extra_redirect_to_interval_camera_page(void)
     ui_extra_clear_page();
 
     lv_obj_clear_flag(ui_PanelCanvasPopupCameraInterval, LV_OBJ_FLAG_HIDDEN);
-    lv_popup_timer = lv_timer_create(pop_up_timer_callback, 5000, ui_PanelCanvasPopupCameraInterval);
+    if(!lv_popup_timer){
+        lv_popup_timer = lv_timer_create(pop_up_timer_callback, 5000, ui_PanelCanvasPopupCameraInterval);
+    }
 }
 
 static void ui_extra_redirect_to_video_mode_page(void)
@@ -582,7 +592,9 @@ static void ui_extra_redirect_to_video_mode_page(void)
     ui_extra_clear_page();
     
     lv_obj_clear_flag(ui_PanelCanvasPopupVideoMode, LV_OBJ_FLAG_HIDDEN);
-    lv_popup_timer = lv_timer_create(pop_up_timer_callback, 5000, ui_PanelCanvasPopupVideoMode);
+    if(!lv_popup_timer){
+        lv_popup_timer = lv_timer_create(pop_up_timer_callback, 5000, ui_PanelCanvasPopupVideoMode);
+    }
 }
 
 static void ui_extra_redirect_to_album_page(void)
@@ -676,7 +688,9 @@ void ui_extra_popup_interval_timer_warning(void)
     lv_label_set_text_fmt(ui_LabelPanelCanvasPopupCameraIntervalTimerWarningEnd, "%d photos saved to \n       SD Card", saved_photo_count);
     lv_obj_clear_flag(ui_PanelCanvasPopupIntervalTimerWarningEnd, LV_OBJ_FLAG_HIDDEN);
 
-    lv_additional_photo_timer = lv_timer_create(pop_up_additional_photo_callback, 5000, ui_PanelCanvasPopupCameraInterval);
+    if(!lv_additional_photo_timer){
+        lv_additional_photo_timer = lv_timer_create(pop_up_additional_photo_callback, 5000, ui_PanelCanvasPopupCameraInterval);
+    }
 }
 
 void ui_extra_goto_page(ui_page_t page)
@@ -905,6 +919,17 @@ void ui_extra_btn_menu(void)
 
 void ui_extra_btn_encoder(void)
 {
+    if(!lv_obj_has_flag(ui_PanelCanvasPopupCamera, LV_OBJ_FLAG_HIDDEN) || 
+       !lv_obj_has_flag(ui_PanelCanvasPopupCameraInterval, LV_OBJ_FLAG_HIDDEN) ||
+       !lv_obj_has_flag(ui_PanelCanvasPopupVideoMode, LV_OBJ_FLAG_HIDDEN) ||
+       !lv_obj_has_flag(ui_PanelCanvasPopupSDWarning, LV_OBJ_FLAG_HIDDEN) ||
+       !lv_obj_has_flag(ui_PanelCanvasPopupIntervalTimerWarning, LV_OBJ_FLAG_HIDDEN) ||
+       !lv_obj_has_flag(ui_PanelCanvasPopupIntervalTimerWarningEnd, LV_OBJ_FLAG_HIDDEN)) {
+
+        ui_extra_clear_popup_window();
+        return;
+    }
+
     if(!lv_obj_has_flag(ui_PanelCanvasPopupSDWarning, LV_OBJ_FLAG_HIDDEN)) {
         switch(current_page) {
             case UI_PAGE_CAMERA:
@@ -958,7 +983,9 @@ void ui_extra_btn_encoder(void)
             lv_label_set_text_fmt(ui_LabelPanelCanvasPopupIntervalTimer, "Starting %d min", interval_time);
             lv_obj_clear_flag(ui_PanelCanvasPopupIntervalTimerWarning, LV_OBJ_FLAG_HIDDEN);
             
-            lv_additional_photo_timer = lv_timer_create(pop_up_additional_photo_callback, 5000, ui_PanelCanvasPopupCameraInterval);
+            if(!lv_additional_photo_timer){
+                lv_additional_photo_timer = lv_timer_create(pop_up_additional_photo_callback, 5000, ui_PanelCanvasPopupCameraInterval);
+            }
             break;
         default:
             break;
