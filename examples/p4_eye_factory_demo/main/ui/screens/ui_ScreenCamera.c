@@ -83,6 +83,8 @@ void ui_ScreenCamera_screen_init(void)
     lv_obj_set_y(ui_LabelPanelCanvasPopupCameraTop, -59);
     lv_obj_set_align(ui_LabelPanelCanvasPopupCameraTop, LV_ALIGN_CENTER);
     lv_label_set_text(ui_LabelPanelCanvasPopupCameraTop, "Camera Mode");
+    lv_obj_set_style_text_color(ui_LabelPanelCanvasPopupCameraTop, lv_color_hex(0x000000), LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_opa(ui_LabelPanelCanvasPopupCameraTop, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_font(ui_LabelPanelCanvasPopupCameraTop, &ui_font_FontKoHoBold28, LV_PART_MAIN | LV_STATE_DEFAULT);
 
     ui_PanelCanvasPopupCameraLine = lv_obj_create(ui_PanelCanvasPopupCamera);
@@ -102,6 +104,8 @@ void ui_ScreenCamera_screen_init(void)
     lv_obj_set_y(ui_LabelPanelCanvasPopupCameraDown, 35);
     lv_obj_set_align(ui_LabelPanelCanvasPopupCameraDown, LV_ALIGN_CENTER);
     lv_label_set_text(ui_LabelPanelCanvasPopupCameraDown, "Rotate wheel to\n   adjust zoom");
+    lv_obj_set_style_text_color(ui_LabelPanelCanvasPopupCameraDown, lv_color_hex(0x000000), LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_opa(ui_LabelPanelCanvasPopupCameraDown, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_font(ui_LabelPanelCanvasPopupCameraDown, &ui_font_FontKoHoMiniBold24,
                                LV_PART_MAIN | LV_STATE_DEFAULT);
 
