@@ -764,7 +764,7 @@ bool ui_extra_get_sd_card_mounted(void)
 
 void ui_extra_popup_interval_timer_warning(void)
 {
-    if(!current_page == UI_PAGE_INTERVAL_CAM) {
+    if(!(current_page == UI_PAGE_INTERVAL_CAM)) {
         return;
     }
 
@@ -896,17 +896,8 @@ void ui_extra_btn_encoder(void)
 
     if(!lv_obj_has_flag(ui_PanelCanvasPopupIntervalTimerWarning, LV_OBJ_FLAG_HIDDEN) || 
        !lv_obj_has_flag(ui_PanelCanvasPopupIntervalTimerWarningEnd, LV_OBJ_FLAG_HIDDEN)) {
-        switch(current_page) {
-            case UI_PAGE_INTERVAL_CAM:
-                ui_extra_goto_page(UI_PAGE_INTERVAL_CAM);
-                break;
-            case UI_PAGE_VIDEO_MODE:
-                ui_extra_goto_page(UI_PAGE_VIDEO_MODE);
-                break;
-            default:
-                break;
-        }
-       
+        
+        ui_extra_goto_page(UI_PAGE_INTERVAL_CAM);
         ui_extra_clear_popup_window();
         return;
     }
