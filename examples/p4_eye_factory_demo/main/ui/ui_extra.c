@@ -518,6 +518,8 @@ static void pop_up_additional_photo_callback(lv_timer_t * timer)
 
         is_sd_card_mounted ? lv_obj_clear_flag(ui_ImageCanvasSDcard, LV_OBJ_FLAG_HIDDEN) : lv_obj_clear_flag(ui_ImageCanvasNOSDcard, LV_OBJ_FLAG_HIDDEN);
     }
+
+    lv_timer_del(timer);
 }
 
 static void update_settings_focus(int new_item)
@@ -762,6 +764,10 @@ bool ui_extra_get_sd_card_mounted(void)
 
 void ui_extra_popup_interval_timer_warning(void)
 {
+    if(!current_page == UI_PAGE_INTERVAL_CAM) {
+        return;
+    }
+
     ui_extra_clear_page();
     lv_label_set_text_fmt(ui_LabelPanelCanvasPopupIntervalTimerEnd, "Ended %d min", interval_time);
     lv_label_set_text_fmt(ui_LabelPanelCanvasPopupCameraIntervalTimerWarningEnd, "%d photos saved to \n       SD Card", saved_photo_count);
