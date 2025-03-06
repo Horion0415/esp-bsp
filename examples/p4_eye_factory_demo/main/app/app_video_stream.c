@@ -30,7 +30,7 @@ static bool is_take_video = false;
 
 static void camera_video_frame_operation(uint8_t *camera_buf, uint8_t camera_buf_index, uint32_t camera_buf_hes, uint32_t camera_buf_ves, size_t camera_buf_len);
 
-static void swap_rgb565_bytes(uint16_t *buffer, int pixel_count)
+void swap_rgb565_bytes(uint16_t *buffer, int pixel_count)
 {
     for (int i = 0; i < pixel_count; i++) {
         uint16_t swap16 = *(buffer + i);

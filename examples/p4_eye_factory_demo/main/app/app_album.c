@@ -13,11 +13,13 @@
 #include "app_storage.h"
 #include "app_video.h"
 
+#include "app_video_stream.h"
+
 static const char *TAG = "app_album";
 
 #define ALIGN_UP(num, align)    (((num) + ((align) - 1)) & ~((align) - 1))
 
-#define MAX_IMAGES 500
+#define MAX_IMAGES   500
 #define MAX_PATH_LEN 300
 #define PIC_FOLDER_NAME "esp32_p4_pic_save"
 
@@ -123,36 +125,15 @@ static esp_err_t app_album_load_current_image(void) {
     album_ctx.buffer_size = file_size;
     ESP_LOGI(TAG, "Loaded image: %s (%u bytes)", album_ctx.filenames[album_ctx.current_index], file_size);
     
-    // // Decode JPEG to RGB565 for canvas
-    // jpeg_decode_config_t decode_config = {
-    //     .output_type = JPEG_RAW_TYPE_RGB565_LE,
-    //     .output_width = album_ctx.canvas_width,
-    //     .output_height = album_ctx.canvas_height,
-    //     .flags.swap_color_bytes = 0,  // Don't swap bytes for LVGL
-    // };
-    
-    // jpeg_decode_data_t decode_data = {
-    //     .src = album_ctx.img_buffer,
-    //     .src_len = album_ctx.buffer_size,
-    //     .dst = album_ctx.canvas_buffer,
-    //     .dst_len = album_ctx.canvas_width * album_ctx.canvas_height * 2, // 2 bytes per pixel for RGB565
-    //     .flags.exif_rotate = 1,  // Auto-rotate based on EXIF
-    // };
-    
-    // esp_err_t ret = jpeg_decode(album_ctx.jpeg_handle, &decode_config, &decode_data);
-    // if (ret != ESP_OK) {
-    //     ESP_LOGE(TAG, "Failed to decode JPEG image: %d", ret);
-    //     return ret;
-    // }
     uint32_t out_size = 0;
     jpeg_decode_picture_info_t header_info;
 
     jpeg_decode_cfg_t decode_cfg_rgb = {
         .output_format = JPEG_DECODE_OUT_FORMAT_RGB565,
-        .rgb_order = JPEG_DEC_RGB_ELEMENT_ORDER_RGB,
+        .rgb_order = JPEG_DEC_RGB_ELEMENT_ORDER_BGR,
     };
     ESP_ERROR_CHECK(jpeg_decoder_get_info(album_ctx.img_buffer, album_ctx.buffer_size, &header_info));
-    ESP_LOGI(TAG, "header parsed, width is %" PRId32 ", height is %" PRId32, header_info.width, header_info.height);
+    ESP_LOGD(TAG, "header parsed, width is %" PRId32 ", height is %" PRId32, header_info.width, header_info.height);
         
     ESP_ERROR_CHECK(jpeg_decoder_process(album_ctx.jpeg_handle, &decode_cfg_rgb, album_ctx.img_buffer, album_ctx.buffer_size, album_ctx.ppa_buffer, tx_buffer_size, &out_size));
     
@@ -182,6 +163,8 @@ static esp_err_t app_album_load_current_image(void) {
 
     ESP_ERROR_CHECK(ppa_do_scale_rotate_mirror(album_ctx.ppa_handle, &srm_config));
 
+    swap_rgb565_bytes(album_ctx.canvas_buffer, BSP_LCD_H_RES * BSP_LCD_V_RES);
+
     return ESP_OK;
 }
 
@@ -193,17 +176,14 @@ static esp_err_t app_album_display_current_image(void) {
     }
     
     // Set canvas buffer with decoded image
+    bsp_display_lock(0);
     lv_canvas_set_buffer(album_ctx.canvas, album_ctx.canvas_buffer, 
                          album_ctx.canvas_width, album_ctx.canvas_height, 
                          LV_IMG_CF_TRUE_COLOR);
     
-    // // Update UI to show current image index
-    // char index_text[32];
-    // snprintf(index_text, sizeof(index_text), "%d/%d", album_ctx.current_index + 1, album_ctx.count);
-    // ui_extra_set_album_index(index_text);
-    
     // Force refresh
     lv_obj_invalidate(album_ctx.canvas);
+    bsp_display_unlock();
     
     return ESP_OK;
 }
@@ -262,25 +242,11 @@ esp_err_t app_album_init(lv_obj_t *parent) {
     
     // Allocate canvas buffer (RGB565 format: 2 bytes per pixel)
     size_t canvas_buf_size = album_ctx.canvas_width * album_ctx.canvas_height * 2;
-    // album_ctx.canvas_buffer = heap_caps_aligned_calloc(16, 1, canvas_buf_size, MALLOC_CAP_SPIRAM);
-    // album_ctx.canvas_buffer = heap_caps_malloc(canvas_buf_size, MALLOC_CAP_SPIRAM);
     album_ctx.canvas_buffer = heap_caps_aligned_calloc(data_cache_line_size, 1, canvas_buf_size, MALLOC_CAP_SPIRAM);
     if (!album_ctx.canvas_buffer) {
         ESP_LOGE(TAG, "Failed to allocate canvas buffer");
         return ESP_FAIL;
     }
-    
-    // Initialize JPEG decoder
-    // jpeg_decode_config_t jpeg_config = {
-    //     .output_type = JPEG_RAW_TYPE_RGB565_LE,
-    // };
-    // esp_err_t ret = jpeg_new_decoder(&jpeg_config, &album_ctx.jpeg_handle);
-    // if (ret != ESP_OK) {
-    //     ESP_LOGE(TAG, "Failed to create JPEG decoder: %d", ret);
-    //     free(album_ctx.canvas_buffer);
-    //     album_ctx.canvas_buffer = NULL;
-    //     return ret;
-    // }
 
     //PPA client config
     ppa_client_config_t ppa_srm_config = {
@@ -305,10 +271,11 @@ esp_err_t app_album_init(lv_obj_t *parent) {
     ESP_ERROR_CHECK(jpeg_new_decoder_engine(&decode_eng_cfg, &album_ctx.jpeg_handle));
     
     // Set initial canvas buffer (black screen)
+    bsp_display_lock(0);
     lv_canvas_set_buffer(album_ctx.canvas, album_ctx.canvas_buffer, 
                          album_ctx.canvas_width, album_ctx.canvas_height, 
                          LV_IMG_CF_TRUE_COLOR);
-    
+    bsp_display_unlock();
     
     // Scan images from SD card
     esp_err_t ret = app_album_scan_images();
