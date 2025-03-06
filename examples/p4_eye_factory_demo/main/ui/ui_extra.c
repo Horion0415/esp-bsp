@@ -940,6 +940,9 @@ void ui_extra_btn_encoder(void)
                 ui_extra_clear_page();
                 lv_obj_clear_flag(ui_PanelCanvasPopupSDWarning, LV_OBJ_FLAG_HIDDEN);
                 break;
+            case UI_PAGE_MAIN:
+                ui_extra_btn_menu();
+                break;
             default:
                 break;
         }
