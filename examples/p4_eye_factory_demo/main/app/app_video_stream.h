@@ -28,6 +28,11 @@ extern "C" {
  */
 esp_err_t app_video_stream_init(i2c_master_bus_handle_t i2c_handle);
 
+esp_err_t app_video_stream_take_photo(void);
+esp_err_t app_video_stream_stop_take_photo(void);
+esp_err_t app_video_stream_take_video(void);
+esp_err_t app_video_stream_stop_take_video(void);
+
 #ifdef __cplusplus
 }
 #endif

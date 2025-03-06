@@ -4,3 +4,6 @@ dependencies:
   esp32_p4_eye:
     version: "0.*"
     override_path: "../../../bsp/esp32_p4_eye"
+
+  espressif/esp_tinyusb:
+    version: "1.4.*"

@@ -12,6 +12,7 @@
 
 #include "app_control.h"
 #include "app_video_stream.h"
+#include "app_storage.h"
 
 static const char *TAG = "main";
 
@@ -29,6 +30,10 @@ void app_main(void)
     bsp_display_unlock();
     
     bsp_display_backlight_on();
+
+    // Initialize the storage
+    ESP_LOGI(TAG, "Initialize the storage");
+    ESP_ERROR_CHECK(app_storage_init());
 
     // Initialize the application control module
     ESP_LOGI(TAG, "Initialize the application control module");

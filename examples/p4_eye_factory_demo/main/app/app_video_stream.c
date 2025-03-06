@@ -18,6 +18,9 @@ static void *canvas_buf[EXAMPLE_CAM_BUF_NUM];
 
 static int scale_level_res[SCALE_LEVELS] = {960, 480, 240, 120, 80, 60};
 
+static bool is_take_photo = false;
+static bool is_take_video = false;
+
 static void camera_video_frame_operation(uint8_t *camera_buf, uint8_t camera_buf_index, uint32_t camera_buf_hes, uint32_t camera_buf_ves, size_t camera_buf_len);
 
 static void swap_rgb565_bytes(uint16_t *buffer, int pixel_count)
@@ -27,6 +30,34 @@ static void swap_rgb565_bytes(uint16_t *buffer, int pixel_count)
         swap16 = (swap16 >> 8) | (swap16 << 8);
         *(buffer + i) = swap16;
     }
+}
+
+esp_err_t app_video_stream_take_photo(void)
+{
+    is_take_photo = true;
+
+    return ESP_OK;
+}
+
+esp_err_t app_video_stream_stop_take_photo(void)
+{
+    is_take_photo = false;
+
+    return ESP_OK;
+}
+
+esp_err_t app_video_stream_take_video(void)
+{
+    is_take_video = true;
+
+    return ESP_OK;
+}
+
+esp_err_t app_video_stream_stop_take_video(void)
+{
+    is_take_video = false;
+
+    return ESP_OK;
 }
 
 esp_err_t app_video_stream_init(i2c_master_bus_handle_t i2c_handle)
