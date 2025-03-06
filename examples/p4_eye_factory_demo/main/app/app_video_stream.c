@@ -2,10 +2,12 @@
 #include "esp_log.h"
 #include "esp_private/esp_cache_private.h"
 #include "driver/ppa.h"
+#include "driver/jpeg_encode.h"
 #include "bsp/esp-bsp.h"
 
 #include "ui_extra.h"
 #include "app_video.h"
+#include "app_storage.h"
 
 #define ALIGN_UP(num, align)    (((num) + ((align) - 1)) & ~((align) - 1))
 #define SCALE_LEVELS 6                         // resolution scale levels
@@ -15,6 +17,11 @@ static const char *TAG = "app_video_stream";
 static size_t data_cache_line_size = 0;
 static ppa_client_handle_t ppa_srm_handle = NULL;
 static void *canvas_buf[EXAMPLE_CAM_BUF_NUM];
+
+static jpeg_encoder_handle_t jpeg_handle;
+static uint32_t jpg_size;
+static uint8_t *jpg_buf;
+static size_t rx_buffer_size = 0;
 
 static int scale_level_res[SCALE_LEVELS] = {960, 480, 240, 120, 80, 60};
 
@@ -93,6 +100,20 @@ esp_err_t app_video_stream_init(i2c_master_bus_handle_t i2c_handle)
         }
     }
 
+    // Initialize the JPEG encoder
+    jpeg_encode_engine_cfg_t encode_eng_cfg = {
+        .timeout_ms = 70,
+    };
+
+    ESP_ERROR_CHECK(jpeg_new_encoder_engine(&encode_eng_cfg, &jpeg_handle));
+
+    jpeg_encode_memory_alloc_cfg_t rx_mem_cfg = {
+        .buffer_direction = JPEG_DEC_ALLOC_OUTPUT_BUFFER,
+    };
+
+    jpg_buf = (uint8_t*)jpeg_alloc_encoder_mem(app_video_get_buf_size() / 10, &rx_mem_cfg, &rx_buffer_size); // Assume that compression ratio of 10 to 1
+    assert(jpg_buf != NULL);
+
     // Initialize video capture device
     ESP_ERROR_CHECK(app_video_set_bufs(video_cam_fd0, EXAMPLE_CAM_BUF_NUM, NULL));
 
@@ -135,6 +156,14 @@ static void camera_video_frame_operation(uint8_t *camera_buf, uint8_t camera_buf
         .mode = PPA_TRANS_MODE_BLOCKING,
     };
 
+    jpeg_encode_cfg_t enc_config = {
+        .src_type = JPEG_ENCODE_IN_FORMAT_RGB565,
+        .sub_sample = JPEG_DOWN_SAMPLING_YUV420,
+        .image_quality = 70,
+        .width = camera_buf_hes,
+        .height = camera_buf_ves,
+    };
+
     ESP_ERROR_CHECK(ppa_do_scale_rotate_mirror(ppa_srm_handle, &srm_config));
 
     swap_rgb565_bytes(canvas_buf[camera_buf_index], BSP_LCD_H_RES * BSP_LCD_V_RES);
@@ -143,4 +172,15 @@ static void camera_video_frame_operation(uint8_t *camera_buf, uint8_t camera_buf
     lv_canvas_set_buffer(ui_PanelCanvas, canvas_buf[camera_buf_index], BSP_LCD_H_RES, BSP_LCD_V_RES, LV_IMG_CF_TRUE_COLOR);
     lv_refr_now(NULL);
     bsp_display_unlock();
+
+    if(is_take_photo && ui_extra_get_current_page() == UI_PAGE_CAMERA) {
+        bsp_display_backlight_off();
+
+        ESP_ERROR_CHECK(jpeg_encoder_process(jpeg_handle, &enc_config, camera_buf, app_video_get_buf_size(), jpg_buf, rx_buffer_size, &jpg_size));
+        app_storage_save_picture(jpg_buf, jpg_size);
+        
+        bsp_display_backlight_on();
+        
+        is_take_photo = false;
+    }
 }

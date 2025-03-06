@@ -19,7 +19,8 @@ static uint32_t pic_num = 0;
 static const char *TAG = "app_storage";
 
 // Find the highest picture number in the directory to continue incrementing
-void app_storage_find_max_pic_num(void) {
+static void app_storage_find_max_pic_num(void) 
+{
     DIR *dir = opendir(BSP_SD_MOUNT_POINT"/"PIC_FOLDER_NAME);
     if (!dir) {
         ESP_LOGE(TAG, "Failed to open directory %s/%s", BSP_SD_MOUNT_POINT, PIC_FOLDER_NAME);
@@ -46,7 +47,8 @@ void app_storage_find_max_pic_num(void) {
 }
 
 // Save picture to SD card with filename pic_XXXX.jpg
-esp_err_t app_storage_save_picture(const uint8_t *data, size_t len) {
+esp_err_t app_storage_save_picture(const uint8_t *data, size_t len) 
+{
     if (data == NULL || len == 0) {
         return ESP_ERR_INVALID_ARG;
     }
@@ -89,7 +91,7 @@ esp_err_t app_storage_init(void){
         bsp_display_lock(0);
         ui_extra_set_sd_card_mounted(true);
         bsp_display_unlock();
-        
+
         // Create directory for saving pictures if it doesn't exist
         char folder_path[64];
         sprintf(folder_path, "%s/%s", BSP_SD_MOUNT_POINT, PIC_FOLDER_NAME);

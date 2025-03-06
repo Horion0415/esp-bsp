@@ -3,4 +3,6 @@
 
 esp_err_t app_storage_init(void);
 
+esp_err_t app_storage_save_picture(const uint8_t *data, size_t len);
+
 #endif
