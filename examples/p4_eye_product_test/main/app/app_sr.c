@@ -69,22 +69,6 @@ static bool detect_flag = false;
 #define FEED_DELETED BIT1
 #define DETECT_DELETED BIT2
 
-/**
- * @brief all default commands
- */
-static const sr_cmd_t g_default_cmd_info[] = {
-    // English
-    {SR_CMD_RIGHT_PAGE, SR_LANG_EN, 0, "Turn to the next page", {NULL}},
-    {SR_CMD_LEFT_PAGE, SR_LANG_EN, 0, "Turn to the last page", {NULL}},
-    // {SR_CMD_ENTER_CALCULATOR, SR_LANG_EN, 0, "Enter Calculator", {NULL}},
-    {SR_CMD_ENTER_MUSIC, SR_LANG_EN, 0, "Enter Music Player", {NULL}},
-    {SR_CMD_ENTER_CAMERA, SR_LANG_EN, 0, "Enter Camera APP", {NULL}},
-    // {SR_CMD_ENTER_SETTING, SR_LANG_EN, 0, "Enter Setting", {NULL}},
-    {SR_CMD_ENTER_GAME, SR_LANG_EN, 0, "Play Game", {NULL}},
-    {SR_CMD_CLOSE_APP, SR_LANG_EN, 0, "Return to the home page", {NULL}},
-    {SR_CMD_TAKE_PHOTO, SR_LANG_EN, 0, "Take a Photo", {NULL}},
-};
-
 static void audio_feed_task(void *arg)
 {
     size_t bytes_read = 0;
@@ -129,10 +113,7 @@ static void audio_detect_task(void *arg)
 {
     esp_afe_sr_data_t *afe_data = arg;
     int afe_chunksize = afe_handle->get_fetch_chunksize(afe_data);
-    //int nch = afe_handle->get_channel_num(afe_data);
 
-    int mu_chunksize = g_sr_data->multinet->get_samp_chunksize(g_sr_data->model_data);
-    assert(mu_chunksize == afe_chunksize);
     ESP_LOGI(TAG, "------------detect start------------\n");
 
     while (true) {
@@ -188,33 +169,7 @@ esp_err_t app_sr_set_language(sr_language_t new_lang)
     g_sr_data->afe_handle->set_wakenet(g_sr_data->afe_data, wn_name);
     ESP_LOGI(TAG, "load wakenet:%s", wn_name);
 
-    char *mn_name = esp_srmodel_filter(models, ESP_MN_PREFIX, ((SR_LANG_EN == g_sr_data->lang) ? ESP_MN_ENGLISH : ESP_MN_CHINESE));
-    ESP_RETURN_ON_FALSE(NULL != mn_name, ESP_ERR_INVALID_ARG, TAG, "Modifications to the code are required to support the relevant configuration");
-    esp_mn_iface_t *multinet = esp_mn_handle_from_name(mn_name);
-    model_iface_data_t *model_data = multinet->create(mn_name, 6000);
-    g_sr_data->multinet = multinet;
-    g_sr_data->model_data = model_data;
-    g_sr_data->mn_name = mn_name;
-    ESP_LOGI(TAG, "load multinet:%s", g_sr_data->mn_name);
-
-    // remove all command
-    app_sr_remove_all_cmd();
-
-    esp_mn_commands_clear();
-
-    uint8_t cmd_number = 0;
-    // count command number
-    for (size_t i = 0; i < sizeof(g_default_cmd_info) / sizeof(sr_cmd_t); i++) {
-        if (g_default_cmd_info[i].lang == g_sr_data->lang) {
-            app_sr_add_cmd(&g_default_cmd_info[i]);
-            cmd_number++;
-        }
-    }
-    g_sr_data->multinet->print_active_speech_commands(model_data);
-
-    ESP_LOGI(TAG, "cmd_number=%d", cmd_number);
-
-    return app_sr_update_cmds();/* Reset command list */
+    return ESP_OK;
 }
 
 esp_err_t app_sr_start(bool record_en)
@@ -276,9 +231,6 @@ esp_err_t app_sr_start(bool record_en)
 
     ret_val = xTaskCreatePinnedToCore(&audio_detect_task, "Detect Task", 8 * 1024, (void *)afe_data, 5, &g_sr_data->detect_task, 1);
     ESP_GOTO_ON_FALSE(pdPASS == ret_val, ESP_FAIL, err, TAG,  "Failed create audio detect task");
-
-    // ret_val = xTaskCreatePinnedToCore(&sr_handler_task, "SR Handler Task", 6 * 1024, NULL, configMAX_PRIORITIES - 1, &g_sr_data->handle_task, 0);
-    // ESP_GOTO_ON_FALSE(pdPASS == ret_val, ESP_FAIL, err, TAG,  "Failed create audio handler task");
 
     return ESP_OK;
 err:
