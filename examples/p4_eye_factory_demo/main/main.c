@@ -27,6 +27,7 @@ static void camera_video_frame_operation(uint8_t *camera_buf, uint8_t camera_buf
 
 static void btn_handler(void *arg, void *data)
 {
+    bsp_display_lock(0);
     if((int)data == BSP_BUTTON_1) {
         ui_extra_btn_menu();
     } else if((int)data == BSP_BUTTON_2) {
@@ -34,6 +35,7 @@ static void btn_handler(void *arg, void *data)
     } else if((int)data == BSP_BUTTON_3) {
         ui_extra_btn_down();
     }
+    bsp_display_unlock();
 }
 
 void app_main(void)
