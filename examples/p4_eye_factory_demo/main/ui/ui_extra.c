@@ -11,6 +11,8 @@
 #define MIN_INTERVAL_TIME   5
 #define MAX_INTERVAL_TIME   120
 #define INTERVAL_TIME_STEP  5
+#define MAX_MAGNIFICATION_FACTOR 6
+#define MIN_MAGNIFICATION_FACTOR 1
 
 #define DEFAULT_MAGNIFICATION_FACTOR 1
 #define DEFAULT_INTERVAL_TIME 30
@@ -737,8 +739,14 @@ settings_info_t* ui_extra_get_settings(void)
 
 void app_extra_set_magnification_factor(uint16_t factor)
 {
-    magnification_factor = factor;
+    if(factor > MAX_MAGNIFICATION_FACTOR) {
+        factor = MAX_MAGNIFICATION_FACTOR;
+    } else if(factor < MIN_MAGNIFICATION_FACTOR) {
+        factor = MIN_MAGNIFICATION_FACTOR;
+    }
 
+    magnification_factor = factor;
+    
     lv_label_set_text_fmt(ui_LabelCanvasFactor, "%dX", magnification_factor);
 }
 
