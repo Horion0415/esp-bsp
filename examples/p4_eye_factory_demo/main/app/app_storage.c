@@ -89,6 +89,7 @@ esp_err_t app_storage_init(void){
         bsp_display_lock(0);
         ui_extra_set_sd_card_mounted(true);
         bsp_display_unlock();
+        
         // Create directory for saving pictures if it doesn't exist
         char folder_path[64];
         sprintf(folder_path, "%s/%s", BSP_SD_MOUNT_POINT, PIC_FOLDER_NAME);
