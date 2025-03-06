@@ -12,6 +12,7 @@
 #include "ff.h"
 
 #include "ui_extra.h"
+#include "app_album.h"
 
 #define PIC_FOLDER_NAME "esp32_p4_pic_save"
 static uint32_t pic_num = 0;
@@ -91,6 +92,8 @@ esp_err_t app_storage_init(void){
         bsp_display_lock(0);
         ui_extra_set_sd_card_mounted(true);
         bsp_display_unlock();
+
+        app_album_init(ui_ImageScreenAlbum);
 
         // Create directory for saving pictures if it doesn't exist
         char folder_path[64];

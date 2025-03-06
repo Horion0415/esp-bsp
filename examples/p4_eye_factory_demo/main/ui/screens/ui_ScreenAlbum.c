@@ -10,7 +10,7 @@ void ui_ScreenAlbum_screen_init(void)
     ui_ScreenAlbum = lv_obj_create(NULL);
     lv_obj_clear_flag(ui_ScreenAlbum, LV_OBJ_FLAG_SCROLLABLE);      /// Flags
 
-    ui_ImageScreenAlbum = lv_img_create(ui_ScreenAlbum);
+    ui_ImageScreenAlbum = lv_canvas_create(ui_ScreenAlbum);
     lv_obj_set_width(ui_ImageScreenAlbum, 240);
     lv_obj_set_height(ui_ImageScreenAlbum, 240);
     lv_obj_set_align(ui_ImageScreenAlbum, LV_ALIGN_CENTER);

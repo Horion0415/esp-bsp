@@ -5,6 +5,7 @@
 
 #include "ui_extra.h"
 #include "app_video_stream.h"
+#include "app_album.h"
 
 static const char *TAG = "app_control";
 
@@ -23,8 +24,16 @@ static void btn_handler(void *arg, void *data)
         ui_extra_btn_menu();
     } else if((int)data == BSP_BUTTON_2) {
         ui_extra_btn_up();
+        if(ui_extra_get_current_page() == UI_PAGE_ALBUM) {
+            printf("prev image\n");
+            app_album_prev_image();
+        }
     } else if((int)data == BSP_BUTTON_3) {
         ui_extra_btn_down();
+        if(ui_extra_get_current_page() == UI_PAGE_ALBUM) {
+            printf("next image\n");
+            app_album_next_image();
+        }
     } else if((int)data == BSP_BUTTON_ED) {
         ui_extra_btn_encoder();
         if(ui_extra_get_current_page() == UI_PAGE_CAMERA) {
