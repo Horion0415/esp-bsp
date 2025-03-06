@@ -45,7 +45,7 @@ static lv_timer_t *lv_additional_photo_timer = NULL;
 static bool is_sd_card_mounted = false;
 static bool is_usb_disk_mounted = false;
 typedef struct {
-    const char** options;  
+    const char* const* options;  
     int option_count;      
     int current_option;    
     lv_obj_t* label;       
