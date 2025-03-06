@@ -929,18 +929,12 @@ void ui_extra_btn_encoder(void)
         case UI_PAGE_MAIN:
             ui_extra_btn_menu();
             break;
-        case UI_PAGE_CAMERA:
+        case UI_PAGE_INTERVAL_CAM:
             ui_extra_clear_page();
             lv_label_set_text_fmt(ui_LabelPanelCanvasPopupIntervalTimer, "Starting %d min", interval_time);
             lv_obj_clear_flag(ui_PanelCanvasPopupIntervalTimerWarning, LV_OBJ_FLAG_HIDDEN);
             
             lv_additional_photo_timer = lv_timer_create(pop_up_additional_photo_callback, 5000, ui_PanelCanvasPopupCameraInterval);
-            break;
-        case UI_PAGE_INTERVAL_CAM:
-            break;
-        case UI_PAGE_VIDEO_MODE:
-            break;
-        case UI_PAGE_SETTINGS:
             break;
         default:
             break;
