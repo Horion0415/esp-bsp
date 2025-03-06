@@ -38,6 +38,7 @@ typedef struct {
 
 static album_context_t album_ctx;
 static size_t data_cache_line_size = 0;
+static size_t tx_buffer_size = 0;
 
 // Scan images from SD card
 static esp_err_t app_album_scan_images(void) {
@@ -148,12 +149,12 @@ static esp_err_t app_album_load_current_image(void) {
 
     jpeg_decode_cfg_t decode_cfg_rgb = {
         .output_format = JPEG_DECODE_OUT_FORMAT_RGB565,
-        .rgb_order = JPEG_DEC_RGB_ELEMENT_ORDER_BGR,
+        .rgb_order = JPEG_DEC_RGB_ELEMENT_ORDER_RGB,
     };
     ESP_ERROR_CHECK(jpeg_decoder_get_info(album_ctx.img_buffer, album_ctx.buffer_size, &header_info));
     ESP_LOGI(TAG, "header parsed, width is %" PRId32 ", height is %" PRId32, header_info.width, header_info.height);
         
-    ESP_ERROR_CHECK(jpeg_decoder_process(album_ctx.jpeg_handle, &decode_cfg_rgb, album_ctx.img_buffer, album_ctx.buffer_size, album_ctx.ppa_buffer, app_video_get_buf_size(), &out_size));
+    ESP_ERROR_CHECK(jpeg_decoder_process(album_ctx.jpeg_handle, &decode_cfg_rgb, album_ctx.img_buffer, album_ctx.buffer_size, album_ctx.ppa_buffer, tx_buffer_size, &out_size));
     
     ppa_srm_oper_config_t srm_config = {
         .in.buffer = album_ctx.ppa_buffer,
@@ -210,6 +211,7 @@ static esp_err_t app_album_display_current_image(void) {
 // Switch to next image
 esp_err_t app_album_next_image(void) {
     if (album_ctx.count == 0) {
+        ESP_LOGE(TAG, "No images available");
         return ESP_FAIL;
     }
     
@@ -226,6 +228,7 @@ esp_err_t app_album_next_image(void) {
 // Switch to previous image
 esp_err_t app_album_prev_image(void) {
     if (album_ctx.count == 0) {
+        ESP_LOGE(TAG, "No images available");
         return ESP_FAIL;
     }
     
@@ -254,11 +257,14 @@ esp_err_t app_album_init(lv_obj_t *parent) {
         ESP_LOGE(TAG, "Failed to create LVGL canvas object");
         return ESP_FAIL;
     }
+
+    ESP_ERROR_CHECK(esp_cache_get_alignment(MALLOC_CAP_SPIRAM, &data_cache_line_size));
     
     // Allocate canvas buffer (RGB565 format: 2 bytes per pixel)
     size_t canvas_buf_size = album_ctx.canvas_width * album_ctx.canvas_height * 2;
     // album_ctx.canvas_buffer = heap_caps_aligned_calloc(16, 1, canvas_buf_size, MALLOC_CAP_SPIRAM);
-    album_ctx.canvas_buffer = heap_caps_malloc(canvas_buf_size, MALLOC_CAP_SPIRAM);
+    // album_ctx.canvas_buffer = heap_caps_malloc(canvas_buf_size, MALLOC_CAP_SPIRAM);
+    album_ctx.canvas_buffer = heap_caps_aligned_calloc(data_cache_line_size, 1, canvas_buf_size, MALLOC_CAP_SPIRAM);
     if (!album_ctx.canvas_buffer) {
         ESP_LOGE(TAG, "Failed to allocate canvas buffer");
         return ESP_FAIL;
@@ -276,13 +282,18 @@ esp_err_t app_album_init(lv_obj_t *parent) {
     //     return ret;
     // }
 
+    //PPA client config
     ppa_client_config_t ppa_srm_config = {
         .oper_type = PPA_OPERATION_SRM,
     };
     ESP_ERROR_CHECK(ppa_register_client(&ppa_srm_config, &album_ctx.ppa_handle));
-    ESP_ERROR_CHECK(esp_cache_get_alignment(MALLOC_CAP_SPIRAM, &data_cache_line_size));
 
-    album_ctx.ppa_buffer = heap_caps_malloc(app_video_get_buf_size(), MALLOC_CAP_SPIRAM);
+    //jpeg decode memory alloc config
+    jpeg_decode_memory_alloc_cfg_t tx_mem_cfg = {
+        .buffer_direction = JPEG_DEC_ALLOC_OUTPUT_BUFFER,
+    };
+
+    album_ctx.ppa_buffer = jpeg_alloc_decoder_mem(1920 * 1088 * 3, &tx_mem_cfg, &tx_buffer_size);
     if (!album_ctx.ppa_buffer) {
         ESP_LOGE(TAG, "Failed to allocate PPA buffer");
         return ESP_FAIL;
