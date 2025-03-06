@@ -29,9 +29,8 @@ static lv_obj_t * scroll_cont = NULL;
 static lv_obj_t * info_label = NULL;  
 
 static ui_page_t current_page = UI_PAGE_MAIN;
-static int current_settings_item = 0;
 
-lv_timer_t *lv_popup_timer = NULL;
+static lv_timer_t *lv_popup_timer = NULL;
 
 typedef struct {
     const char** options;  
@@ -41,6 +40,7 @@ typedef struct {
 } setting_options_t;
 
 // All settings options
+static int current_settings_item = 0;
 static lv_obj_t* settings_items[4]; 
 static setting_options_t settings_options[4];
 static settings_info_t current_settings;
