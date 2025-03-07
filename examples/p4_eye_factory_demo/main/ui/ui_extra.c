@@ -562,12 +562,6 @@ static void update_settings_focus(int new_item)
     ESP_LOGD(TAG, "Settings: selected item %d", current_settings_item);
 }
 
-void ui_extra_stop_interval_photo(void)
-{
-    app_video_stream_stop_interval_photo();
-    app_extra_set_saved_photo_count(0);
-}
-
 // Redirect to page functions
 static void ui_extra_redirect_to_main_page(void)
 {

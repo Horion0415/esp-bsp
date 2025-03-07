@@ -113,6 +113,12 @@ esp_err_t app_video_stream_stop_interval_photo(void)
     return ESP_OK;
 }
 
+// void app_video_stream_stop_interval_photo(void)
+// {
+//     app_video_stream_stop_interval_photo();
+//     app_extra_set_saved_photo_count(0);
+// }
+
 // // Check if there is a pending interval photo
 // esp_err_t app_video_stream_check_interval_wakeup(void)
 // {
