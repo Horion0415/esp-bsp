@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include "esp_log.h"
+#include "esp_sleep.h"
 #include "esp_private/esp_cache_private.h"
 #include "driver/ppa.h"
 #include "driver/jpeg_encode.h"
@@ -28,6 +29,10 @@ static int scale_level_res[SCALE_LEVELS] = {960, 480, 240, 120, 80, 60};
 static bool is_take_photo = false;
 static bool is_take_video = false;
 
+static bool is_interval_photo_active = false;
+static uint32_t next_wake_time = 0;
+static uint16_t current_interval_minutes = 0;
+
 static TaskHandle_t photo_task_handle = NULL;
 static QueueHandle_t photo_queue = NULL;
 
@@ -39,6 +44,112 @@ typedef struct {
 
 static void photo_task(void *pvParameters);
 static void camera_video_frame_operation(uint8_t *camera_buf, uint8_t camera_buf_index, uint32_t camera_buf_hes, uint32_t camera_buf_ves, size_t camera_buf_len);
+
+// Enter deep sleep
+static void enter_deep_sleep(uint16_t sleep_minutes)
+{
+    // Calculate the next wake up time (current time + interval time)
+    next_wake_time = esp_timer_get_time() / 1000000 + sleep_minutes * 60;
+    
+    // Save the interval photo state
+    app_storage_save_interval_state(is_interval_photo_active, next_wake_time);
+    
+    // Set the wake up time (microseconds)
+    uint64_t sleep_time_us = sleep_minutes * 60 * 1000000ULL;
+    
+    ESP_LOGI(TAG, "Entering deep sleep for %d minutes", sleep_minutes);
+    
+    // Configure the RTC wake up timer
+    esp_sleep_enable_timer_wakeup(sleep_time_us);
+    
+    // Enter deep sleep
+    esp_deep_sleep_start();
+}
+
+// Handle the interval photo complete callback
+static void interval_photo_complete_callback(void)
+{
+    ESP_LOGI(TAG, "Interval photo completed, saved photo count: %d", app_extra_get_saved_photo_count());
+    
+    // If the interval photo is still active, enter deep sleep
+    if (is_interval_photo_active) {
+        // Delay for a while to ensure the photo is saved
+        vTaskDelay(pdMS_TO_TICKS(1000));
+        
+        // Enter deep sleep until the next photo time
+        enter_deep_sleep(current_interval_minutes);
+    }
+}
+
+// Start interval photo
+esp_err_t app_video_stream_start_interval_photo(uint16_t interval_minutes)
+{
+    current_interval_minutes = interval_minutes;
+    is_interval_photo_active = true;
+    
+    // Save the interval photo state
+    next_wake_time = esp_timer_get_time() / 1000000 + interval_minutes * 60;
+    app_storage_save_interval_state(true, next_wake_time);
+    
+    // Take a photo immediately
+    app_video_stream_take_photo();
+    ESP_LOGI(TAG, "Interval photo started with interval %d minutes", interval_minutes);
+    
+    return ESP_OK;
+}
+
+// Stop interval photo
+esp_err_t app_video_stream_stop_interval_photo(void)
+{
+    is_interval_photo_active = false;
+    
+    // Save the interval photo state (close)
+    app_storage_save_interval_state(false, 0);
+    
+    ESP_LOGI(TAG, "Interval photo stopped");
+    
+    return ESP_OK;
+}
+
+// // Check if there is a pending interval photo
+// esp_err_t app_video_stream_check_interval_wakeup(void)
+// {
+//     bool is_active = false;
+//     uint32_t wake_time = 0;
+    
+//     esp_err_t err = app_storage_get_interval_state(&is_active, &wake_time);
+//     if (err != ESP_OK) {
+//         return err;
+//     }
+    
+//     if (is_active) {
+//         // Get the current interval time
+//         settings_info_t settings;
+//         uint16_t interval_time;
+//         uint16_t magnification;
+        
+//         err = app_storage_load_settings(&settings, &interval_time, &magnification);
+//         if (err != ESP_OK) {
+//             return err;
+//         }
+        
+//         // Set the current interval time
+//         current_interval_minutes = interval_time;
+        
+//         // Set the timed shooting flag
+//         is_interval_photo_active = true;
+        
+//         // Take a photo immediately
+//         app_video_stream_take_photo();
+//         app_extra_set_saved_photo_count(app_extra_get_saved_photo_count() + 1);
+        
+//         ESP_LOGI(TAG, "Woke up for interval photo, interval: %d minutes", interval_time);
+        
+//         // The photo will be taken after the photo is completed
+//     }
+    
+//     return ESP_OK;
+// }
 
 void swap_rgb565_bytes(uint16_t *buffer, int pixel_count)
 {
@@ -152,6 +263,9 @@ esp_err_t app_video_stream_init(i2c_master_bus_handle_t i2c_handle)
     // Start the camera stream task
     ESP_ERROR_CHECK(app_video_stream_task_start(video_cam_fd0, 0));
 
+    // // Check if there is a pending interval photo
+    // app_video_stream_check_interval_wakeup();
+
     return ret;
 }
 
@@ -186,6 +300,11 @@ static esp_err_t take_and_save_photo(uint8_t *camera_buf, uint32_t width, uint32
     bsp_led_set(BSP_LED_WHITE, false);
     bsp_display_backlight_on();
     
+    if (is_interval_photo_active) {
+        app_extra_set_saved_photo_count(app_extra_get_saved_photo_count() + 1);
+        interval_photo_complete_callback();
+    }
+
     return ret;
 }
 

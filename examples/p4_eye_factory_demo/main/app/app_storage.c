@@ -19,6 +19,252 @@ static uint32_t pic_num = 0;
 
 static const char *TAG = "app_storage";
 
+// Nvs namespace and key name definition
+#define NVS_NAMESPACE "p4_eye_cfg"
+#define NVS_KEY_LANGUAGE "language"
+#define NVS_KEY_RESOLUTION "resolution"
+#define NVS_KEY_FLASH "flash"
+#define NVS_KEY_INTERVAL_TIME "int_time"
+#define NVS_KEY_MAGNIFICATION "magnify"
+#define NVS_KEY_INTERVAL_ACTIVE "int_active"  // timed shooting flag
+#define NVS_KEY_NEXT_WAKE_TIME "wake_time"    // next wake time
+
+// Save timed shooting state
+esp_err_t app_storage_save_interval_state(bool is_active, uint32_t next_wake_time)
+{
+    nvs_handle_t nvs_handle;
+    esp_err_t err;
+    
+    // Open NVS namespace
+    err = nvs_open(NVS_NAMESPACE, NVS_READWRITE, &nvs_handle);
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "Error opening NVS handle: %s", esp_err_to_name(err));
+        return err;
+    }
+    
+    // Save timed shooting flag
+    err = nvs_set_u8(nvs_handle, NVS_KEY_INTERVAL_ACTIVE, is_active ? 1 : 0);
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "Error saving interval active flag: %s", esp_err_to_name(err));
+        nvs_close(nvs_handle);
+        return err;
+    }
+    
+    // Save next wake time
+    err = nvs_set_u32(nvs_handle, NVS_KEY_NEXT_WAKE_TIME, next_wake_time);
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "Error saving next wake time: %s", esp_err_to_name(err));
+        nvs_close(nvs_handle);
+        return err;
+    }
+    
+    // Commit changes
+    err = nvs_commit(nvs_handle);
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "Error committing NVS: %s", esp_err_to_name(err));
+        nvs_close(nvs_handle);
+        return err;
+    }
+    
+    // Close NVS handle
+    nvs_close(nvs_handle);
+    ESP_LOGI(TAG, "Interval state saved: active=%d, next_wake=%u", is_active, next_wake_time);
+    
+    return ESP_OK;
+}
+
+// Get timed shooting state
+esp_err_t app_storage_get_interval_state(bool *is_active, uint32_t *next_wake_time)
+{
+    nvs_handle_t nvs_handle;
+    esp_err_t err;
+    
+    // Open NVS namespace
+    err = nvs_open(NVS_NAMESPACE, NVS_READONLY, &nvs_handle);
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "Error opening NVS handle: %s", esp_err_to_name(err));
+        return err;
+    }
+    
+    // Get timed shooting flag
+    uint8_t active_flag = 0;
+    err = nvs_get_u8(nvs_handle, NVS_KEY_INTERVAL_ACTIVE, &active_flag);
+    if (err == ESP_OK) {
+        *is_active = (active_flag == 1);
+    } else if (err == ESP_ERR_NVS_NOT_FOUND) {
+        *is_active = false;
+        err = ESP_OK;
+    } else {
+        ESP_LOGE(TAG, "Error getting interval active flag: %s", esp_err_to_name(err));
+        nvs_close(nvs_handle);
+        return err;
+    }
+    
+    // Get next wake time
+    err = nvs_get_u32(nvs_handle, NVS_KEY_NEXT_WAKE_TIME, next_wake_time);
+    if (err == ESP_ERR_NVS_NOT_FOUND) {
+        *next_wake_time = 0;
+        err = ESP_OK;
+    } else if (err != ESP_OK) {
+        ESP_LOGE(TAG, "Error getting next wake time: %s", esp_err_to_name(err));
+        nvs_close(nvs_handle);
+        return err;
+    }
+    
+    // Close NVS handle
+    nvs_close(nvs_handle);
+    ESP_LOGI(TAG, "Interval state loaded: active=%d, next_wake=%u", *is_active, *next_wake_time);
+    
+    return ESP_OK;
+}
+
+// Save settings to NVS
+esp_err_t app_storage_save_settings(settings_info_t *settings, uint16_t interval_time, uint16_t magnification)
+{
+    nvs_handle_t nvs_handle;
+    esp_err_t err;
+    
+    // Open NVS namespace
+    err = nvs_open(NVS_NAMESPACE, NVS_READWRITE, &nvs_handle);
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "Error opening NVS handle: %s", esp_err_to_name(err));
+        return err;
+    }
+    
+    // Save language settings
+    uint8_t language_idx = 0;
+    if (strcmp(settings->language, "Chinese") == 0) {
+        language_idx = 1;
+    }
+    err = nvs_set_u8(nvs_handle, NVS_KEY_LANGUAGE, language_idx);
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "Error saving language: %s", esp_err_to_name(err));
+        nvs_close(nvs_handle);
+        return err;
+    }
+    
+    // Save resolution settings
+    uint8_t resolution_idx = 0;
+    if (strcmp(settings->resolution, "1080P") == 0) {
+        resolution_idx = 1;
+    } else if (strcmp(settings->resolution, "480P") == 0) {
+        resolution_idx = 2;
+    }
+    err = nvs_set_u8(nvs_handle, NVS_KEY_RESOLUTION, resolution_idx);
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "Error saving resolution: %s", esp_err_to_name(err));
+        nvs_close(nvs_handle);
+        return err;
+    }
+    
+    // Save flash settings
+    uint8_t flash_idx = 0;
+    if (strcmp(settings->flash, "On") == 0) {
+        flash_idx = 1;
+    }
+    err = nvs_set_u8(nvs_handle, NVS_KEY_FLASH, flash_idx);
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "Error saving flash: %s", esp_err_to_name(err));
+        nvs_close(nvs_handle);
+        return err;
+    }
+    
+    // Save timed time
+    err = nvs_set_u16(nvs_handle, NVS_KEY_INTERVAL_TIME, interval_time);
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "Error saving interval time: %s", esp_err_to_name(err));
+        nvs_close(nvs_handle);
+        return err;
+    }
+    
+    // Save magnification
+    err = nvs_set_u16(nvs_handle, NVS_KEY_MAGNIFICATION, magnification);
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "Error saving magnification: %s", esp_err_to_name(err));
+        nvs_close(nvs_handle);
+        return err;
+    }
+    
+    // Commit changes
+    err = nvs_commit(nvs_handle);
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "Error committing NVS: %s", esp_err_to_name(err));
+        nvs_close(nvs_handle);
+        return err;
+    }
+    
+    // Close NVS handle
+    nvs_close(nvs_handle);
+    ESP_LOGI(TAG, "Settings saved to NVS successfully");
+    
+    return ESP_OK;
+}
+
+// Load settings from NVS
+esp_err_t app_storage_load_settings(settings_info_t *settings, uint16_t *interval_time, uint16_t *magnification)
+{
+    nvs_handle_t nvs_handle;
+    esp_err_t err;
+    
+    // Open NVS namespace
+    err = nvs_open(NVS_NAMESPACE, NVS_READONLY, &nvs_handle);
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "Error opening NVS handle: %s", esp_err_to_name(err));
+        return err;
+    }
+    
+    // Load language settings
+    uint8_t language_idx = 0;
+    err = nvs_get_u8(nvs_handle, NVS_KEY_LANGUAGE, &language_idx);
+    if (err == ESP_OK) {
+        settings->language = (language_idx == 1) ? "Chinese" : "English";
+    } else if (err != ESP_ERR_NVS_NOT_FOUND) {
+        ESP_LOGE(TAG, "Error loading language: %s", esp_err_to_name(err));
+    }
+    
+    // Load resolution settings
+    uint8_t resolution_idx = 0;
+    err = nvs_get_u8(nvs_handle, NVS_KEY_RESOLUTION, &resolution_idx);
+    if (err == ESP_OK) {
+        if (resolution_idx == 0) {
+            settings->resolution = "720P";
+        } else if (resolution_idx == 1) {
+            settings->resolution = "1080P";
+        } else {
+            settings->resolution = "480P";
+        }
+    } else if (err != ESP_ERR_NVS_NOT_FOUND) {
+        ESP_LOGE(TAG, "Error loading resolution: %s", esp_err_to_name(err));
+    }
+    
+    // Load flash settings
+    uint8_t flash_idx = 0;
+    err = nvs_get_u8(nvs_handle, NVS_KEY_FLASH, &flash_idx);
+    if (err == ESP_OK) {
+        settings->flash = (flash_idx == 1) ? "On" : "Off";
+    } else if (err != ESP_ERR_NVS_NOT_FOUND) {
+        ESP_LOGE(TAG, "Error loading flash: %s", esp_err_to_name(err));
+    }
+    
+    // Load timed time
+    err = nvs_get_u16(nvs_handle, NVS_KEY_INTERVAL_TIME, interval_time);
+    if (err != ESP_OK && err != ESP_ERR_NVS_NOT_FOUND) {
+        ESP_LOGE(TAG, "Error loading interval time: %s", esp_err_to_name(err));
+    }
+    
+    // Load magnification
+    err = nvs_get_u16(nvs_handle, NVS_KEY_MAGNIFICATION, magnification);
+    if (err != ESP_OK && err != ESP_ERR_NVS_NOT_FOUND) {
+        ESP_LOGE(TAG, "Error loading magnification: %s", esp_err_to_name(err));
+    }
+    
+    // Close NVS handle
+    nvs_close(nvs_handle);
+    ESP_LOGI(TAG, "Settings loaded from NVS successfully");
+    
+    return ESP_OK;
+}
+
 // Find the highest picture number in the directory to continue incrementing
 static void app_storage_find_max_pic_num(void) 
 {
@@ -81,7 +327,24 @@ esp_err_t app_storage_save_picture(const uint8_t *data, size_t len)
 }
 
 esp_err_t app_storage_init(void){
-    esp_err_t ret = bsp_sdcard_mount();
+    // Initialize NVS
+    esp_err_t ret = nvs_flash_init();
+    if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
+        ESP_ERROR_CHECK(nvs_flash_erase());
+        ret = nvs_flash_init();
+    }
+    ESP_ERROR_CHECK(ret);
+
+    bool is_interval_active = false;
+    uint32_t next_wake_time = 0;
+
+    ret = app_storage_get_interval_state(&is_interval_active, &next_wake_time);
+    if (ret == ESP_OK && is_interval_active) {
+        // Set wake flag, take photos later after camera initialization
+        ESP_LOGI(TAG, "Device woke up for interval photography, next wake time: %u", next_wake_time);
+    }
+
+    ret = bsp_sdcard_mount();
     if(ret != ESP_OK){
         ESP_LOGW(TAG, "Failed to mount the SD card");
         bsp_display_lock(0);

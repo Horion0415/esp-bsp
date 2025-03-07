@@ -3,6 +3,9 @@
 #include "lvgl.h"
 
 #include "ui_extra.h"
+
+#include "app_storage.h"
+
 #define IMG_BASE_ZOOM       60
 #define BTN_ZOOM_FACTOR     2.3
 #define IMG_ZOOM_FACTOR     2.4
@@ -76,6 +79,15 @@ static const PageMapping page_map[] = {
 };
 
 // Other functions
+static void save_current_settings(void)
+{
+    settings_info_t *settings = &current_settings;
+    uint16_t interval = interval_time;
+    uint16_t magnify = magnification_factor;
+    
+    app_storage_save_settings(settings, interval, magnify);
+}
+
 static void update_setting_display(int setting_index) {
     if (setting_index < 0 || setting_index >= 4) {
         ESP_LOGW(TAG, "Invalid setting index: %d", setting_index);
@@ -103,6 +115,8 @@ static void update_setting_display(int setting_index) {
             break;
     }
     
+    save_current_settings();
+
     ESP_LOGD(TAG, "Setting %d updated to: %s", setting_index, current_text);
 }
 
@@ -524,6 +538,8 @@ static void pop_up_additional_photo_callback(lv_timer_t * timer)
         lv_obj_clear_flag(ui_LabelCanvasInvervalTime, LV_OBJ_FLAG_HIDDEN);
 
         is_sd_card_mounted ? lv_obj_clear_flag(ui_ImageCanvasSDcard, LV_OBJ_FLAG_HIDDEN) : lv_obj_clear_flag(ui_ImageCanvasNOSDcard, LV_OBJ_FLAG_HIDDEN);
+    } else if(timer->user_data == ui_PanelCanvasPopupCameraInterval) {
+        app_video_stream_start_interval_photo(interval_time);
     }
 
     if(lv_additional_photo_timer){
@@ -543,6 +559,12 @@ static void update_settings_focus(int new_item)
     current_settings_item = new_item;
     lv_event_send(settings_items[current_settings_item], LV_EVENT_FOCUSED, NULL);
     ESP_LOGD(TAG, "Settings: selected item %d", current_settings_item);
+}
+
+void ui_extra_stop_interval_photo(void)
+{
+    app_video_stream_stop_interval_photo();
+    app_extra_set_saved_photo_count(0);
 }
 
 // Redirect to page functions
@@ -763,6 +785,8 @@ void app_extra_set_magnification_factor(uint16_t factor)
     magnification_factor = factor;
     
     lv_label_set_text_fmt(ui_LabelCanvasFactor, "%dX", magnification_factor);
+
+    save_current_settings();
 }
 
 uint16_t app_extra_get_magnification_factor(void)
@@ -793,6 +817,8 @@ void app_extra_set_interval_time(uint16_t time)
     interval_time = time;
 
     lv_label_set_text_fmt(ui_LabelCanvasInvervalTime, "%dmin", interval_time);
+
+    save_current_settings();
 }
 
 uint16_t app_extra_get_interval_time(void)
@@ -1020,6 +1046,59 @@ void ui_extra_init(void)
     init_settings_options();
 
     lv_scroll_create();
+
+    // Load settings from NVS
+    settings_info_t settings;
+    uint16_t loaded_interval_time;
+    uint16_t loaded_magnification;
+    
+    // Set default values
+    settings.language = language_options[0];
+    settings.resolution = resolution_options[0];
+    settings.flash = flash_options[0];
+    loaded_interval_time = DEFAULT_INTERVAL_TIME;
+    loaded_magnification = DEFAULT_MAGNIFICATION_FACTOR;
+    
+    // Load settings from NVS
+    esp_err_t err = app_storage_load_settings(&settings, &loaded_interval_time, &loaded_magnification);
+    if (err == ESP_OK) {
+        // Apply loaded settings
+        // Update language settings
+        for (int i = 0; i < settings_options[0].option_count; i++) {
+            if (strcmp(settings.language, settings_options[0].options[i]) == 0) {
+                settings_options[0].current_option = i;
+                break;
+            }
+        }
+        
+        // Update resolution settings
+        for (int i = 0; i < settings_options[1].option_count; i++) {
+            if (strcmp(settings.resolution, settings_options[1].options[i]) == 0) {
+                settings_options[1].current_option = i;
+                break;
+            }
+        }
+        
+        // Update flash settings
+        for (int i = 0; i < settings_options[2].option_count; i++) {
+            if (strcmp(settings.flash, settings_options[2].options[i]) == 0) {
+                settings_options[2].current_option = i;
+                break;
+            }
+        }
+        
+        // Update current settings
+        current_settings.language = settings.language;
+        current_settings.resolution = settings.resolution;
+        current_settings.flash = settings.flash;
+        
+        // Update interval time and magnification
+        interval_time = loaded_interval_time;
+        magnification_factor = loaded_magnification;
+        
+        // Update display
+        init_settings_display();
+    }
 
     // redirect to the main page
     ui_extra_goto_page(UI_PAGE_MAIN);
