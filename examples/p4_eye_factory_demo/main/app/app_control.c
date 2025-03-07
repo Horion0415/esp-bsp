@@ -1,6 +1,9 @@
 #include <stdio.h>
 #include "esp_log.h"
 #include "esp_timer.h"
+#include "esp_sleep.h"
+#include "esp_system.h"
+#include "driver/gpio.h"
 #include "bsp/esp-bsp.h"
 
 #include "ui_extra.h"
@@ -126,6 +129,15 @@ void app_control_set_knob_sensitivity(int threshold)
 
 esp_err_t app_control_init(void)
 {
+    // Initialize the wake buttons
+    const gpio_config_t config = {
+        .pin_bit_mask = BIT(BSP_BUTTON_NUM1) | BIT(BSP_BUTTON_NUM2) | BIT(BSP_BUTTON_NUM3) | BIT(BSP_BUTTON_ENCODER),
+        .mode = GPIO_MODE_INPUT,
+    };
+
+    ESP_ERROR_CHECK(gpio_config(&config));
+    ESP_ERROR_CHECK(esp_deep_sleep_enable_gpio_wakeup(BIT(BSP_BUTTON_NUM1) | BIT(BSP_BUTTON_NUM2) | BIT(BSP_BUTTON_NUM3) | BIT(BSP_BUTTON_ENCODER), 0));
+
     // Initialize the buttons
     ESP_ERROR_CHECK(bsp_iot_button_create(btns, NULL, BSP_BUTTON_NUM));
     ESP_ERROR_CHECK(iot_button_register_cb(btns[BSP_BUTTON_1], BUTTON_PRESS_DOWN, btn_handler, (void *) BSP_BUTTON_1));
