@@ -28,12 +28,12 @@ void app_main(void)
     bsp_display_lock(0);
     ui_extra_init();
     bsp_display_unlock();
-    
-    bsp_display_backlight_on();
 
     // Initialize the storage
     ESP_LOGI(TAG, "Initialize the storage");
     ESP_ERROR_CHECK(app_storage_init());
+
+    bsp_display_backlight_on();
 
     // Initialize the application control module
     ESP_LOGI(TAG, "Initialize the application control module");
