@@ -3,6 +3,7 @@
 #include <fcntl.h>
 #include <string.h>
 #include "esp_log.h"
+#include "driver/gpio.h"
 #include "bsp/esp-bsp.h"
 #include "nvs_flash.h"
 #include "nvs.h"
@@ -327,7 +328,13 @@ esp_err_t app_storage_save_picture(const uint8_t *data, size_t len)
     return ESP_OK;
 }
 
-esp_err_t app_storage_init(void){
+esp_err_t app_storage_init(void) {
+    bool is_interval_active = false;
+    uint32_t next_wake_time = 0;
+    uint16_t interval_time = 0;
+    settings_info_t settings;
+    uint16_t magnification;
+    
     // Initialize NVS
     esp_err_t ret = nvs_flash_init();
     if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
@@ -336,22 +343,35 @@ esp_err_t app_storage_init(void){
     }
     ESP_ERROR_CHECK(ret);
 
-    bool is_interval_active = false;
-    uint32_t next_wake_time = 0;
-    uint16_t interval_time = 0;
-    settings_info_t settings;
-    uint16_t magnification;
+    const gpio_config_t config = {
+        .pin_bit_mask = BIT(BSP_BUTTON_NUM1) | BIT(BSP_BUTTON_NUM2) | BIT(BSP_BUTTON_NUM3) | BIT(BSP_BUTTON_ENCODER),
+        .mode = GPIO_MODE_INPUT,
+    };
 
-    ret = app_storage_get_interval_state(&is_interval_active, &next_wake_time);
-    if (ret == ESP_OK && is_interval_active) {
-        // load settings
-        ret = app_storage_load_settings(&settings, &interval_time, &magnification);
-        if (ret == ESP_OK) {
-            // use interval time
-            app_video_stream_start_interval_photo(interval_time);
-            ESP_LOGI(TAG, "Device woke up for interval photography, interval time: %u minutes", interval_time);
-        } else {
-            ESP_LOGE(TAG, "Failed to load interval time settings");
+    ESP_ERROR_CHECK(gpio_config(&config));
+    ESP_ERROR_CHECK(esp_deep_sleep_enable_gpio_wakeup(BIT(BSP_BUTTON_NUM1) | BIT(BSP_BUTTON_NUM2) | BIT(BSP_BUTTON_NUM3) | BIT(BSP_BUTTON_ENCODER), 0));
+
+    deep_sleep_register_rtc_timer_wakeup();
+
+    if(!(esp_sleep_get_wakeup_cause() == ESP_SLEEP_WAKEUP_TIMER)) {
+        ESP_LOGI(TAG, "Device woke up for interval photography");
+        
+        app_video_stream_stop_interval_photo();
+        app_extra_set_saved_photo_count(0);
+    } else {
+        ESP_LOGI(TAG, "Device woke up for interval photography");
+
+        ret = app_storage_get_interval_state(&is_interval_active, &next_wake_time);
+        if (ret == ESP_OK && is_interval_active) {
+            // load settings
+            ret = app_storage_load_settings(&settings, &interval_time, &magnification);
+            if (ret == ESP_OK) {
+                // use interval time
+                app_video_stream_start_interval_photo(interval_time);
+                ESP_LOGI(TAG, "Device woke up for interval photography, interval time: %u minutes", interval_time);
+            } else {
+                ESP_LOGE(TAG, "Failed to load interval time settings");
+            }
         }
     }
 
