@@ -338,12 +338,21 @@ esp_err_t app_storage_init(void){
 
     bool is_interval_active = false;
     uint32_t next_wake_time = 0;
+    uint16_t interval_time = 0;
+    settings_info_t settings;
+    uint16_t magnification;
 
     ret = app_storage_get_interval_state(&is_interval_active, &next_wake_time);
     if (ret == ESP_OK && is_interval_active) {
-        // Set wake flag, take photos later after camera initialization
-        app_video_stream_start_interval_photo(next_wake_time);
-        ESP_LOGI(TAG, "Device woke up for interval photography, next wake time: %u", next_wake_time);
+        // load settings
+        ret = app_storage_load_settings(&settings, &interval_time, &magnification);
+        if (ret == ESP_OK) {
+            // use interval time
+            app_video_stream_start_interval_photo(interval_time);
+            ESP_LOGI(TAG, "Device woke up for interval photography, interval time: %u minutes", interval_time);
+        } else {
+            ESP_LOGE(TAG, "Failed to load interval time settings");
+        }
     }
 
     ret = bsp_sdcard_mount();
