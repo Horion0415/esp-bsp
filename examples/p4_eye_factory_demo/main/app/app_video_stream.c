@@ -387,7 +387,7 @@ static void camera_video_frame_operation(uint8_t *camera_buf, uint8_t camera_buf
     lv_refr_now(NULL);
     bsp_display_unlock();
 
-    if(is_take_photo && ui_extra_get_current_page() == UI_PAGE_CAMERA) {
+    if(is_take_photo && (ui_extra_get_current_page() == UI_PAGE_CAMERA || ui_extra_get_current_page() == UI_PAGE_INTERVAL_CAM)) {
         photo_task_params_t params = {
             .camera_buf = camera_buf,
             .width = camera_buf_hes,
