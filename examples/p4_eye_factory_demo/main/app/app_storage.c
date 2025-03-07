@@ -3,6 +3,9 @@
 #include <fcntl.h>
 #include <string.h>
 #include "esp_log.h"
+#include "esp_sleep.h"
+#include "esp_timer.h"
+#include "esp_system.h"
 #include "driver/gpio.h"
 #include "bsp/esp-bsp.h"
 #include "nvs_flash.h"
@@ -351,11 +354,9 @@ esp_err_t app_storage_init(void) {
     ESP_ERROR_CHECK(gpio_config(&config));
     ESP_ERROR_CHECK(esp_deep_sleep_enable_gpio_wakeup(BIT(BSP_BUTTON_NUM1) | BIT(BSP_BUTTON_NUM2) | BIT(BSP_BUTTON_NUM3) | BIT(BSP_BUTTON_ENCODER), 0));
 
-    deep_sleep_register_rtc_timer_wakeup();
-
     if(!(esp_sleep_get_wakeup_cause() == ESP_SLEEP_WAKEUP_TIMER)) {
         ESP_LOGI(TAG, "Device woke up for interval photography");
-        
+
         app_video_stream_stop_interval_photo();
         app_extra_set_saved_photo_count(0);
     } else {
