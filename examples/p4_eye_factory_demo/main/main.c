@@ -21,6 +21,9 @@ void app_main(void)
     ESP_LOGI(TAG, "Initialize the P4 Eye");
     ESP_ERROR_CHECK(bsp_p4_eye_init());
 
+    // Initialize the LEDs
+    ESP_ERROR_CHECK(bsp_leds_init());
+
     // Initialize the display
     ESP_LOGI(TAG, "Initialize the display");
     bsp_display_start();

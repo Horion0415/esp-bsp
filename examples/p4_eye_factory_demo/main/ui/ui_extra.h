@@ -119,6 +119,12 @@ void app_extra_set_saved_photo_count(uint16_t count);
 uint16_t app_extra_get_saved_photo_count(void);
 
 /**
+ * @brief Get popup window visible status
+ * @return Whether popup window is visible
+ */
+bool ui_extra_get_popup_window_visible(void);
+
+/**
  * @brief Set USB disk mount status
  * @param mounted Whether USB disk is mounted
  */

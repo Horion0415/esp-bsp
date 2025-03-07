@@ -46,6 +46,7 @@ static lv_timer_t *lv_additional_photo_timer = NULL;
 
 static bool is_sd_card_mounted = false;
 static bool is_usb_disk_mounted = false;
+static bool is_popup_window_visible = false;
 typedef struct {
     const char* const* options;  
     int option_count;      
@@ -820,6 +821,21 @@ void ui_extra_set_usb_disk_mounted(bool mounted)
 bool ui_extra_get_usb_disk_mounted(void)
 {
     return is_usb_disk_mounted;
+}
+
+bool ui_extra_get_popup_window_visible(void)
+{
+    if(!lv_obj_has_flag(ui_PanelCanvasPopupCamera, LV_OBJ_FLAG_HIDDEN) || 
+       !lv_obj_has_flag(ui_PanelCanvasPopupCameraInterval, LV_OBJ_FLAG_HIDDEN) ||
+       !lv_obj_has_flag(ui_PanelCanvasPopupVideoMode, LV_OBJ_FLAG_HIDDEN) ||
+       !lv_obj_has_flag(ui_PanelCanvasPopupSDWarning, LV_OBJ_FLAG_HIDDEN) ||
+       !lv_obj_has_flag(ui_PanelCanvasPopupIntervalTimerWarning, LV_OBJ_FLAG_HIDDEN) ||
+       !lv_obj_has_flag(ui_PanelCanvasPopupIntervalTimerWarningEnd, LV_OBJ_FLAG_HIDDEN)) {
+        
+        return true;
+    }
+
+    return false;
 }
 
 // Button event handler

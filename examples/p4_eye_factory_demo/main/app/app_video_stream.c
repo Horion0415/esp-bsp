@@ -28,6 +28,16 @@ static int scale_level_res[SCALE_LEVELS] = {960, 480, 240, 120, 80, 60};
 static bool is_take_photo = false;
 static bool is_take_video = false;
 
+static TaskHandle_t photo_task_handle = NULL;
+static QueueHandle_t photo_queue = NULL;
+
+typedef struct {
+    uint8_t *camera_buf;
+    uint32_t width;
+    uint32_t height;
+} photo_task_params_t;
+
+static void photo_task(void *pvParameters);
 static void camera_video_frame_operation(uint8_t *camera_buf, uint8_t camera_buf_index, uint32_t camera_buf_hes, uint32_t camera_buf_ves, size_t camera_buf_len);
 
 void swap_rgb565_bytes(uint16_t *buffer, int pixel_count)
@@ -120,10 +130,95 @@ esp_err_t app_video_stream_init(i2c_master_bus_handle_t i2c_handle)
     // Register the video frame operation callback
     ESP_ERROR_CHECK(app_video_register_frame_operation_cb(camera_video_frame_operation));
 
+    photo_queue = xQueueCreate(2, sizeof(photo_task_params_t));
+    if (photo_queue == NULL) {
+        ESP_LOGE(TAG, "Failed to create photo queue");
+        return ESP_FAIL;
+    }
+    
+    BaseType_t task_created = xTaskCreate(
+        photo_task,
+        "photo_task",
+        4096,
+        NULL,
+        5,
+        &photo_task_handle);
+    
+    if (task_created != pdPASS) {
+        ESP_LOGE(TAG, "Failed to create photo task");
+        return ESP_FAIL;
+    }
+
     // Start the camera stream task
     ESP_ERROR_CHECK(app_video_stream_task_start(video_cam_fd0, 0));
 
     return ret;
+}
+
+static esp_err_t take_and_save_photo(uint8_t *camera_buf, uint32_t width, uint32_t height)
+{
+    esp_err_t ret = ESP_OK;
+    
+    bsp_display_backlight_off();
+    bsp_led_set(BSP_LED_WHITE, true);
+
+    jpeg_encode_cfg_t enc_config = {
+        .src_type = JPEG_ENCODE_IN_FORMAT_RGB565,
+        .sub_sample = JPEG_DOWN_SAMPLING_YUV420,
+        .image_quality = 70,
+        .width = width,
+        .height = height,
+    };
+
+    ret = jpeg_encoder_process(jpeg_handle, &enc_config, camera_buf, app_video_get_buf_size(), 
+                              jpg_buf, rx_buffer_size, &jpg_size);
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "JPEG encoding failed: 0x%x", ret);
+        bsp_display_backlight_on();
+        return ret;
+    }
+    
+    ret = app_storage_save_picture(jpg_buf, jpg_size);
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to save picture: 0x%x", ret);
+    }
+    
+    bsp_led_set(BSP_LED_WHITE, false);
+    bsp_display_backlight_on();
+    
+    return ret;
+}
+
+static void photo_task(void *pvParameters)
+{
+    photo_task_params_t params;
+    uint8_t *photo_buffer = NULL;
+    size_t buffer_size = app_video_get_buf_size();
+    
+    // malloc the photo buffer
+    photo_buffer = heap_caps_aligned_calloc(data_cache_line_size, 1, buffer_size, MALLOC_CAP_SPIRAM);
+    if (photo_buffer == NULL) {
+        ESP_LOGE(TAG, "Failed to allocate photo buffer");
+        vTaskDelete(NULL);
+        return;
+    }
+    
+    while (1) {
+        if (xQueueReceive(photo_queue, &params, portMAX_DELAY) == pdTRUE) {
+            // copy the image data to the local buffer
+            memcpy(photo_buffer, params.camera_buf, buffer_size);
+            
+            // handle the photo and save it
+            esp_err_t photo_ret = take_and_save_photo(photo_buffer, params.width, params.height);
+            if (photo_ret == ESP_OK) {
+                ESP_LOGI(TAG, "take and save photo success");
+            }
+        }
+    }
+    
+    // free the photo buffer
+    heap_caps_free(photo_buffer);
+    vTaskDelete(NULL);
 }
 
 static void camera_video_frame_operation(uint8_t *camera_buf, uint8_t camera_buf_index, uint32_t camera_buf_hes, uint32_t camera_buf_ves, size_t camera_buf_len)
@@ -174,13 +269,18 @@ static void camera_video_frame_operation(uint8_t *camera_buf, uint8_t camera_buf
     bsp_display_unlock();
 
     if(is_take_photo && ui_extra_get_current_page() == UI_PAGE_CAMERA) {
-        bsp_display_backlight_off();
+        photo_task_params_t params = {
+            .camera_buf = camera_buf,
+            .width = camera_buf_hes,
+            .height = camera_buf_ves
+        };
+        
+        // send the photo task params to the photo task
+        if (xQueueSend(photo_queue, &params, 0) != pdTRUE) {
+            ESP_LOGW(TAG, "photo queue is full, skip this photo");
+        }
 
-        ESP_ERROR_CHECK(jpeg_encoder_process(jpeg_handle, &enc_config, camera_buf, app_video_get_buf_size(), jpg_buf, rx_buffer_size, &jpg_size));
-        app_storage_save_picture(jpg_buf, jpg_size);
-        
-        bsp_display_backlight_on();
-        
+        // reset the photo flag
         is_take_photo = false;
     }
 }
