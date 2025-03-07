@@ -38,6 +38,8 @@ static void btn_handler(void *arg, void *data)
         ui_extra_btn_encoder();
         if(ui_extra_get_current_page() == UI_PAGE_CAMERA) {
             app_video_stream_take_photo();
+        } else if(ui_extra_get_current_page() == UI_PAGE_INTERVAL_CAM) {
+
         }
     }
     bsp_display_unlock();
