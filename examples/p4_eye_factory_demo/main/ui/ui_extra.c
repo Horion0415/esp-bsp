@@ -5,6 +5,7 @@
 #include "ui_extra.h"
 
 #include "app_storage.h"
+#include "app_video_stream.h"
 
 #define IMG_BASE_ZOOM       60
 #define BTN_ZOOM_FACTOR     2.3
@@ -49,7 +50,7 @@ static lv_timer_t *lv_additional_photo_timer = NULL;
 
 static bool is_sd_card_mounted = false;
 static bool is_usb_disk_mounted = false;
-static bool is_popup_window_visible = false;
+
 typedef struct {
     const char* const* options;  
     int option_count;      

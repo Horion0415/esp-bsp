@@ -13,6 +13,7 @@
 
 #include "ui_extra.h"
 #include "app_album.h"
+#include "app_video_stream.h"
 
 #define PIC_FOLDER_NAME "esp32_p4_pic_save"
 static uint32_t pic_num = 0;
@@ -341,6 +342,7 @@ esp_err_t app_storage_init(void){
     ret = app_storage_get_interval_state(&is_interval_active, &next_wake_time);
     if (ret == ESP_OK && is_interval_active) {
         // Set wake flag, take photos later after camera initialization
+        app_video_stream_start_interval_photo(next_wake_time);
         ESP_LOGI(TAG, "Device woke up for interval photography, next wake time: %u", next_wake_time);
     }
 

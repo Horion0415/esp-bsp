@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include "esp_log.h"
 #include "esp_sleep.h"
+#include "esp_timer.h"
 #include "esp_private/esp_cache_private.h"
 #include "driver/ppa.h"
 #include "driver/jpeg_encode.h"
@@ -9,6 +10,7 @@
 #include "ui_extra.h"
 #include "app_video.h"
 #include "app_storage.h"
+#include "app_video_stream.h"
 
 #define ALIGN_UP(num, align)    (((num) + ((align) - 1)) & ~((align) - 1))
 #define SCALE_LEVELS 6                         // resolution scale levels
@@ -368,14 +370,6 @@ static void camera_video_frame_operation(uint8_t *camera_buf, uint8_t camera_buf
         .rgb_swap = 0,
         .byte_swap = 0,
         .mode = PPA_TRANS_MODE_BLOCKING,
-    };
-
-    jpeg_encode_cfg_t enc_config = {
-        .src_type = JPEG_ENCODE_IN_FORMAT_RGB565,
-        .sub_sample = JPEG_DOWN_SAMPLING_YUV420,
-        .image_quality = 70,
-        .width = camera_buf_hes,
-        .height = camera_buf_ves,
     };
 
     ESP_ERROR_CHECK(ppa_do_scale_rotate_mirror(ppa_srm_handle, &srm_config));
