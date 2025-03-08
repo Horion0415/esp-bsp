@@ -30,7 +30,7 @@ static uint16_t interval_time = DEFAULT_INTERVAL_TIME;
 static uint16_t saved_photo_count = DEFAULT_SAVED_PHOTO_COUNT;
 
 // language options
-static const char* const language_options[] = {"English", "Chinese"};
+static const char* const language_options[] = {"English", "English"};
 // resolution options
 static const char* const resolution_options[] = {"720P", "1080P", "480P"};
 // flash options
@@ -945,6 +945,12 @@ void ui_extra_btn_menu(void)
             if(current_settings_item == 3 && settings_items[current_settings_item] == ui_PanelSettingsMenu) {
                 // If current setting item is menu item, return to main page
                 ui_extra_goto_page(UI_PAGE_MAIN);
+
+                if(strcmp(current_settings.flash, "On") == 0) {
+                    app_video_stream_set_flash_light(true);
+                } else {
+                    app_video_stream_set_flash_light(false);
+                }
             } else {
                 // Otherwise, cycle through options
                 setting_options_t* opt = &settings_options[current_settings_item];
@@ -1059,7 +1065,7 @@ void ui_extra_init(void)
     
     // Load settings from NVS
     esp_err_t err = app_storage_load_settings(&settings, &loaded_interval_time, &loaded_magnification);
-    ESP_LOGI(TAG, "loaded_interval_time: %d, loaded_magnification: %d", loaded_interval_time, loaded_magnification);
+    ESP_LOGD(TAG, "loaded_interval_time: %d, loaded_magnification: %d", loaded_interval_time, loaded_magnification);
     if (err == ESP_OK) {
         // Apply loaded settings
         // Update language settings
@@ -1090,6 +1096,12 @@ void ui_extra_init(void)
         current_settings.language = settings.language;
         current_settings.resolution = settings.resolution;
         current_settings.flash = settings.flash;
+
+        if(strcmp(current_settings.flash, "On") == 0) {
+            app_video_stream_set_flash_light(true);
+        } else {
+            app_video_stream_set_flash_light(false);
+        }
         
         // Update interval time and magnification
         interval_time = loaded_interval_time;

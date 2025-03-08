@@ -37,6 +37,8 @@ esp_err_t app_video_stream_start_interval_photo(uint16_t interval_minutes);
 esp_err_t app_video_stream_stop_interval_photo(void);
 esp_err_t app_video_stream_check_interval_wakeup(void);
 
+esp_err_t app_video_stream_set_flash_light(bool is_on);
+
 void swap_rgb565_bytes(uint16_t *buffer, int pixel_count);
 
 #ifdef __cplusplus

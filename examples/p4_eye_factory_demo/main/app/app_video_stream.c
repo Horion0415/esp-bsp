@@ -34,6 +34,7 @@ static bool is_take_photo = false;
 static bool is_take_video = false;
 static bool is_interval_photo_active = false;
 static bool is_camera_initialized = false;
+static bool is_flash_light_on = false;
 
 static uint32_t next_wake_time = 0;
 static uint16_t current_interval_minutes = 0;
@@ -163,6 +164,13 @@ esp_err_t app_video_stream_stop_take_video(void)
     return ESP_OK;
 }
 
+esp_err_t app_video_stream_set_flash_light(bool is_on)
+{
+    is_flash_light_on = is_on;
+
+    return ESP_OK;
+}
+
 esp_err_t app_video_stream_init(i2c_master_bus_handle_t i2c_handle)
 {
     // Initialize the PPA
@@ -257,7 +265,8 @@ static esp_err_t take_and_save_photo(uint8_t *camera_buf, uint32_t width, uint32
     esp_err_t ret = ESP_OK;
     
     bsp_display_backlight_off();
-    bsp_led_set(BSP_LED_WHITE, true);
+
+    is_flash_light_on ? bsp_led_set(BSP_LED_WHITE, true) : bsp_led_set(BSP_LED_WHITE, false);
 
     jpeg_encode_cfg_t enc_config = {
         .src_type = JPEG_ENCODE_IN_FORMAT_RGB565,
@@ -285,6 +294,7 @@ static esp_err_t take_and_save_photo(uint8_t *camera_buf, uint32_t width, uint32
     xSemaphoreGive(photo_take_sem);
 
     bsp_led_set(BSP_LED_WHITE, false);
+    
     bsp_display_backlight_on();
 
     if (is_interval_photo_active) {
