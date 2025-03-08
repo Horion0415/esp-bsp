@@ -12,6 +12,7 @@
 #include "app_storage.h"
 #include "app_video_stream.h"
 #include "app_album.h"
+
 #define ALIGN_UP(num, align)    (((num) + ((align) - 1)) & ~((align) - 1))
 #define SCALE_LEVELS 6                         // resolution scale levels
 #define DEBUG_MODE   1
@@ -60,7 +61,8 @@ static void enter_deep_sleep(uint16_t sleep_minutes)
     
     // Save the interval photo state
     app_storage_save_interval_state(is_interval_photo_active, next_wake_time);
-    
+    app_storage_save_photo_count(app_extra_get_saved_photo_count());
+
     // Set the wake up time (microseconds)
 #if DEBUG_MODE
     uint64_t sleep_time_us = sleep_minutes * 1000000ULL;
@@ -113,8 +115,10 @@ esp_err_t app_video_stream_stop_interval_photo(void)
     
     // Save the interval photo state (close)
     app_storage_save_interval_state(false, 0);
+
+    app_storage_save_photo_count(app_extra_get_saved_photo_count());
     
-    ESP_LOGW(TAG, "Interval photo stopped");
+    ESP_LOGI(TAG, "Interval photo stopped");
     
     return ESP_OK;
 }
@@ -234,6 +238,11 @@ esp_err_t app_video_stream_init(i2c_master_bus_handle_t i2c_handle)
         return ESP_FAIL;
     }
 
+    uint16_t saved_count = 0;
+    if (app_storage_get_photo_count(&saved_count) == ESP_OK) {
+        app_extra_set_saved_photo_count(saved_count);
+    }
+
     // Start the camera stream task
     ESP_ERROR_CHECK(app_video_stream_task_start(video_cam_fd0, 0));
 
@@ -326,7 +335,7 @@ static void camera_video_frame_operation(uint8_t *camera_buf, uint8_t camera_buf
 
     if(!is_camera_initialized) {
         camera_init_count++;
-        if(camera_init_count >= 10) {
+        if(camera_init_count >= 20) {
             is_camera_initialized = true;
             camera_init_count = 0;
         }

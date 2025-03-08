@@ -33,6 +33,73 @@ static const char *TAG = "app_storage";
 #define NVS_KEY_MAGNIFICATION "magnify"
 #define NVS_KEY_INTERVAL_ACTIVE "int_active"  // timed shooting flag
 #define NVS_KEY_NEXT_WAKE_TIME "wake_time"    // next wake time
+#define NVS_KEY_PHOTO_COUNT "photo_count"     // photo count
+
+
+esp_err_t app_storage_save_photo_count(uint16_t count)
+{
+    nvs_handle_t nvs_handle;
+    esp_err_t err;
+    
+    // Open NVS namespace
+    err = nvs_open(NVS_NAMESPACE, NVS_READWRITE, &nvs_handle);
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "Error opening NVS handle: %s", esp_err_to_name(err));
+        return err;
+    }
+    
+    // Save photo count
+    err = nvs_set_u16(nvs_handle, NVS_KEY_PHOTO_COUNT, count);
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "Error saving photo count: %s", esp_err_to_name(err));
+        nvs_close(nvs_handle);
+        return err;
+    }
+    
+    // Commit changes
+    err = nvs_commit(nvs_handle);
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "Error committing NVS: %s", esp_err_to_name(err));
+        nvs_close(nvs_handle);
+        return err;
+    }
+    
+    // Close NVS handle
+    nvs_close(nvs_handle);
+    ESP_LOGI(TAG, "Photo count saved: %d", count);
+    
+    return ESP_OK;
+}
+
+esp_err_t app_storage_get_photo_count(uint16_t *count)
+{
+    nvs_handle_t nvs_handle;
+    esp_err_t err;
+    
+    // Open NVS namespace
+    err = nvs_open(NVS_NAMESPACE, NVS_READONLY, &nvs_handle);
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "Error opening NVS handle: %s", esp_err_to_name(err));
+        return err;
+    }
+    
+    // Get photo count
+    err = nvs_get_u16(nvs_handle, NVS_KEY_PHOTO_COUNT, count);
+    if (err == ESP_ERR_NVS_NOT_FOUND) {
+        *count = 0;  // If not exist, set to 0
+        err = ESP_OK;
+    } else if (err != ESP_OK) {
+        ESP_LOGE(TAG, "Error getting photo count: %s", esp_err_to_name(err));
+        nvs_close(nvs_handle);
+        return err;
+    }
+    
+    // Close NVS handle
+    nvs_close(nvs_handle);
+    ESP_LOGI(TAG, "Photo count loaded: %d", *count);
+    
+    return ESP_OK;
+}
 
 // Save timed shooting state
 esp_err_t app_storage_save_interval_state(bool is_active, uint32_t next_wake_time)
@@ -342,6 +409,13 @@ esp_err_t app_storage_init(void) {
 
     if(!(esp_sleep_get_wakeup_cause() == ESP_SLEEP_WAKEUP_TIMER)) {
         ESP_LOGI(TAG, "other wake up");
+
+        app_storage_get_interval_state(&is_interval_active, &next_wake_time);
+        if(is_interval_active) {
+            ui_extra_goto_page(UI_PAGE_INTERVAL_CAM);
+            ui_extra_clear_page();
+            ui_extra_popup_interval_timer_warning();
+        }
 
         app_video_stream_stop_interval_photo();
         app_extra_set_saved_photo_count(0);

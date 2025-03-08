@@ -15,4 +15,8 @@ esp_err_t app_storage_load_settings(settings_info_t *settings, uint16_t *interva
 esp_err_t app_storage_save_interval_state(bool is_active, uint32_t next_wake_time);
 esp_err_t app_storage_get_interval_state(bool *is_active, uint32_t *next_wake_time);
 
+// Management of photo count
+esp_err_t app_storage_save_photo_count(uint16_t count);
+esp_err_t app_storage_get_photo_count(uint16_t *count);
+
 #endif

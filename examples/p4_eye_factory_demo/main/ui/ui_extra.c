@@ -451,7 +451,7 @@ static void lv_scroll_create(void)
     }
 }
 
-static void ui_extra_clear_page(void)
+void ui_extra_clear_page(void)
 {
     lv_obj_add_flag(ui_ImageCanvasSelect, LV_OBJ_FLAG_HIDDEN | LV_OBJ_FLAG_ADV_HITTEST);     /// Flags
     lv_obj_add_flag(ui_ImageCanvasUp, LV_OBJ_FLAG_HIDDEN | LV_OBJ_FLAG_ADV_HITTEST);     /// Flags

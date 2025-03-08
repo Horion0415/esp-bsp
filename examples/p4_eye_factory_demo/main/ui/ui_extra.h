@@ -141,4 +141,9 @@ bool ui_extra_get_usb_disk_mounted(void);
  */
 void ui_extra_popup_interval_timer_warning(void);
 
+/**
+ * @brief Clear page
+ */
+void ui_extra_clear_page(void);
+
 #endif
