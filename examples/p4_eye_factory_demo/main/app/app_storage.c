@@ -35,7 +35,6 @@ static const char *TAG = "app_storage";
 #define NVS_KEY_NEXT_WAKE_TIME "wake_time"    // next wake time
 #define NVS_KEY_PHOTO_COUNT "photo_count"     // photo count
 
-
 esp_err_t app_storage_save_photo_count(uint16_t count)
 {
     nvs_handle_t nvs_handle;

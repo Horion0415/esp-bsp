@@ -702,7 +702,7 @@ void ui_extra_popup_interval_timer_warning(void)
     if(!(current_page == UI_PAGE_INTERVAL_CAM)) {
         return;
     }
-
+    app_storage_get_photo_count(&saved_photo_count);
     ui_extra_clear_page();
     lv_label_set_text_fmt(ui_LabelPanelCanvasPopupIntervalTimerEnd, "Ended %d min", interval_time);
     lv_label_set_text_fmt(ui_LabelPanelCanvasPopupCameraIntervalTimerWarningEnd, "%d photos saved to \n       SD Card", saved_photo_count);
@@ -795,7 +795,7 @@ uint16_t app_extra_get_magnification_factor(void)
 void app_extra_set_saved_photo_count(uint16_t count)
 {
     saved_photo_count = count;
-    
+    app_storage_save_photo_count(saved_photo_count);
 }
 
 uint16_t app_extra_get_saved_photo_count(void)

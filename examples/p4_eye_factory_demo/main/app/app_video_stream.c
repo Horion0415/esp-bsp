@@ -246,9 +246,6 @@ esp_err_t app_video_stream_init(i2c_master_bus_handle_t i2c_handle)
     // Start the camera stream task
     ESP_ERROR_CHECK(app_video_stream_task_start(video_cam_fd0, 0));
 
-    // // Check if there is a pending interval photo
-    // app_video_stream_check_interval_wakeup();
-
     return ret;
 }
 
