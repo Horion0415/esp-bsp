@@ -63,6 +63,9 @@ static void enter_deep_sleep(uint16_t sleep_minutes)
     app_storage_save_interval_state(is_interval_photo_active, next_wake_time);
     app_storage_save_photo_count(app_extra_get_saved_photo_count());
 
+    // Initialize the sleep IO
+    bsp_sleep_io_init();
+
     // Set the wake up time (microseconds)
 #if DEBUG_MODE
     uint64_t sleep_time_us = sleep_minutes * 1000000ULL;

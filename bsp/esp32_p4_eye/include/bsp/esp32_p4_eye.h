@@ -55,10 +55,6 @@
 #define BSP_I2C_SDA           (GPIO_NUM_14)
 
 /* Audio */
-#define BSP_I2S_SCLK          (GPIO_NUM_41)
-#define BSP_I2S_LCLK          (GPIO_NUM_42)
-#define BSP_I2S_DIN           (GPIO_NUM_2)
-
 #define BSP_I2S_DAT           (GPIO_NUM_21)
 #define BSP_I2S_CLK           (GPIO_NUM_22)
 
@@ -73,19 +69,7 @@
 #define BSP_KNOB_A            (GPIO_NUM_48)
 #define BSP_KNOB_B            (GPIO_NUM_47)
 
-// // /* Camera */
-// #define BSP_CAMERA_XCLK      (GPIO_NUM_15)
-// #define BSP_CAMERA_PCLK      (GPIO_NUM_13)
-// #define BSP_CAMERA_VSYNC     (GPIO_NUM_6)
-// #define BSP_CAMERA_HSYNC     (GPIO_NUM_7)
-// #define BSP_CAMERA_D0        (GPIO_NUM_11)
-// #define BSP_CAMERA_D1        (GPIO_NUM_9)
-// #define BSP_CAMERA_D2        (GPIO_NUM_8)
-// #define BSP_CAMERA_D3        (GPIO_NUM_10)
-// #define BSP_CAMERA_D4        (GPIO_NUM_12)
-// #define BSP_CAMERA_D5        (GPIO_NUM_18)
-// #define BSP_CAMERA_D6        (GPIO_NUM_17)
-// #define BSP_CAMERA_D7        (GPIO_NUM_16)
+/* Camera */
 #define BSP_CAMERA_XCLK_FREQUENCY              (24000000)       // Frequency in Hertz. Set frequency at 10MHz
 #define BSP_CAMERA_EN_PIN       (GPIO_NUM_12)
 #define BSP_CAMERA_RST_PIN      (GPIO_NUM_26)
@@ -93,7 +77,6 @@
 
 /* C6 */
 #define BSP_C6_EN_PIN           (GPIO_NUM_9)
-
 
 /* uSD card */
 #define BSP_SD_SLOT_0_DEFAULT_INIT     \
@@ -109,13 +92,11 @@
     .d7  = 0
 #define BSP_SD_EN_PIN         (GPIO_NUM_46)
 
-
 /* Buttons */
 #define BSP_BUTTON_NUM1      (GPIO_NUM_3)
 #define BSP_BUTTON_NUM2      (GPIO_NUM_4)
 #define BSP_BUTTON_NUM3      (GPIO_NUM_5)
 #define BSP_BUTTON_ENCODER   (GPIO_NUM_2)
-
 
 typedef enum bsp_led_t {
     BSP_LED_WHITE = GPIO_NUM_23,
@@ -194,58 +175,6 @@ esp_err_t bsp_i2c_init(void);
 esp_err_t bsp_i2c_deinit(void);
 
 esp_err_t bsp_get_i2c_bus_handle(i2c_master_bus_handle_t *handle);
-
-/**************************************************************************************************
- *
- * Camera interface
- *
- * ESP32-P4-EYE is shipped with OV2640 camera module.
- * As a camera driver, esp32-camera component is used.
- *
- * Example configuration:
- * \code{.c}
- * const camera_config_t camera_config = BSP_CAMERA_DEFAULT_CONFIG;
- * esp_err_t err = esp_camera_init(&camera_config);
- * \endcode
- **************************************************************************************************/
-/**
- * @brief ESP32-P4-EYE camera default configuration
- *
- * In this configuration we select RGB565 color format and 240x240 image size - matching the display.
- * We use double-buffering for the best performance.
- * Since we don't want to waste internal SRAM, we allocate the framebuffers in external PSRAM.
- * By setting XCLK to 16MHz, we configure the esp32-camera driver to use EDMA when accessing the PSRAM.
- *
- * @attention I2C must be enabled by bsp_i2c_init(), before camera is initialized
- */
-#define BSP_CAMERA_DEFAULT_CONFIG         \
-    {                                     \
-        .pin_pwdn = GPIO_NUM_NC,          \
-        .pin_reset = GPIO_NUM_NC,         \
-        .pin_xclk = BSP_CAMERA_XCLK,      \
-        .pin_sccb_sda = GPIO_NUM_NC,      \
-        .pin_sccb_scl = GPIO_NUM_NC,      \
-        .pin_d7 = BSP_CAMERA_D7,          \
-        .pin_d6 = BSP_CAMERA_D6,          \
-        .pin_d5 = BSP_CAMERA_D5,          \
-        .pin_d4 = BSP_CAMERA_D4,          \
-        .pin_d3 = BSP_CAMERA_D3,          \
-        .pin_d2 = BSP_CAMERA_D2,          \
-        .pin_d1 = BSP_CAMERA_D1,          \
-        .pin_d0 = BSP_CAMERA_D0,          \
-        .pin_vsync = BSP_CAMERA_VSYNC,    \
-        .pin_href = BSP_CAMERA_HSYNC,     \
-        .pin_pclk = BSP_CAMERA_PCLK,      \
-        .xclk_freq_hz = 16000000,         \
-        .ledc_timer = LEDC_TIMER_0,       \
-        .ledc_channel = LEDC_CHANNEL_0,   \
-        .pixel_format = PIXFORMAT_RGB565, \
-        .frame_size = FRAMESIZE_240X240,  \
-        .jpeg_quality = 12,               \
-        .fb_count = 2,                    \
-        .fb_location = CAMERA_FB_IN_PSRAM,\
-        .sccb_i2c_port = BSP_I2C_NUM,     \
-    }
 
 /**************************************************************************************************
  *
