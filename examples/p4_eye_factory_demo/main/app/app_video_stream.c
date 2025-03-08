@@ -42,6 +42,7 @@ static QueueHandle_t photo_queue = NULL;
 
 static uint32_t camera_init_count = 0;
 
+static SemaphoreHandle_t photo_take_sem = NULL;
 typedef struct {
     uint8_t *camera_buf;
     uint32_t width;
@@ -227,6 +228,12 @@ esp_err_t app_video_stream_init(i2c_master_bus_handle_t i2c_handle)
         return ESP_FAIL;
     }
 
+    photo_take_sem = xSemaphoreCreateBinary();
+    if (photo_take_sem == NULL) {
+        ESP_LOGE(TAG, "Failed to create photo take semaphore");
+        return ESP_FAIL;
+    }
+
     // Start the camera stream task
     ESP_ERROR_CHECK(app_video_stream_task_start(video_cam_fd0, 0));
 
@@ -265,10 +272,12 @@ static esp_err_t take_and_save_photo(uint8_t *camera_buf, uint32_t width, uint32
     } else {
         ESP_LOGI(TAG, "Picture saved successfully");
     }
-    
+
+    xSemaphoreGive(photo_take_sem);
+
     bsp_led_set(BSP_LED_WHITE, false);
     bsp_display_backlight_on();
-    
+
     if (is_interval_photo_active) {
         app_extra_set_saved_photo_count(app_extra_get_saved_photo_count() + 1);
         interval_photo_complete_callback();
@@ -295,7 +304,7 @@ static void photo_task(void *pvParameters)
         if (xQueueReceive(photo_queue, &params, portMAX_DELAY) == pdTRUE) {
             // copy the image data to the local buffer
             memcpy(photo_buffer, params.camera_buf, buffer_size);
-            
+
             // handle the photo and save it
             esp_err_t photo_ret = take_and_save_photo(photo_buffer, params.width, params.height);
             if (photo_ret == ESP_OK) {
@@ -370,5 +379,7 @@ static void camera_video_frame_operation(uint8_t *camera_buf, uint8_t camera_buf
         if (xQueueSend(photo_queue, &params, 0) != pdTRUE) {
             ESP_LOGW(TAG, "photo queue is full, skip this photo");
         }
+
+        xSemaphoreTake(photo_take_sem, portMAX_DELAY);
     }
 }
