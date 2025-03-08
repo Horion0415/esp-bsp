@@ -142,7 +142,13 @@ static esp_err_t app_album_load_current_image(void) {
         
     ESP_ERROR_CHECK(jpeg_decoder_process(album_ctx.jpeg_handle, &decode_cfg_rgb, album_ctx.img_buffer, album_ctx.buffer_size, album_ctx.ppa_buffer, tx_buffer_size, &out_size));
     
-    current_album_resolution = app_video_stream_get_photo_resolution();
+    if(header_info.width == 1920 && header_info.height == 1080) {
+        current_album_resolution = PHOTO_RESOLUTION_1080P;
+    } else if(header_info.width == 1280 && header_info.height == 720) {
+        current_album_resolution = PHOTO_RESOLUTION_720P;
+    } else if(header_info.width == 640 && header_info.height == 480) {
+        current_album_resolution = PHOTO_RESOLUTION_480P;
+    }
 
     ppa_srm_oper_config_t srm_config = {
         .in.buffer = album_ctx.ppa_buffer,

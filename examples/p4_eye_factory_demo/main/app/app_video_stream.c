@@ -250,13 +250,6 @@ esp_err_t app_video_stream_init(i2c_master_bus_handle_t i2c_handle)
 
     ESP_ERROR_CHECK(jpeg_new_encoder_engine(&encode_eng_cfg, &jpeg_handle));
 
-    jpeg_encode_memory_alloc_cfg_t rx_mem_cfg = {
-        .buffer_direction = JPEG_DEC_ALLOC_OUTPUT_BUFFER,
-    };
-
-    jpg_buf = (uint8_t*)jpeg_alloc_encoder_mem(app_video_get_buf_size() / 10, &rx_mem_cfg, &rx_buffer_size); // Assume that compression ratio of 10 to 1
-    assert(jpg_buf != NULL);
-
     // Initialize video capture device
     ESP_ERROR_CHECK(app_video_set_bufs(video_cam_fd0, EXAMPLE_CAM_BUF_NUM, NULL));
 
@@ -309,6 +302,7 @@ static esp_err_t take_and_save_photo(uint8_t *camera_buf, uint32_t width, uint32
 
     uint32_t photo_width = photo_resolution_width[current_photo_resolution];
     uint32_t photo_height = photo_resolution_height[current_photo_resolution];
+
     uint8_t *pic_buf = NULL;
     
     if (photo_width > width) {
@@ -342,8 +336,8 @@ static esp_err_t take_and_save_photo(uint8_t *camera_buf, uint32_t width, uint32
             .out.block_offset_y = 0,
             .out.srm_cm = PPA_SRM_COLOR_MODE_RGB565,
             .rotation_angle = PPA_SRM_ROTATION_ANGLE_0,
-            .scale_x = (float)photo_width / width,
-            .scale_y = (float)photo_height / height,
+            .scale_x = 1,
+            .scale_y = 1,
             .rgb_swap = 0,
             .byte_swap = 0,
             .mode = PPA_TRANS_MODE_BLOCKING,
@@ -359,10 +353,17 @@ static esp_err_t take_and_save_photo(uint8_t *camera_buf, uint32_t width, uint32
     jpeg_encode_cfg_t enc_config = {
         .src_type = JPEG_ENCODE_IN_FORMAT_RGB565,
         .sub_sample = JPEG_DOWN_SAMPLING_YUV420,
-        .image_quality = 70,
+        .image_quality = 90,
         .width = photo_width,
         .height = photo_height,
     };
+
+    jpeg_encode_memory_alloc_cfg_t rx_mem_cfg = {
+        .buffer_direction = JPEG_DEC_ALLOC_OUTPUT_BUFFER,
+    };
+
+    jpg_buf = (uint8_t*)jpeg_alloc_encoder_mem(photo_width * photo_height * 2 / 10, &rx_mem_cfg, &rx_buffer_size); // Assume that compression ratio of 10 to 1
+    assert(jpg_buf != NULL);
 
     ret = jpeg_encoder_process(jpeg_handle, &enc_config, pic_buf, photo_width * photo_height * 2, 
                               jpg_buf, rx_buffer_size, &jpg_size);
@@ -382,6 +383,11 @@ static esp_err_t take_and_save_photo(uint8_t *camera_buf, uint32_t width, uint32
         ESP_LOGE(TAG, "Failed to save picture: 0x%x", ret);
     } else {
         ESP_LOGI(TAG, "Picture saved successfully");
+    }
+
+    if(jpg_buf != NULL) {
+        heap_caps_free(jpg_buf);
+        jpg_buf = NULL;
     }
 
     xSemaphoreGive(photo_take_sem);

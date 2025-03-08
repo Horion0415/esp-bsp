@@ -1104,6 +1104,8 @@ void ui_extra_init(void)
         } else {
             app_video_stream_set_flash_light(false);
         }
+
+        app_video_stream_set_photo_resolution_by_string(current_settings.resolution);
         
         // Update interval time and magnification
         interval_time = loaded_interval_time;
