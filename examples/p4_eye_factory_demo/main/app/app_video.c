@@ -20,7 +20,7 @@
 
 static const char *TAG = "app_video";
 
-#define MAX_BUFFER_COUNT                (3)
+#define MAX_BUFFER_COUNT                (6)
 #define MIN_BUFFER_COUNT                (2)
 #define VIDEO_TASK_STACK_SIZE           (4 * 1024)
 #define VIDEO_TASK_PRIORITY             (6)

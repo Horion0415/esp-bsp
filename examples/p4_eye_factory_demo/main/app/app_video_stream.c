@@ -31,13 +31,16 @@ static int scale_level_res[SCALE_LEVELS] = {960, 480, 240, 120, 80, 60};
 
 static bool is_take_photo = false;
 static bool is_take_video = false;
-
 static bool is_interval_photo_active = false;
+static bool is_camera_initialized = false;
+
 static uint32_t next_wake_time = 0;
 static uint16_t current_interval_minutes = 0;
 
 static TaskHandle_t photo_task_handle = NULL;
 static QueueHandle_t photo_queue = NULL;
+
+static uint32_t camera_init_count = 0;
 
 typedef struct {
     uint8_t *camera_buf;
@@ -80,9 +83,6 @@ static void interval_photo_complete_callback(void)
     
     // If the interval photo is still active, enter deep sleep
     if (is_interval_photo_active) {
-        // Delay for a while to ensure the photo is saved
-        //vTaskDelay(pdMS_TO_TICKS(1000));
-
         // Enter deep sleep until the next photo time
         enter_deep_sleep(current_interval_minutes);
     }
@@ -315,6 +315,14 @@ static void camera_video_frame_operation(uint8_t *camera_buf, uint8_t camera_buf
     int res_width = scale_level_res[scale_level - 1];
     int res_height = scale_level_res[scale_level - 1];
 
+    if(!is_camera_initialized) {
+        camera_init_count++;
+        if(camera_init_count >= 10) {
+            is_camera_initialized = true;
+            camera_init_count = 0;
+        }
+    }
+
     ppa_srm_oper_config_t srm_config = {
         .in.buffer = camera_buf,
         .in.pic_w = camera_buf_hes,
@@ -348,7 +356,7 @@ static void camera_video_frame_operation(uint8_t *camera_buf, uint8_t camera_buf
     lv_refr_now(NULL);
     bsp_display_unlock();
 
-    if(is_take_photo && (ui_extra_get_current_page() == UI_PAGE_CAMERA || ui_extra_get_current_page() == UI_PAGE_INTERVAL_CAM)) {
+    if(is_take_photo && (ui_extra_get_current_page() == UI_PAGE_CAMERA || ui_extra_get_current_page() == UI_PAGE_INTERVAL_CAM) && is_camera_initialized) {
         // reset the photo flag
         is_take_photo = false;
 

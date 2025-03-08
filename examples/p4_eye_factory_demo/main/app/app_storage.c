@@ -341,12 +341,12 @@ esp_err_t app_storage_init(void) {
     uint16_t magnification;
 
     if(!(esp_sleep_get_wakeup_cause() == ESP_SLEEP_WAKEUP_TIMER)) {
-        ESP_LOGW(TAG, "other wake up");
+        ESP_LOGI(TAG, "other wake up");
 
         app_video_stream_stop_interval_photo();
         app_extra_set_saved_photo_count(0);
     } else {
-        ESP_LOGW(TAG, "timer wake up");
+        ESP_LOGI(TAG, "timer wake up");
 
         ret = app_storage_get_interval_state(&is_interval_active, &next_wake_time);
         if (ret == ESP_OK && is_interval_active) {
