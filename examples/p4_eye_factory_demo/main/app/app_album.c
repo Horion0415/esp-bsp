@@ -42,7 +42,7 @@ static album_context_t album_ctx;
 static size_t data_cache_line_size = 0;
 static size_t tx_buffer_size = 0;
 
-static const uint32_t album_res[PHOTO_RESOLUTION_MAX] = {480, 720, 960};
+static const uint32_t album_res[PHOTO_RESOLUTION_MAX] = {480, 600, 960};
 static photo_resolution_t current_album_resolution = PHOTO_RESOLUTION_1080P; // default 1080P
 
 // Scan images from SD card
