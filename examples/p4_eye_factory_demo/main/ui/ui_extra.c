@@ -951,6 +951,8 @@ void ui_extra_btn_menu(void)
                 } else {
                     app_video_stream_set_flash_light(false);
                 }
+
+                app_video_stream_set_photo_resolution_by_string(current_settings.resolution);
             } else {
                 // Otherwise, cycle through options
                 setting_options_t* opt = &settings_options[current_settings_item];

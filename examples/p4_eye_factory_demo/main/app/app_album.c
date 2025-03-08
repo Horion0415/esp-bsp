@@ -10,9 +10,9 @@
 #include "esp_private/esp_cache_private.h"
 
 #include "ui_extra.h"
+
 #include "app_storage.h"
 #include "app_video.h"
-
 #include "app_video_stream.h"
 
 static const char *TAG = "app_album";
@@ -41,6 +41,9 @@ typedef struct {
 static album_context_t album_ctx;
 static size_t data_cache_line_size = 0;
 static size_t tx_buffer_size = 0;
+
+static const uint32_t album_res[PHOTO_RESOLUTION_MAX] = {480, 720, 960};
+static photo_resolution_t current_album_resolution = PHOTO_RESOLUTION_1080P; // default 1080P
 
 // Scan images from SD card
 static esp_err_t app_album_scan_images(void) {
@@ -139,14 +142,16 @@ static esp_err_t app_album_load_current_image(void) {
         
     ESP_ERROR_CHECK(jpeg_decoder_process(album_ctx.jpeg_handle, &decode_cfg_rgb, album_ctx.img_buffer, album_ctx.buffer_size, album_ctx.ppa_buffer, tx_buffer_size, &out_size));
     
+    current_album_resolution = app_video_stream_get_photo_resolution();
+
     ppa_srm_oper_config_t srm_config = {
         .in.buffer = album_ctx.ppa_buffer,
         .in.pic_w = header_info.width,
         .in.pic_h = header_info.height,
-        .in.block_w = 960,
-        .in.block_h = 960,
-        .in.block_offset_x = (header_info.width - 960) / 2,
-        .in.block_offset_y = (header_info.height - 960) / 2,
+        .in.block_w = album_res[current_album_resolution],
+        .in.block_h = album_res[current_album_resolution],
+        .in.block_offset_x = (header_info.width - album_res[current_album_resolution]) / 2,
+        .in.block_offset_y = (header_info.height - album_res[current_album_resolution]) / 2,
         .in.srm_cm = PPA_SRM_COLOR_MODE_RGB565,
         .out.buffer = album_ctx.canvas_buffer,
         .out.buffer_size = ALIGN_UP(BSP_LCD_H_RES * BSP_LCD_V_RES * 2, data_cache_line_size),
@@ -156,8 +161,8 @@ static esp_err_t app_album_load_current_image(void) {
         .out.block_offset_y = 0,
         .out.srm_cm = PPA_SRM_COLOR_MODE_RGB565,
         .rotation_angle = PPA_SRM_ROTATION_ANGLE_0,
-        .scale_x = (float)BSP_LCD_H_RES / 960,
-        .scale_y = (float)BSP_LCD_V_RES / 960,
+        .scale_x = (float)BSP_LCD_H_RES / album_res[current_album_resolution],
+        .scale_y = (float)BSP_LCD_V_RES / album_res[current_album_resolution],
         .rgb_swap = 0,
         .byte_swap = 0,
         .mode = PPA_TRANS_MODE_BLOCKING,

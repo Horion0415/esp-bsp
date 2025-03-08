@@ -28,6 +28,8 @@ static uint32_t jpg_size;
 static uint8_t *jpg_buf;
 static size_t rx_buffer_size = 0;
 
+static uint8_t *photo_buf = NULL;
+
 static int scale_level_res[SCALE_LEVELS] = {960, 480, 240, 120, 80, 60};
 
 static bool is_take_photo = false;
@@ -50,6 +52,10 @@ typedef struct {
     uint32_t width;
     uint32_t height;
 } photo_task_params_t;
+
+static const uint32_t photo_resolution_width[PHOTO_RESOLUTION_MAX] = {640, 1280, 1920};
+static const uint32_t photo_resolution_height[PHOTO_RESOLUTION_MAX] = {480, 720, 1080};
+static photo_resolution_t current_photo_resolution = PHOTO_RESOLUTION_1080P; // default 1080P
 
 static void photo_task(void *pvParameters);
 static void camera_video_frame_operation(uint8_t *camera_buf, uint8_t camera_buf_index, uint32_t camera_buf_hes, uint32_t camera_buf_ves, size_t camera_buf_len);
@@ -171,6 +177,39 @@ esp_err_t app_video_stream_set_flash_light(bool is_on)
     return ESP_OK;
 }
 
+photo_resolution_t app_video_stream_get_photo_resolution(void)
+{
+    return current_photo_resolution;
+}
+
+static esp_err_t app_video_stream_set_photo_resolution(photo_resolution_t resolution)
+{
+    if (resolution >= PHOTO_RESOLUTION_MAX) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    
+    current_photo_resolution = resolution;
+    ESP_LOGI(TAG, "Photo resolution set to %dx%d", 
+             photo_resolution_width[current_photo_resolution],
+             photo_resolution_height[current_photo_resolution]);
+    
+    return ESP_OK;
+}
+
+esp_err_t app_video_stream_set_photo_resolution_by_string(const char *resolution_str)
+{
+    if (strcmp(resolution_str, "480P") == 0 || strcmp(resolution_str, "480p") == 0) {
+        return app_video_stream_set_photo_resolution(PHOTO_RESOLUTION_480P);
+    } else if (strcmp(resolution_str, "720P") == 0 || strcmp(resolution_str, "720p") == 0) {
+        return app_video_stream_set_photo_resolution(PHOTO_RESOLUTION_720P);
+    } else if (strcmp(resolution_str, "1080P") == 0 || strcmp(resolution_str, "1080p") == 0) {
+        return app_video_stream_set_photo_resolution(PHOTO_RESOLUTION_1080P);
+    } else {
+        ESP_LOGW(TAG, "Unknown resolution string: %s, using default 720P", resolution_str);
+        return app_video_stream_set_photo_resolution(PHOTO_RESOLUTION_720P);
+    }
+}
+
 esp_err_t app_video_stream_init(i2c_master_bus_handle_t i2c_handle)
 {
     // Initialize the PPA
@@ -268,15 +307,64 @@ static esp_err_t take_and_save_photo(uint8_t *camera_buf, uint32_t width, uint32
 
     is_flash_light_on ? bsp_led_set(BSP_LED_WHITE, true) : bsp_led_set(BSP_LED_WHITE, false);
 
+    uint32_t photo_width = photo_resolution_width[current_photo_resolution];
+    uint32_t photo_height = photo_resolution_height[current_photo_resolution];
+    uint8_t *pic_buf = NULL;
+    
+    if (photo_width > width) {
+        photo_width = width;
+    }
+    if (photo_height > height) {
+        photo_height = height;
+    }
+
+    if(current_photo_resolution != PHOTO_RESOLUTION_1080P) {
+        photo_buf = (uint8_t*)heap_caps_aligned_calloc(data_cache_line_size, 1, photo_width * photo_height * 2, MALLOC_CAP_SPIRAM);
+        if (photo_buf == NULL) {
+            ESP_LOGE(TAG, "Failed to allocate photo buffer");
+            return ESP_FAIL;
+        }
+
+        ppa_srm_oper_config_t srm_config = {
+            .in.buffer = camera_buf,
+            .in.pic_w = width,
+            .in.pic_h = height,
+            .in.block_w = photo_width,
+            .in.block_h = photo_height,
+            .in.block_offset_x = (width - photo_width) / 2,
+            .in.block_offset_y = (height - photo_height) / 2,
+            .in.srm_cm = PPA_SRM_COLOR_MODE_RGB565,
+            .out.buffer = photo_buf,
+            .out.buffer_size = ALIGN_UP(photo_width * photo_height * 2, data_cache_line_size),
+            .out.pic_w = photo_width,
+            .out.pic_h = photo_height,
+            .out.block_offset_x = 0,
+            .out.block_offset_y = 0,
+            .out.srm_cm = PPA_SRM_COLOR_MODE_RGB565,
+            .rotation_angle = PPA_SRM_ROTATION_ANGLE_0,
+            .scale_x = (float)photo_width / width,
+            .scale_y = (float)photo_height / height,
+            .rgb_swap = 0,
+            .byte_swap = 0,
+            .mode = PPA_TRANS_MODE_BLOCKING,
+        };
+
+        ESP_ERROR_CHECK(ppa_do_scale_rotate_mirror(ppa_srm_handle, &srm_config));
+
+        pic_buf = photo_buf;
+    } else {
+        pic_buf = camera_buf;
+    }
+
     jpeg_encode_cfg_t enc_config = {
         .src_type = JPEG_ENCODE_IN_FORMAT_RGB565,
         .sub_sample = JPEG_DOWN_SAMPLING_YUV420,
         .image_quality = 70,
-        .width = width,
-        .height = height,
+        .width = photo_width,
+        .height = photo_height,
     };
 
-    ret = jpeg_encoder_process(jpeg_handle, &enc_config, camera_buf, app_video_get_buf_size(), 
+    ret = jpeg_encoder_process(jpeg_handle, &enc_config, pic_buf, photo_width * photo_height * 2, 
                               jpg_buf, rx_buffer_size, &jpg_size);
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "JPEG encoding failed: 0x%x", ret);
@@ -284,6 +372,11 @@ static esp_err_t take_and_save_photo(uint8_t *camera_buf, uint32_t width, uint32
         return ret;
     }
     
+    if(pic_buf != camera_buf) {
+        heap_caps_free(pic_buf);
+        pic_buf = NULL;
+    }
+
     ret = app_storage_save_picture(jpg_buf, jpg_size);
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "Failed to save picture: 0x%x", ret);

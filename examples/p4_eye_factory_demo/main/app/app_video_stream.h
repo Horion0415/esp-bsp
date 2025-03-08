@@ -16,6 +16,13 @@
 extern "C" {
 #endif
 
+typedef enum {
+    PHOTO_RESOLUTION_480P = 0,  // 640x480
+    PHOTO_RESOLUTION_720P = 1,  // 1280x720
+    PHOTO_RESOLUTION_1080P = 2, // 1920x1080
+    PHOTO_RESOLUTION_MAX
+} photo_resolution_t;
+
 /**
  * @brief Initialize the video streaming application
  *
@@ -38,6 +45,9 @@ esp_err_t app_video_stream_stop_interval_photo(void);
 esp_err_t app_video_stream_check_interval_wakeup(void);
 
 esp_err_t app_video_stream_set_flash_light(bool is_on);
+
+photo_resolution_t app_video_stream_get_photo_resolution(void);
+esp_err_t app_video_stream_set_photo_resolution_by_string(const char *resolution_str);
 
 void swap_rgb565_bytes(uint16_t *buffer, int pixel_count);
 
