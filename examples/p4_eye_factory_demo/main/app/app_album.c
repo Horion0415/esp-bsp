@@ -58,11 +58,13 @@ static esp_err_t app_album_scan_images(void) {
 
     // Scan all jpg files in the directory
     while ((entry = readdir(dir)) != NULL && album_ctx.count < MAX_IMAGES) {
-        if (strstr(entry->d_name, ".jpg") || strstr(entry->d_name, ".JPG")) {
+        if ((strstr(entry->d_name, ".jpg") || strstr(entry->d_name, ".JPG")) && 
+            strncmp(entry->d_name, "._", 2) != 0) {
             snprintf(album_ctx.filenames[album_ctx.count], MAX_PATH_LEN, 
                     "%s/%s/%s", BSP_SD_MOUNT_POINT, PIC_FOLDER_NAME, entry->d_name);
             album_ctx.count++;
         }
+        ESP_LOGD(TAG, "image %d: %s", album_ctx.count, album_ctx.filenames[album_ctx.count - 1]);
     }
 
     closedir(dir);

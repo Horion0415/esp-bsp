@@ -5,6 +5,7 @@
 #include "ui_extra.h"
 
 #include "app_storage.h"
+#include "app_album.h"
 #include "app_video_stream.h"
 
 #define IMG_BASE_ZOOM       60
@@ -732,6 +733,7 @@ void ui_extra_goto_page(ui_page_t page)
             ui_extra_redirect_to_video_mode_page();
             break;
         case UI_PAGE_ALBUM:
+            app_album_refresh();
             ui_extra_redirect_to_album_page();
             break;
         case UI_PAGE_USB_DISK:
@@ -1057,6 +1059,7 @@ void ui_extra_init(void)
     
     // Load settings from NVS
     esp_err_t err = app_storage_load_settings(&settings, &loaded_interval_time, &loaded_magnification);
+    ESP_LOGI(TAG, "loaded_interval_time: %d, loaded_magnification: %d", loaded_interval_time, loaded_magnification);
     if (err == ESP_OK) {
         // Apply loaded settings
         // Update language settings
@@ -1092,6 +1095,10 @@ void ui_extra_init(void)
         interval_time = loaded_interval_time;
         magnification_factor = loaded_magnification;
         
+        // Update the display
+        lv_label_set_text_fmt(ui_LabelCanvasFactor, "%dX", magnification_factor);
+        lv_label_set_text_fmt(ui_LabelCanvasInvervalTime, "%dmin", interval_time);
+
         // Update display
         init_settings_display();
     }

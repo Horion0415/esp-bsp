@@ -332,27 +332,21 @@ esp_err_t app_storage_save_picture(const uint8_t *data, size_t len)
 }
 
 esp_err_t app_storage_init(void) {
+    esp_err_t ret = ESP_OK;
+    
     bool is_interval_active = false;
     uint32_t next_wake_time = 0;
     uint16_t interval_time = 0;
     settings_info_t settings;
     uint16_t magnification;
-    
-    // Initialize NVS
-    esp_err_t ret = nvs_flash_init();
-    if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
-        ESP_ERROR_CHECK(nvs_flash_erase());
-        ret = nvs_flash_init();
-    }
-    ESP_ERROR_CHECK(ret);
 
     if(!(esp_sleep_get_wakeup_cause() == ESP_SLEEP_WAKEUP_TIMER)) {
-        ESP_LOGI(TAG, "Device woke up for interval photography");
+        ESP_LOGI(TAG, "other wake up");
 
         app_video_stream_stop_interval_photo();
         app_extra_set_saved_photo_count(0);
     } else {
-        ESP_LOGI(TAG, "Device woke up for interval photography");
+        ESP_LOGI(TAG, "timer wake up");
 
         ret = app_storage_get_interval_state(&is_interval_active, &next_wake_time);
         if (ret == ESP_OK && is_interval_active) {

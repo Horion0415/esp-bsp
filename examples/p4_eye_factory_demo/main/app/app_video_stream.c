@@ -11,9 +11,10 @@
 #include "app_video.h"
 #include "app_storage.h"
 #include "app_video_stream.h"
-
+#include "app_album.h"
 #define ALIGN_UP(num, align)    (((num) + ((align) - 1)) & ~((align) - 1))
 #define SCALE_LEVELS 6                         // resolution scale levels
+#define DEBUG_MODE   1
 
 static const char *TAG = "app_video_stream";
 
@@ -77,9 +78,13 @@ static void interval_photo_complete_callback(void)
     if (is_interval_photo_active) {
         // Delay for a while to ensure the photo is saved
         vTaskDelay(pdMS_TO_TICKS(1000));
-        
+
         // Enter deep sleep until the next photo time
+#if DEBUG_MODE
+        enter_deep_sleep(current_interval_minutes / 60);
+#else
         enter_deep_sleep(current_interval_minutes);
+#endif
     }
 }
 
@@ -303,6 +308,8 @@ static esp_err_t take_and_save_photo(uint8_t *camera_buf, uint32_t width, uint32
     ret = app_storage_save_picture(jpg_buf, jpg_size);
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "Failed to save picture: 0x%x", ret);
+    } else {
+        ESP_LOGI(TAG, "Picture saved successfully");
     }
     
     bsp_led_set(BSP_LED_WHITE, false);

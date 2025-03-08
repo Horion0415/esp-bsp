@@ -6,6 +6,8 @@
 
 #include <stdio.h>
 #include "esp_log.h"
+#include "nvs_flash.h"
+#include "nvs.h"
 #include "bsp/esp-bsp.h"
 
 #include "ui_extra.h"
@@ -20,6 +22,14 @@ void app_main(void)
 {
     ESP_LOGI(TAG, "Initialize the P4 Eye");
     ESP_ERROR_CHECK(bsp_p4_eye_init());
+
+    // Initialize NVS
+    esp_err_t ret = nvs_flash_init();
+    if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
+        ESP_ERROR_CHECK(nvs_flash_erase());
+        ret = nvs_flash_init();
+    }
+    ESP_ERROR_CHECK(ret);
 
     // Initialize the LEDs
     ESP_ERROR_CHECK(bsp_leds_init());
