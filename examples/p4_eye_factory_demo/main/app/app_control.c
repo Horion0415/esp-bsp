@@ -41,8 +41,6 @@ static void btn_handler(void *arg, void *data)
         ui_extra_btn_encoder();
         if(ui_extra_get_current_page() == UI_PAGE_CAMERA) {
             app_video_stream_take_photo();
-        } else if(ui_extra_get_current_page() == UI_PAGE_INTERVAL_CAM) {
-
         }
     }
     bsp_display_unlock();
@@ -131,12 +129,12 @@ esp_err_t app_control_init(void)
 {
     // Initialize the wake buttons
     const gpio_config_t config = {
-        .pin_bit_mask = BIT(BSP_BUTTON_NUM1) | BIT(BSP_BUTTON_NUM2) | BIT(BSP_BUTTON_NUM3) | BIT(BSP_BUTTON_ENCODER),
+        .pin_bit_mask = BIT(BSP_BUTTON_NUM1) | BIT(BSP_BUTTON_NUM2) | BIT(BSP_BUTTON_NUM3),
         .mode = GPIO_MODE_INPUT,
     };
 
     ESP_ERROR_CHECK(gpio_config(&config));
-    ESP_ERROR_CHECK(esp_deep_sleep_enable_gpio_wakeup(BIT(BSP_BUTTON_NUM1) | BIT(BSP_BUTTON_NUM2) | BIT(BSP_BUTTON_NUM3) | BIT(BSP_BUTTON_ENCODER), 0));
+    ESP_ERROR_CHECK(esp_deep_sleep_enable_gpio_wakeup(BIT(BSP_BUTTON_NUM1) | BIT(BSP_BUTTON_NUM2) | BIT(BSP_BUTTON_NUM3), 0));
 
     // Initialize the buttons
     ESP_ERROR_CHECK(bsp_iot_button_create(btns, NULL, BSP_BUTTON_NUM));

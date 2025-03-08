@@ -58,7 +58,11 @@ static void enter_deep_sleep(uint16_t sleep_minutes)
     app_storage_save_interval_state(is_interval_photo_active, next_wake_time);
     
     // Set the wake up time (microseconds)
+#if DEBUG_MODE
+    uint64_t sleep_time_us = sleep_minutes * 1000000ULL;
+#else
     uint64_t sleep_time_us = sleep_minutes * 60 * 1000000ULL;
+#endif
     
     ESP_LOGI(TAG, "Entering deep sleep for %d minutes", sleep_minutes);
     
@@ -77,14 +81,10 @@ static void interval_photo_complete_callback(void)
     // If the interval photo is still active, enter deep sleep
     if (is_interval_photo_active) {
         // Delay for a while to ensure the photo is saved
-        vTaskDelay(pdMS_TO_TICKS(1000));
+        //vTaskDelay(pdMS_TO_TICKS(1000));
 
         // Enter deep sleep until the next photo time
-#if DEBUG_MODE
-        enter_deep_sleep(current_interval_minutes / 60);
-#else
         enter_deep_sleep(current_interval_minutes);
-#endif
     }
 }
 
@@ -113,56 +113,10 @@ esp_err_t app_video_stream_stop_interval_photo(void)
     // Save the interval photo state (close)
     app_storage_save_interval_state(false, 0);
     
-    ESP_LOGI(TAG, "Interval photo stopped");
+    ESP_LOGW(TAG, "Interval photo stopped");
     
     return ESP_OK;
 }
-
-// void app_video_stream_stop_interval_photo(void)
-// {
-//     app_video_stream_stop_interval_photo();
-//     app_extra_set_saved_photo_count(0);
-// }
-
-// // Check if there is a pending interval photo
-// esp_err_t app_video_stream_check_interval_wakeup(void)
-// {
-//     bool is_active = false;
-//     uint32_t wake_time = 0;
-    
-//     esp_err_t err = app_storage_get_interval_state(&is_active, &wake_time);
-//     if (err != ESP_OK) {
-//         return err;
-//     }
-    
-//     if (is_active) {
-//         // Get the current interval time
-//         settings_info_t settings;
-//         uint16_t interval_time;
-//         uint16_t magnification;
-        
-//         err = app_storage_load_settings(&settings, &interval_time, &magnification);
-//         if (err != ESP_OK) {
-//             return err;
-//         }
-        
-//         // Set the current interval time
-//         current_interval_minutes = interval_time;
-        
-//         // Set the timed shooting flag
-//         is_interval_photo_active = true;
-        
-//         // Take a photo immediately
-//         app_video_stream_take_photo();
-//         app_extra_set_saved_photo_count(app_extra_get_saved_photo_count() + 1);
-        
-//         ESP_LOGI(TAG, "Woke up for interval photo, interval: %d minutes", interval_time);
-        
-//         // The photo will be taken after the photo is completed
-//     }
-    
-//     return ESP_OK;
-// }
 
 void swap_rgb565_bytes(uint16_t *buffer, int pixel_count)
 {

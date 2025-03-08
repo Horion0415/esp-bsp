@@ -341,12 +341,12 @@ esp_err_t app_storage_init(void) {
     uint16_t magnification;
 
     if(!(esp_sleep_get_wakeup_cause() == ESP_SLEEP_WAKEUP_TIMER)) {
-        ESP_LOGI(TAG, "other wake up");
+        ESP_LOGW(TAG, "other wake up");
 
         app_video_stream_stop_interval_photo();
         app_extra_set_saved_photo_count(0);
     } else {
-        ESP_LOGI(TAG, "timer wake up");
+        ESP_LOGW(TAG, "timer wake up");
 
         ret = app_storage_get_interval_state(&is_interval_active, &next_wake_time);
         if (ret == ESP_OK && is_interval_active) {
@@ -354,6 +354,7 @@ esp_err_t app_storage_init(void) {
             ret = app_storage_load_settings(&settings, &interval_time, &magnification);
             if (ret == ESP_OK) {
                 // use interval time
+                ui_extra_goto_page(UI_PAGE_INTERVAL_CAM);
                 app_video_stream_start_interval_photo(interval_time);
                 ESP_LOGI(TAG, "Device woke up for interval photography, interval time: %u minutes", interval_time);
             } else {
