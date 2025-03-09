@@ -148,6 +148,12 @@ static esp_err_t app_album_load_current_image(void) {
         current_album_resolution = PHOTO_RESOLUTION_720P;
     } else if(header_info.width == 640 && header_info.height == 480) {
         current_album_resolution = PHOTO_RESOLUTION_480P;
+    } else {
+        ESP_LOGE(TAG, "Not supported image resolution: %"PRId32"x%"PRId32", skip this image", 
+                 header_info.width, header_info.height);
+        free(album_ctx.img_buffer);
+        album_ctx.img_buffer = NULL;
+        return ESP_ERR_NOT_SUPPORTED;
     }
 
     ppa_srm_oper_config_t srm_config = {
