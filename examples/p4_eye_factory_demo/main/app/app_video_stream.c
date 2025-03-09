@@ -395,7 +395,6 @@ static esp_err_t take_and_save_photo(uint8_t *camera_buf, uint32_t width, uint32
 {
     esp_err_t ret = ESP_OK;
     uint8_t *pic_buf = NULL;
-    bool resources_allocated = false;
     
     bsp_display_backlight_off();
 
@@ -485,8 +484,6 @@ static esp_err_t take_and_save_photo(uint8_t *camera_buf, uint32_t width, uint32
         ret = ESP_FAIL;
         goto cleanup;
     }
-
-    resources_allocated = true;
 
     // Perform JPEG encoding
     ret = jpeg_encoder_process(jpeg_handle, &enc_config, pic_buf, photo_width * photo_height * 2, 
