@@ -20,9 +20,6 @@ static const char *TAG = "main";
 
 void app_main(void)
 {
-    ESP_LOGI(TAG, "Initialize the P4 Eye");
-    ESP_ERROR_CHECK(bsp_p4_eye_init());
-
     // Initialize NVS
     esp_err_t ret = nvs_flash_init();
     if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
