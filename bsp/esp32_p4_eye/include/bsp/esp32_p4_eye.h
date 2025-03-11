@@ -91,6 +91,7 @@
     .d6  = 0,                          \
     .d7  = 0
 #define BSP_SD_EN_PIN         (GPIO_NUM_46)
+#define BSP_SD_DETECT_PIN     (GPIO_NUM_45)
 
 /* Buttons */
 #define BSP_BUTTON_NUM1      (GPIO_NUM_3)
@@ -250,6 +251,10 @@ esp_err_t bsp_sleep_io_init(void);
  *      - other error codes from wear levelling library, SPI flash driver, or FATFS drivers
  */
 esp_err_t bsp_sdcard_unmount(void);
+
+esp_err_t bsp_sdcard_detect_init(void);
+
+bool bsp_sdcard_is_present(void);
 
 esp_err_t bsp_get_sdcard_handle(sdmmc_card_t **card);
 

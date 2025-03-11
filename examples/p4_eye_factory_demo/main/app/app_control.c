@@ -28,20 +28,15 @@ static void btn_handler(void *arg, void *data)
     } else if((int)data == BSP_BUTTON_2) {
         ui_extra_btn_up();
         if(ui_extra_get_current_page() == UI_PAGE_ALBUM) {
-            printf("prev image\n");
             app_album_prev_image();
         }
     } else if((int)data == BSP_BUTTON_3) {
         ui_extra_btn_down();
         if(ui_extra_get_current_page() == UI_PAGE_ALBUM) {
-            printf("next image\n");
             app_album_next_image();
         }
     } else if((int)data == BSP_BUTTON_ED) {
         ui_extra_btn_encoder();
-        if(ui_extra_get_current_page() == UI_PAGE_CAMERA) {
-            app_video_stream_take_photo();
-        }
     }
     bsp_display_unlock();
 }

@@ -211,6 +211,10 @@ esp_err_t bsp_spiffs_unmount(void)
 
 esp_err_t bsp_sdcard_mount(void)
 {
+    if(bsp_sdcard != NULL) {
+        return ESP_OK;
+    }
+
     const esp_vfs_fat_sdmmc_mount_config_t mount_config = {
 #ifdef CONFIG_BSP_SD_FORMAT_ON_MOUNT_FAIL
         .format_if_mount_failed = true,
@@ -249,7 +253,12 @@ esp_err_t bsp_sdcard_mount(void)
 
 esp_err_t bsp_sdcard_unmount(void)
 {
+    if(bsp_sdcard == NULL) {
+        return ESP_OK;
+    }
+
     esp_vfs_fat_sdcard_unmount(BSP_SD_MOUNT_POINT, bsp_sdcard);
+    bsp_sdcard = NULL;
     
     esp_err_t ret = sd_pwr_ctrl_del_on_chip_ldo(pwr_ctrl_handle);
     if (ret != ESP_OK) {
@@ -257,6 +266,25 @@ esp_err_t bsp_sdcard_unmount(void)
     }
 
     return ret;
+}
+
+esp_err_t bsp_sdcard_detect_init(void)
+{
+    const gpio_config_t sd_detect_config = {
+        .pin_bit_mask = BIT64(BSP_SD_DETECT_PIN),
+        .mode = GPIO_MODE_INPUT,
+        .pull_up_en = GPIO_PULLUP_DISABLE,
+        .pull_down_en = GPIO_PULLDOWN_DISABLE,
+        .intr_type = GPIO_INTR_DISABLE
+    };
+    BSP_ERROR_CHECK_RETURN_ERR(gpio_config(&sd_detect_config));
+
+    return ESP_OK;
+}
+
+bool bsp_sdcard_is_present(void)
+{
+    return gpio_get_level(BSP_SD_DETECT_PIN) == 0;
 }
 
 esp_err_t bsp_get_sdcard_handle(sdmmc_card_t **card)

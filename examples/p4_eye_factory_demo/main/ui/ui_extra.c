@@ -827,6 +827,10 @@ uint16_t app_extra_get_interval_time(void)
 void ui_extra_set_sd_card_mounted(bool mounted)
 {
     is_sd_card_mounted = mounted;
+    if(is_sd_card_mounted && (current_page == UI_PAGE_CAMERA || current_page == UI_PAGE_INTERVAL_CAM || current_page == UI_PAGE_VIDEO_MODE)) {
+        lv_obj_add_flag(ui_ImageCanvasNOSDcard, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_clear_flag(ui_ImageCanvasSDcard, LV_OBJ_FLAG_HIDDEN);
+    }
 }
 
 bool ui_extra_get_sd_card_mounted(void)
@@ -1036,6 +1040,9 @@ void ui_extra_btn_encoder(void)
             if(!lv_additional_photo_timer){
                 lv_additional_photo_timer = lv_timer_create(pop_up_additional_photo_callback, 5000, ui_PanelCanvasPopupIntervalTimerWarning);
             }
+            break;
+        case UI_PAGE_CAMERA:
+            app_video_stream_take_photo();
             break;
         default:
             break;
