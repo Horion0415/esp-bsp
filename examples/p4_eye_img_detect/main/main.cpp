@@ -152,7 +152,7 @@ void camera_dectect_task(void)
     while (1) {        
         camera_pipeline_buffer_element *p = camera_pipeline_recv_element(feed_pipeline, portMAX_DELAY);
         if (p) {
-            if (!hum_detect) {
+            if (!human_detected) {
                 detect_results = app_pedestrian_detect((uint16_t *)p->buffer, HOR_RES, VER_RES);
             }  else {
                 detect_results = app_humanface_detect((uint16_t *)p->buffer, HOR_RES, VER_RES);
@@ -194,7 +194,7 @@ static void camera_video_frame_operation(uint8_t *camera_buf, uint8_t camera_buf
                 detect_bound.push_back(box);
 
                 // Process keypoints only in face detection mode
-                if ((hum_detect) && 
+                if ((human_detected) && 
                     res.keypoint.size() >= 10 && 
                     std::any_of(res.keypoint.begin(), res.keypoint.end(), [](int v) { return v != 0; })) {
                     detect_keypoints.push_back(res.keypoint);
@@ -217,7 +217,7 @@ static void camera_video_frame_operation(uint8_t *camera_buf, uint8_t camera_buf
                                 0, 0, 255, 0, 0, 3);
 
             // Draw keypoints in face detection mode
-            if (hum_detect && 
+            if (human_detected && 
                 i < detect_keypoints.size() && 
                 detect_keypoints[i].size() >= 10) {
                 draw_green_points(rgb_buf, detect_keypoints[i]);
@@ -246,8 +246,8 @@ static void camera_video_frame_operation(uint8_t *camera_buf, uint8_t camera_buf
             .srm_cm = PPA_SRM_COLOR_MODE_RGB565,
         },
         .rotation_angle = PPA_SRM_ROTATION_ANGLE_0,
-        .scale_x = (float)BSP_LCD_H_RES / camera_buf_hes,
-        .scale_y = (float)BSP_LCD_V_RES / camera_buf_ves,
+        .scale_x = (float)BSP_LCD_H_RES / 960,
+        .scale_y = (float)BSP_LCD_V_RES / 960,
         .rgb_swap = 0,
         .byte_swap = 0,
         .mode = PPA_TRANS_MODE_BLOCKING,
