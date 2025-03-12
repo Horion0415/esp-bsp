@@ -1043,7 +1043,7 @@ void ui_extra_btn_encoder(void)
             ui_extra_start_interval_timer();
             
             if(!lv_additional_photo_timer){
-                lv_additional_photo_timer = lv_timer_create(pop_up_additional_photo_callback, 5000, ui_PanelCanvasPopupIntervalTimerWarning);
+                lv_additional_photo_timer = lv_timer_create(pop_up_additional_photo_callback, 7000, ui_PanelCanvasPopupIntervalTimerWarning);
             }
             break;
         case UI_PAGE_CAMERA:
