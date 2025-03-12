@@ -335,17 +335,17 @@ static void scroll_end_event_cb(lv_event_t * e)
                 }
 
                 if(strcmp(btn_text, "CAMERA") == 0) {
-                    lv_obj_align(info_label, LV_ALIGN_CENTER, 6, 50);
+                    lv_obj_align(info_label, LV_ALIGN_CENTER, -9, 50);
                 } else if(strcmp(btn_text, "INTERVAL CAM") == 0) {
-                    lv_obj_align(info_label, LV_ALIGN_CENTER, 3, 40);
+                    lv_obj_align(info_label, LV_ALIGN_CENTER, -12, 45);
                 } else if(strcmp(btn_text, "VIDEO MODE") == 0) {
-                    lv_obj_align(info_label, LV_ALIGN_CENTER, 6, 45);
+                    lv_obj_align(info_label, LV_ALIGN_CENTER, -9, 45);
                 } else if(strcmp(btn_text, "ALBUM") == 0) {
-                    lv_obj_align(info_label, LV_ALIGN_CENTER, 6, 55);
+                    lv_obj_align(info_label, LV_ALIGN_CENTER, -9, 55);
                 } else if(strcmp(btn_text, "USB DISK") == 0) {
-                    lv_obj_align(info_label, LV_ALIGN_CENTER, 6, 60);
+                    lv_obj_align(info_label, LV_ALIGN_CENTER, -7, 60);
                 } else if(strcmp(btn_text, "SETTINGS") == 0) {
-                    lv_obj_align(info_label, LV_ALIGN_CENTER, 6, 60);
+                    lv_obj_align(info_label, LV_ALIGN_CENTER, -9, 60);
                 }
             }
         }
@@ -385,7 +385,7 @@ static void lv_scroll_create(void)
     // Create main container
     scroll_cont = lv_obj_create(ui_PanelCanvas);
     lv_obj_set_size(scroll_cont, 240, 240);
-    lv_obj_align(scroll_cont, LV_ALIGN_CENTER, -50, 0);
+    lv_obj_align(scroll_cont, LV_ALIGN_CENTER, -65, 0);
     
     // Set container properties
     lv_obj_set_style_pad_row(scroll_cont, 10, 0);
