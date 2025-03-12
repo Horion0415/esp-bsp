@@ -42,6 +42,8 @@ static TaskHandle_t detect_task_handle;
 static esp_lcd_panel_io_handle_t io_handle = NULL;
 static esp_lcd_panel_handle_t panel_handle = NULL;
 
+static button_handle_t btns[BSP_BUTTON_NUM];
+
 static ppa_client_handle_t ppa_srm_handle = NULL;
 static size_t data_cache_line_size = 0;
 static void *canvas_buf[EXAMPLE_CAM_BUF_NUM];
@@ -60,6 +62,13 @@ void swap_rgb565_bytes(uint16_t *buffer, int pixel_count)
     }
 }
 
+static void btn_handler(void *arg, void *data)
+{
+    if((int)data == BSP_BUTTON_1) {
+        human_detected = !human_detected;
+    }
+}
+
 extern "C" void app_main(void)
 {
     // Initialize the display
@@ -69,6 +78,9 @@ extern "C" void app_main(void)
     ESP_ERROR_CHECK(bsp_display_new(&bsp_disp_cfg, &panel_handle, &io_handle));
 
     esp_lcd_panel_disp_on_off(panel_handle, true);
+
+    ESP_ERROR_CHECK(bsp_iot_button_create(btns, NULL, BSP_BUTTON_NUM));
+    ESP_ERROR_CHECK(iot_button_register_cb(btns[BSP_BUTTON_1], BUTTON_PRESS_DOWN, btn_handler, (void *) BSP_BUTTON_1));
 
     // Initialize the PPA
     ppa_client_config_t ppa_srm_config = {
@@ -214,7 +226,7 @@ static void camera_video_frame_operation(uint8_t *camera_buf, uint8_t camera_buf
             // Draw bounding box
             draw_rectangle_rgb(rgb_buf, camera_buf_hes, camera_buf_ves,
                                 bound[0], bound[1], bound[2], bound[3],
-                                0, 0, 255, 0, 0, 3);
+                                0, 0, 255, 0, 0, 5);
 
             // Draw keypoints in face detection mode
             if (human_detected && 

@@ -13,8 +13,8 @@
 
 static PedestrianDetect *detect = NULL;
 
-#define WIDTH  1280
-#define HEIGHT 720
+#define WIDTH  1920
+#define HEIGHT 1080
 
 std::list<dl::detect::result_t> app_pedestrian_detect(uint16_t *frame, int width, int height)
 {
@@ -75,8 +75,8 @@ void draw_rectangle_rgb(uint16_t *buffer, int width, int height, int x1, int y1,
 static void draw_large_green_point(uint16_t *buffer, int x, int y) {
     uint16_t green = 0x07E0; 
     
-    for (int dx = -3; dx <= 3; ++dx) {
-        for (int dy = -3; dy <= 3; ++dy) {
+    for (int dx = -6; dx <= 6; ++dx) {
+        for (int dy = -6; dy <= 6; ++dy) {
             int nx = x + dx;
             int ny = y + dy;
 
