@@ -866,6 +866,13 @@ bool ui_extra_get_popup_window_visible(void)
     return false;
 }
 
+void ui_extra_start_interval_timer(void)
+{
+    ui_extra_clear_page();
+    lv_label_set_text_fmt(ui_LabelPanelCanvasPopupIntervalTimer, "Starting %d min", interval_time);
+    lv_obj_clear_flag(ui_PanelCanvasPopupIntervalTimerWarning, LV_OBJ_FLAG_HIDDEN);
+}
+
 // Button event handler
 void ui_extra_btn_up(void)
 {
@@ -1033,9 +1040,7 @@ void ui_extra_btn_encoder(void)
             ui_extra_btn_menu();
             break;
         case UI_PAGE_INTERVAL_CAM:
-            ui_extra_clear_page();
-            lv_label_set_text_fmt(ui_LabelPanelCanvasPopupIntervalTimer, "Starting %d min", interval_time);
-            lv_obj_clear_flag(ui_PanelCanvasPopupIntervalTimerWarning, LV_OBJ_FLAG_HIDDEN);
+            ui_extra_start_interval_timer();
             
             if(!lv_additional_photo_timer){
                 lv_additional_photo_timer = lv_timer_create(pop_up_additional_photo_callback, 5000, ui_PanelCanvasPopupIntervalTimerWarning);

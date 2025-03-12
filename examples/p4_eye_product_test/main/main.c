@@ -181,7 +181,7 @@ void app_main(void)
         lv_label_set_text(label, "WiFi scan: PASS");
         create_and_write_file(file_path, "WiFi scan: PASS", true);
     } else {
-        lv_label_set_text(label, "WiFi scan: FAIL");
+        lv_label_set_text(label, "WiFi scan: FAIL");                 
         create_and_write_file(file_path, "WiFi scan: FAIL", true);
     }
 

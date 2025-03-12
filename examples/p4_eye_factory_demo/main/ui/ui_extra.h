@@ -146,4 +146,9 @@ void ui_extra_popup_interval_timer_warning(void);
  */
 void ui_extra_clear_page(void);
 
+/**
+ * @brief Start interval timer
+ */
+void ui_extra_start_interval_timer(void);
+
 #endif
