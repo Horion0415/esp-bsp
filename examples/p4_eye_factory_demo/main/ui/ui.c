@@ -82,6 +82,12 @@ lv_obj_t * ui_ImageScreenAlbum;
 lv_obj_t * ui_ImageAlbumMenu;
 lv_obj_t * ui_ImageAlbumUp;
 lv_obj_t * ui_ImageAlbumDown;
+lv_obj_t * ui_PanelImageScreenAlbumDelete;
+lv_obj_t * ui_LabelPanelImageScreenAlbumDelete;
+lv_obj_t * ui_ButtonPanelImageScreenAlbumDeleteYES;
+lv_obj_t * ui_LabelButtonPanelImageScreenAlbumDeleteYES;
+lv_obj_t * ui_ButtonPanelImageScreenAlbumDeleteNO;
+lv_obj_t * ui_LabelButtonPanelImageScreenAlbumDeleteNO;
 
 
 // SCREEN: ui_ScreenUSB

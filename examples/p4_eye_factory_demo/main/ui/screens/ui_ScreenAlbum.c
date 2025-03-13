@@ -47,4 +47,85 @@ void ui_ScreenAlbum_screen_init(void)
     lv_obj_add_flag(ui_ImageAlbumDown, LV_OBJ_FLAG_ADV_HITTEST);     /// Flags
     lv_obj_clear_flag(ui_ImageAlbumDown, LV_OBJ_FLAG_SCROLLABLE);      /// Flags
 
+    ui_PanelImageScreenAlbumDelete = lv_obj_create(ui_ImageScreenAlbum);
+    lv_obj_set_width(ui_PanelImageScreenAlbumDelete, 181);
+    lv_obj_set_height(ui_PanelImageScreenAlbumDelete, 185);
+    lv_obj_set_x(ui_PanelImageScreenAlbumDelete, -13);
+    lv_obj_set_y(ui_PanelImageScreenAlbumDelete, 4);
+    lv_obj_set_align(ui_PanelImageScreenAlbumDelete, LV_ALIGN_CENTER);
+    lv_obj_add_flag(ui_PanelImageScreenAlbumDelete, LV_OBJ_FLAG_HIDDEN);     /// Flags
+    lv_obj_clear_flag(ui_PanelImageScreenAlbumDelete, LV_OBJ_FLAG_SCROLLABLE);      /// Flags
+    lv_obj_set_style_radius(ui_PanelImageScreenAlbumDelete, 30, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_bg_color(ui_PanelImageScreenAlbumDelete, lv_color_hex(0xC9C9C9), LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_bg_opa(ui_PanelImageScreenAlbumDelete, 100, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_border_color(ui_PanelImageScreenAlbumDelete, lv_color_hex(0x000000), LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_border_opa(ui_PanelImageScreenAlbumDelete, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_bg_color(ui_PanelImageScreenAlbumDelete, lv_color_hex(0xC9C9C9), LV_PART_MAIN | LV_STATE_FOCUSED);
+    lv_obj_set_style_bg_opa(ui_PanelImageScreenAlbumDelete, 120, LV_PART_MAIN | LV_STATE_FOCUSED);
+
+    ui_LabelPanelImageScreenAlbumDelete = lv_label_create(ui_PanelImageScreenAlbumDelete);
+    lv_obj_set_width(ui_LabelPanelImageScreenAlbumDelete, LV_SIZE_CONTENT);   /// 1
+    lv_obj_set_height(ui_LabelPanelImageScreenAlbumDelete, LV_SIZE_CONTENT);    /// 1
+    lv_obj_set_x(ui_LabelPanelImageScreenAlbumDelete, 2);
+    lv_obj_set_y(ui_LabelPanelImageScreenAlbumDelete, -43);
+    lv_obj_set_align(ui_LabelPanelImageScreenAlbumDelete, LV_ALIGN_CENTER);
+    lv_label_set_text(ui_LabelPanelImageScreenAlbumDelete, "Delete the currently \n    viewed photo?");
+    lv_obj_set_style_text_color(ui_LabelPanelImageScreenAlbumDelete, lv_color_hex(0x000000),
+                                LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_opa(ui_LabelPanelImageScreenAlbumDelete, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_font(ui_LabelPanelImageScreenAlbumDelete, &ui_font_FontKoHoMiniBold18,
+                               LV_PART_MAIN | LV_STATE_DEFAULT);
+
+    ui_ButtonPanelImageScreenAlbumDeleteYES = lv_btn_create(ui_PanelImageScreenAlbumDelete);
+    lv_obj_set_width(ui_ButtonPanelImageScreenAlbumDeleteYES, 61);
+    lv_obj_set_height(ui_ButtonPanelImageScreenAlbumDeleteYES, 27);
+    lv_obj_set_x(ui_ButtonPanelImageScreenAlbumDeleteYES, -45);
+    lv_obj_set_y(ui_ButtonPanelImageScreenAlbumDeleteYES, 40);
+    lv_obj_set_align(ui_ButtonPanelImageScreenAlbumDeleteYES, LV_ALIGN_CENTER);
+    lv_obj_add_flag(ui_ButtonPanelImageScreenAlbumDeleteYES, LV_OBJ_FLAG_SCROLL_ON_FOCUS);     /// Flags
+    lv_obj_clear_flag(ui_ButtonPanelImageScreenAlbumDeleteYES, LV_OBJ_FLAG_SCROLLABLE);      /// Flags
+    lv_obj_set_style_bg_color(ui_ButtonPanelImageScreenAlbumDeleteYES, lv_color_hex(0xFFFFFF),
+                              LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_bg_opa(ui_ButtonPanelImageScreenAlbumDeleteYES, 150, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_bg_color(ui_ButtonPanelImageScreenAlbumDeleteYES, lv_color_hex(0x33E341),
+                              LV_PART_MAIN | LV_STATE_FOCUSED);
+    lv_obj_set_style_bg_opa(ui_ButtonPanelImageScreenAlbumDeleteYES, 255, LV_PART_MAIN | LV_STATE_FOCUSED);
+
+    ui_LabelButtonPanelImageScreenAlbumDeleteYES = lv_label_create(ui_ButtonPanelImageScreenAlbumDeleteYES);
+    lv_obj_set_width(ui_LabelButtonPanelImageScreenAlbumDeleteYES, LV_SIZE_CONTENT);   /// 1
+    lv_obj_set_height(ui_LabelButtonPanelImageScreenAlbumDeleteYES, LV_SIZE_CONTENT);    /// 1
+    lv_obj_set_x(ui_LabelButtonPanelImageScreenAlbumDeleteYES, 0);
+    lv_obj_set_y(ui_LabelButtonPanelImageScreenAlbumDeleteYES, 2);
+    lv_obj_set_align(ui_LabelButtonPanelImageScreenAlbumDeleteYES, LV_ALIGN_CENTER);
+    lv_label_set_text(ui_LabelButtonPanelImageScreenAlbumDeleteYES, "YES");
+    lv_obj_set_style_text_color(ui_LabelButtonPanelImageScreenAlbumDeleteYES, lv_color_hex(0x000000),
+                                LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_opa(ui_LabelButtonPanelImageScreenAlbumDeleteYES, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
+
+    ui_ButtonPanelImageScreenAlbumDeleteNO = lv_btn_create(ui_PanelImageScreenAlbumDelete);
+    lv_obj_set_width(ui_ButtonPanelImageScreenAlbumDeleteNO, 61);
+    lv_obj_set_height(ui_ButtonPanelImageScreenAlbumDeleteNO, 27);
+    lv_obj_set_x(ui_ButtonPanelImageScreenAlbumDeleteNO, 35);
+    lv_obj_set_y(ui_ButtonPanelImageScreenAlbumDeleteNO, 40);
+    lv_obj_set_align(ui_ButtonPanelImageScreenAlbumDeleteNO, LV_ALIGN_CENTER);
+    lv_obj_add_flag(ui_ButtonPanelImageScreenAlbumDeleteNO, LV_OBJ_FLAG_SCROLL_ON_FOCUS);     /// Flags
+    lv_obj_clear_flag(ui_ButtonPanelImageScreenAlbumDeleteNO, LV_OBJ_FLAG_SCROLLABLE);      /// Flags
+    lv_obj_set_style_bg_color(ui_ButtonPanelImageScreenAlbumDeleteNO, lv_color_hex(0xFFFFFF),
+                              LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_bg_opa(ui_ButtonPanelImageScreenAlbumDeleteNO, 150, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_bg_color(ui_ButtonPanelImageScreenAlbumDeleteNO, lv_color_hex(0xD92020),
+                              LV_PART_MAIN | LV_STATE_FOCUSED);
+    lv_obj_set_style_bg_opa(ui_ButtonPanelImageScreenAlbumDeleteNO, 255, LV_PART_MAIN | LV_STATE_FOCUSED);
+
+    ui_LabelButtonPanelImageScreenAlbumDeleteNO = lv_label_create(ui_ButtonPanelImageScreenAlbumDeleteNO);
+    lv_obj_set_width(ui_LabelButtonPanelImageScreenAlbumDeleteNO, LV_SIZE_CONTENT);   /// 1
+    lv_obj_set_height(ui_LabelButtonPanelImageScreenAlbumDeleteNO, LV_SIZE_CONTENT);    /// 1
+    lv_obj_set_x(ui_LabelButtonPanelImageScreenAlbumDeleteNO, 0);
+    lv_obj_set_y(ui_LabelButtonPanelImageScreenAlbumDeleteNO, 2);
+    lv_obj_set_align(ui_LabelButtonPanelImageScreenAlbumDeleteNO, LV_ALIGN_CENTER);
+    lv_label_set_text(ui_LabelButtonPanelImageScreenAlbumDeleteNO, "NO");
+    lv_obj_set_style_text_color(ui_LabelButtonPanelImageScreenAlbumDeleteNO, lv_color_hex(0x000000),
+                                LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_opa(ui_LabelButtonPanelImageScreenAlbumDeleteNO, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
+
 }

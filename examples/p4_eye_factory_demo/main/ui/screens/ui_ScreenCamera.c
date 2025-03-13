@@ -241,10 +241,10 @@ void ui_ScreenCamera_screen_init(void)
     ui_LabelPanelCanvasPopupCameraIntervalDown = lv_label_create(ui_PanelCanvasPopupCameraInterval);
     lv_obj_set_width(ui_LabelPanelCanvasPopupCameraIntervalDown, LV_SIZE_CONTENT);   /// 1
     lv_obj_set_height(ui_LabelPanelCanvasPopupCameraIntervalDown, LV_SIZE_CONTENT);    /// 1
-    lv_obj_set_x(ui_LabelPanelCanvasPopupCameraIntervalDown, 2);
-    lv_obj_set_y(ui_LabelPanelCanvasPopupCameraIntervalDown, 46);
+    lv_obj_set_x(ui_LabelPanelCanvasPopupCameraIntervalDown, -1);
+    lv_obj_set_y(ui_LabelPanelCanvasPopupCameraIntervalDown, 45);
     lv_obj_set_align(ui_LabelPanelCanvasPopupCameraIntervalDown, LV_ALIGN_CENTER);
-    lv_label_set_text(ui_LabelPanelCanvasPopupCameraIntervalDown, " 1)Set Interval\n2)Press wheel to \nstart shooting");
+    lv_label_set_text(ui_LabelPanelCanvasPopupCameraIntervalDown, "1)  Set Interval\n2) Press wheel to \nstart shooting");
     lv_obj_set_style_text_color(ui_LabelPanelCanvasPopupCameraIntervalDown, lv_color_hex(0x000000),
                                 LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_opa(ui_LabelPanelCanvasPopupCameraIntervalDown, 255, LV_PART_MAIN | LV_STATE_DEFAULT);

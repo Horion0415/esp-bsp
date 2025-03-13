@@ -86,6 +86,12 @@ extern lv_obj_t * ui_ImageScreenAlbum;
 extern lv_obj_t * ui_ImageAlbumMenu;
 extern lv_obj_t * ui_ImageAlbumUp;
 extern lv_obj_t * ui_ImageAlbumDown;
+extern lv_obj_t * ui_PanelImageScreenAlbumDelete;
+extern lv_obj_t * ui_LabelPanelImageScreenAlbumDelete;
+extern lv_obj_t * ui_ButtonPanelImageScreenAlbumDeleteYES;
+extern lv_obj_t * ui_LabelButtonPanelImageScreenAlbumDeleteYES;
+extern lv_obj_t * ui_ButtonPanelImageScreenAlbumDeleteNO;
+extern lv_obj_t * ui_LabelButtonPanelImageScreenAlbumDeleteNO;
 // SCREEN: ui_ScreenUSB
 void ui_ScreenUSB_screen_init(void);
 extern lv_obj_t * ui_ScreenUSB;
@@ -126,9 +132,9 @@ LV_FONT_DECLARE(ui_font_FontKoHoBold14);
 LV_FONT_DECLARE(ui_font_FontKoHoBold18);
 LV_FONT_DECLARE(ui_font_FontKoHoBold28);
 LV_FONT_DECLARE(ui_font_FontKoHoMiniBold14);
+LV_FONT_DECLARE(ui_font_FontKoHoMiniBold18);
 LV_FONT_DECLARE(ui_font_FontKoHoMiniBold22);
 LV_FONT_DECLARE(ui_font_FontKoHoMiniBold24);
-LV_FONT_DECLARE(ui_font_FontKoHoMiniBold18);
 
 
 void ui_init(void);
