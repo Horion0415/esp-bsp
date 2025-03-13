@@ -45,6 +45,11 @@ static size_t tx_buffer_size = 0;
 static const uint32_t album_res[PHOTO_RESOLUTION_MAX] = {480, 640, 960};
 static photo_resolution_t current_album_resolution = PHOTO_RESOLUTION_1080P; // default 1080P
 
+// Comparison function for sorting filenames in descending order
+static int compare_filenames_desc(const void *a, const void *b) {
+    return strcmp(*(const char **)b, *(const char **)a);
+}
+
 // Scan images from SD card
 static esp_err_t app_album_scan_images(void) {
     DIR *dir = opendir(BSP_SD_MOUNT_POINT"/"PIC_FOLDER_NAME);
@@ -54,6 +59,7 @@ static esp_err_t app_album_scan_images(void) {
     }
 
     struct dirent *entry;
+    char *filenames_temp[MAX_IMAGES];
     album_ctx.count = 0;
 
     // Clear filename array
@@ -63,11 +69,18 @@ static esp_err_t app_album_scan_images(void) {
     while ((entry = readdir(dir)) != NULL && album_ctx.count < MAX_IMAGES) {
         if ((strstr(entry->d_name, ".jpg") || strstr(entry->d_name, ".JPG")) && 
             strncmp(entry->d_name, "._", 2) != 0) {
-            snprintf(album_ctx.filenames[album_ctx.count], MAX_PATH_LEN, 
+            
+            // Allocate temporary memory for full path
+            filenames_temp[album_ctx.count] = malloc(MAX_PATH_LEN);
+            if (filenames_temp[album_ctx.count] == NULL) {
+                ESP_LOGE(TAG, "Failed to allocate memory for filename");
+                continue;
+            }
+            
+            snprintf(filenames_temp[album_ctx.count], MAX_PATH_LEN, 
                     "%s/%s/%s", BSP_SD_MOUNT_POINT, PIC_FOLDER_NAME, entry->d_name);
             album_ctx.count++;
         }
-        ESP_LOGD(TAG, "image %d: %s", album_ctx.count, album_ctx.filenames[album_ctx.count - 1]);
     }
 
     closedir(dir);
@@ -77,7 +90,18 @@ static esp_err_t app_album_scan_images(void) {
         return ESP_FAIL;
     }
     
-    ESP_LOGI(TAG, "Found %d images in %s/%s", album_ctx.count, BSP_SD_MOUNT_POINT, PIC_FOLDER_NAME);
+    // Sort filenames in descending order (newest first, assuming sequential numbering)
+    qsort(filenames_temp, album_ctx.count, sizeof(char *), compare_filenames_desc);
+    
+    // Copy sorted filenames to album context
+    for (int i = 0; i < album_ctx.count; i++) {
+        strncpy(album_ctx.filenames[i], filenames_temp[i], MAX_PATH_LEN - 1);
+        free(filenames_temp[i]);  // Free temporary memory
+        ESP_LOGD(TAG, "image %d: %s", i, album_ctx.filenames[i]);
+    }
+    
+    ESP_LOGI(TAG, "Found %d images in %s/%s (sorted by filename in descending order)", 
+             album_ctx.count, BSP_SD_MOUNT_POINT, PIC_FOLDER_NAME);
     album_ctx.current_index = 0;
     
     return ESP_OK;
