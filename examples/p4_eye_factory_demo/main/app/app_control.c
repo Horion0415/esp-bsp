@@ -39,14 +39,14 @@ static void btn_handler(void *arg, void *data)
             
         case BSP_BUTTON_2:
             ui_extra_btn_up();
-            if (ui_extra_get_current_page() == UI_PAGE_ALBUM) {
+            if (ui_extra_get_current_page() == UI_PAGE_ALBUM && lv_obj_has_flag(ui_PanelImageScreenAlbumDelete, LV_OBJ_FLAG_HIDDEN)) {
                 app_album_prev_image();
             }
             break;
             
         case BSP_BUTTON_3:
             ui_extra_btn_down();
-            if (ui_extra_get_current_page() == UI_PAGE_ALBUM) {
+            if (ui_extra_get_current_page() == UI_PAGE_ALBUM && lv_obj_has_flag(ui_PanelImageScreenAlbumDelete, LV_OBJ_FLAG_HIDDEN)) {
                 app_album_next_image();
             }
             break;

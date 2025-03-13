@@ -877,6 +877,28 @@ void ui_extra_start_interval_timer(void)
     lv_obj_clear_flag(ui_PanelCanvasPopupIntervalTimerWarning, LV_OBJ_FLAG_HIDDEN);
 }
 
+static void ui_extra_focus_on_picture_delete(void)
+{
+    if(lv_obj_has_state(ui_ButtonPanelImageScreenAlbumDeleteYES, LV_STATE_FOCUSED)) {
+        lv_obj_add_state(ui_ButtonPanelImageScreenAlbumDeleteNO, LV_STATE_FOCUSED);
+        lv_obj_clear_state(ui_ButtonPanelImageScreenAlbumDeleteYES, LV_STATE_FOCUSED);
+    } else {
+        lv_obj_clear_state(ui_ButtonPanelImageScreenAlbumDeleteNO, LV_STATE_FOCUSED);
+        lv_obj_add_state(ui_ButtonPanelImageScreenAlbumDeleteYES, LV_STATE_FOCUSED);
+    }
+}
+
+void ui_extra_popup_picture_delete_warning(void)
+{
+    lv_obj_clear_flag(ui_PanelImageScreenAlbumDelete, LV_OBJ_FLAG_HIDDEN);
+    ui_extra_focus_on_picture_delete();
+}
+
+void ui_extra_popup_picture_delete_success(void)
+{
+    lv_obj_add_flag(ui_PanelImageScreenAlbumDelete, LV_OBJ_FLAG_HIDDEN);
+}
+
 // Button event handler
 void ui_extra_btn_up(void)
 {
@@ -900,6 +922,12 @@ void ui_extra_btn_up(void)
             
         case UI_PAGE_INTERVAL_CAM:
             app_extra_set_interval_time(interval_time + INTERVAL_TIME_STEP);
+            break;
+
+        case UI_PAGE_ALBUM:
+            if(!lv_obj_has_flag(ui_PanelImageScreenAlbumDelete, LV_OBJ_FLAG_HIDDEN)) {
+                ui_extra_focus_on_picture_delete();
+            }
             break;
             
         default:
@@ -929,6 +957,12 @@ void ui_extra_btn_down(void)
             
         case UI_PAGE_INTERVAL_CAM:
             app_extra_set_interval_time(interval_time - INTERVAL_TIME_STEP);
+            break;
+
+        case UI_PAGE_ALBUM:
+            if(!lv_obj_has_flag(ui_PanelImageScreenAlbumDelete, LV_OBJ_FLAG_HIDDEN)) {
+                ui_extra_focus_on_picture_delete();
+            }
             break;
             
         default:
@@ -979,6 +1013,19 @@ void ui_extra_btn_menu(void)
                 setting_options_t* opt = &settings_options[current_settings_item];
                 opt->current_option = (opt->current_option + 1) % opt->option_count;
                 update_setting_display(current_settings_item);
+            }
+            break;
+            
+        case UI_PAGE_ALBUM:
+            if(!lv_obj_has_flag(ui_PanelImageScreenAlbumDelete, LV_OBJ_FLAG_HIDDEN)) {
+                if(lv_obj_has_state(ui_ButtonPanelImageScreenAlbumDeleteYES, LV_STATE_FOCUSED)) {
+                    app_album_delete_current_image();
+                    ui_extra_popup_picture_delete_success();
+                } else {
+                    ui_extra_popup_picture_delete_success();
+                }
+            } else {
+                ui_extra_goto_page(UI_PAGE_MAIN);
             }
             break;
             
@@ -1064,6 +1111,19 @@ void ui_extra_btn_encoder(void)
             break;
         case UI_PAGE_CAMERA:
             app_video_stream_take_photo();
+            break;
+        case UI_PAGE_ALBUM:
+            if(lv_obj_has_flag(ui_PanelImageScreenAlbumDelete, LV_OBJ_FLAG_HIDDEN)) {
+                ui_extra_popup_picture_delete_warning();
+                ui_extra_focus_on_picture_delete();
+            } else {
+                if(lv_obj_has_state(ui_ButtonPanelImageScreenAlbumDeleteYES, LV_STATE_FOCUSED)) {
+                    app_album_delete_current_image();
+                    ui_extra_popup_picture_delete_success();
+                } else {
+                    ui_extra_popup_picture_delete_success();
+                }
+            }
             break;
         default:
             break;

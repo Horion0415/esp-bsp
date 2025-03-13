@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <dirent.h>
 #include <string.h>
+#include <unistd.h>
 #include "esp_log.h"
 #include "esp_heap_caps.h"
 #include "bsp/esp-bsp.h"
@@ -259,6 +260,75 @@ esp_err_t app_album_prev_image(void) {
     ESP_LOGI(TAG, "Switching to previous image: %d/%d", album_ctx.current_index + 1, album_ctx.count);
     
     if (app_album_load_current_image() != ESP_OK) {
+        return ESP_FAIL;
+    }
+    
+    return app_album_display_current_image();
+}
+
+// Delete current image and load next one
+esp_err_t app_album_delete_current_image(void) {
+    if (album_ctx.count == 0) {
+        ESP_LOGE(TAG, "No images available");
+        return ESP_FAIL;
+    }
+    
+    // Get current filename
+    char current_file[MAX_PATH_LEN];
+    strncpy(current_file, album_ctx.filenames[album_ctx.current_index], MAX_PATH_LEN - 1);
+    
+    ESP_LOGI(TAG, "Deleting image: %s", current_file);
+    
+    // Delete the file
+    if (unlink(current_file) != 0) {
+        ESP_LOGE(TAG, "Failed to delete file: %s", current_file);
+        return ESP_FAIL;
+    }
+    
+    // Update filenames array by shifting elements
+    for (int i = album_ctx.current_index; i < album_ctx.count - 1; i++) {
+        strncpy(album_ctx.filenames[i], album_ctx.filenames[i + 1], MAX_PATH_LEN - 1);
+    }
+    
+    // Decrease count
+    album_ctx.count--;
+    
+    ESP_LOGI(TAG, "Image deleted successfully, remaining images: %d", album_ctx.count);
+    
+    // If no images left
+    if (album_ctx.count == 0) {
+        // Clear canvas
+        if (album_ctx.canvas_buffer) {
+            memset(album_ctx.canvas_buffer, 0, album_ctx.canvas_width * album_ctx.canvas_height * 2);
+            bsp_display_lock(0);
+            lv_canvas_set_buffer(album_ctx.canvas, album_ctx.canvas_buffer, 
+                                album_ctx.canvas_width, album_ctx.canvas_height, 
+                                LV_IMG_CF_TRUE_COLOR);
+            lv_obj_invalidate(album_ctx.canvas);
+            bsp_display_unlock();
+        }
+        
+        // Free image buffer
+        if (album_ctx.img_buffer) {
+            free(album_ctx.img_buffer);
+            album_ctx.img_buffer = NULL;
+        }
+        
+        return ESP_OK;
+    }
+    
+    // Adjust current index if needed
+    if (album_ctx.current_index >= album_ctx.count) {
+        album_ctx.current_index = album_ctx.count - 1;
+    }
+    
+    // Load and display next image
+    if (app_album_load_current_image() != ESP_OK) {
+        // If failed to load current image, try next one
+        if (album_ctx.count > 1) {
+            album_ctx.current_index = (album_ctx.current_index + 1) % album_ctx.count;
+            return app_album_load_current_image() && app_album_display_current_image();
+        }
         return ESP_FAIL;
     }
     
