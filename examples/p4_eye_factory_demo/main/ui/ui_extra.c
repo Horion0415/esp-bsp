@@ -807,9 +807,9 @@ void app_extra_set_interval_time(uint16_t time)
 {
     // Limit time range
     if(time > MAX_INTERVAL_TIME) {
-        time = MAX_INTERVAL_TIME;
-    } else if(time < MIN_INTERVAL_TIME) {
         time = MIN_INTERVAL_TIME;
+    } else if(time < MIN_INTERVAL_TIME) {
+        time = MAX_INTERVAL_TIME;
     }
 
     interval_time = time;
