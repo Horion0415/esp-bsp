@@ -16,6 +16,8 @@
 #define ALIGN_UP(num, align)    (((num) + ((align) - 1)) & ~((align) - 1))
 #define SCALE_LEVELS 6                         // resolution scale levels
 #define DEBUG_MODE   1
+#define CROP_PHOTO_WIDTH 1280
+#define CROP_PHOTO_HEIGHT 960
 
 // Define constants to replace magic numbers
 #define JPEG_COMPRESSION_RATIO 5  // Assuming 10:1 compression ratio
@@ -428,10 +430,10 @@ static esp_err_t take_and_save_photo(uint8_t *camera_buf, uint32_t width, uint32
             .in.buffer = camera_buf,
             .in.pic_w = width,
             .in.pic_h = height,
-            .in.block_w = photo_width,
-            .in.block_h = photo_height,
-            .in.block_offset_x = (width - photo_width) / 2,
-            .in.block_offset_y = (height - photo_height) / 2,
+            .in.block_w = CROP_PHOTO_WIDTH,
+            .in.block_h = CROP_PHOTO_HEIGHT,
+            .in.block_offset_x = (width - CROP_PHOTO_WIDTH) / 2,
+            .in.block_offset_y = (height - CROP_PHOTO_HEIGHT) / 2,
             .in.srm_cm = PPA_SRM_COLOR_MODE_RGB565,
             .out.buffer = camera_buffer.photo_buf,
             .out.buffer_size = ALIGN_UP(photo_width * photo_height * 2, data_cache_line_size),
@@ -441,8 +443,8 @@ static esp_err_t take_and_save_photo(uint8_t *camera_buf, uint32_t width, uint32
             .out.block_offset_y = 0,
             .out.srm_cm = PPA_SRM_COLOR_MODE_RGB565,
             .rotation_angle = PPA_SRM_ROTATION_ANGLE_0,
-            .scale_x = 1,
-            .scale_y = 1,
+            .scale_x = (float)photo_width / CROP_PHOTO_WIDTH,
+            .scale_y = (float)photo_height / CROP_PHOTO_HEIGHT,
             .rgb_swap = 0,
             .byte_swap = 0,
             .mode = PPA_TRANS_MODE_BLOCKING,
