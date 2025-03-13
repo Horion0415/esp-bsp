@@ -22,22 +22,44 @@ static int knob_step_threshold = 6;  // threshold for knob step counter
 
 static void btn_handler(void *arg, void *data)
 {
+    int button_id = (int)data;
+    
     bsp_display_lock(0);
-    if((int)data == BSP_BUTTON_1) {
-        ui_extra_btn_menu();
-    } else if((int)data == BSP_BUTTON_2) {
-        ui_extra_btn_up();
-        if(ui_extra_get_current_page() == UI_PAGE_ALBUM) {
-            app_album_prev_image();
-        }
-    } else if((int)data == BSP_BUTTON_3) {
-        ui_extra_btn_down();
-        if(ui_extra_get_current_page() == UI_PAGE_ALBUM) {
-            app_album_next_image();
-        }
-    } else if((int)data == BSP_BUTTON_ED) {
-        ui_extra_btn_encoder();
+
+    if(ui_extra_get_current_page() == UI_PAGE_USB_DISK) {
+        ui_extra_goto_page(UI_PAGE_MAIN);
+        bsp_display_unlock();
+        return;
     }
+    
+    switch (button_id) {
+        case BSP_BUTTON_1:
+            ui_extra_btn_menu();
+            break;
+            
+        case BSP_BUTTON_2:
+            ui_extra_btn_up();
+            if (ui_extra_get_current_page() == UI_PAGE_ALBUM) {
+                app_album_prev_image();
+            }
+            break;
+            
+        case BSP_BUTTON_3:
+            ui_extra_btn_down();
+            if (ui_extra_get_current_page() == UI_PAGE_ALBUM) {
+                app_album_next_image();
+            }
+            break;
+            
+        case BSP_BUTTON_ED:
+            ui_extra_btn_encoder();
+            break;
+            
+        default:
+            ESP_LOGW(TAG, "Unknown button ID: %d", button_id);
+            break;
+    }
+    
     bsp_display_unlock();
 }
 

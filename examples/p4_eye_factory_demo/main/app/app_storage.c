@@ -479,7 +479,7 @@ esp_err_t app_storage_init(void) {
             if (ret == ESP_OK) {
                 // use interval time
                 ui_extra_goto_page(UI_PAGE_INTERVAL_CAM);
-                ui_extra_start_interval_timer();
+                ui_extra_clear_page();
                 app_video_stream_start_interval_photo(interval_time);
                 ESP_LOGI(TAG, "Device woke up for interval photography, interval time: %u minutes", interval_time);
             } else {
