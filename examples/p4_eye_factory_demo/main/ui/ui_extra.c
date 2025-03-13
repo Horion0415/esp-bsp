@@ -40,6 +40,7 @@ static lv_coord_t btn_width = 0;
 static lv_coord_t btn_height = 0;
 
 static lv_obj_t * selected_btn = NULL;  
+static bool is_scrolling = false; 
 
 static lv_obj_t * scroll_cont = NULL;
 static lv_obj_t * info_label = NULL;  
@@ -233,6 +234,7 @@ static lv_obj_t * create_img_button(lv_obj_t *parent, const void *img_src, const
 
 static void scroll_event_cb(lv_event_t * e)
 {
+    is_scrolling = true; 
     lv_obj_t * cont = lv_event_get_target(e);
     lv_area_t cont_a;
     lv_obj_get_coords(cont, &cont_a);
@@ -378,6 +380,8 @@ static void scroll_end_event_cb(lv_event_t * e)
         // scroll to the view
         lv_obj_scroll_to_view(closest_child, LV_ANIM_ON);
     }
+
+    is_scrolling = false; 
 }
 
 static void lv_scroll_create(void)
@@ -946,6 +950,12 @@ void ui_extra_btn_menu(void)
         return;
     }
 
+    // Ignore selection during scroll
+    if (is_scrolling && current_page == UI_PAGE_MAIN) {
+        ESP_LOGI(TAG, "Ignoring selection during scroll");
+        return;
+    }
+
     // Perform different actions based on current page
     switch(current_page) {
         case UI_PAGE_MAIN:
@@ -1032,6 +1042,12 @@ void ui_extra_btn_encoder(void)
             default:
                 break;
         }
+        return;
+    }
+
+    // Ignore selection during scroll
+    if (is_scrolling && current_page == UI_PAGE_MAIN) {
+        ESP_LOGI(TAG, "Ignoring selection during scroll");
         return;
     }
 
