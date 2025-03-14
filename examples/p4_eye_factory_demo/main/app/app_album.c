@@ -46,6 +46,24 @@ static size_t tx_buffer_size = 0;
 static const uint32_t album_res[PHOTO_RESOLUTION_MAX] = {480, 640, 960};
 static photo_resolution_t current_album_resolution = PHOTO_RESOLUTION_1080P; // default 1080P
 
+static bool is_valid_image_file(const char *filename) {
+    // check file extension
+    const char *ext = strrchr(filename, '.');
+    if (!ext || (strcasecmp(ext, ".jpg") != 0 && strcasecmp(ext, ".jpeg") != 0)) {
+        return false;
+    }
+    
+    // check if it is a temporary file or system file
+    if (filename[0] == '.' || filename[0] == '#' || 
+        filename[strlen(filename)-1] == '~' ||
+        strncmp(filename, "____~", 5) == 0 ||
+        strstr(filename, ".swp") != NULL) {
+        return false;
+    }
+    
+    return true;
+}
+
 // Comparison function for sorting filenames in descending order
 static int compare_filenames_desc(const void *a, const void *b) {
     return strcmp(*(const char **)b, *(const char **)a);
@@ -68,10 +86,7 @@ static esp_err_t app_album_scan_images(void) {
 
     // Scan all jpg files in the directory
     while ((entry = readdir(dir)) != NULL && album_ctx.count < MAX_IMAGES) {
-        if ((strstr(entry->d_name, ".jpg") || strstr(entry->d_name, ".JPG")) && 
-            strncmp(entry->d_name, "._", 2) != 0 &&
-            strncmp(entry->d_name, "____~", 5) != 0) {  
-            
+        if (is_valid_image_file(entry->d_name)) {  
             // Allocate temporary memory for full path
             filenames_temp[album_ctx.count] = malloc(MAX_PATH_LEN);
             if (filenames_temp[album_ctx.count] == NULL) {
