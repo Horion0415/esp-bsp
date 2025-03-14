@@ -44,6 +44,7 @@ typedef struct {
     uint8_t *jpg_buf;
     uint32_t jpg_size;
     size_t rx_buffer_size;
+    uint8_t *adj_camera_buf;
 } camera_buffer_t;
 
 typedef struct {
@@ -81,6 +82,9 @@ static SemaphoreHandle_t photo_take_sem = NULL;
 static const uint32_t photo_resolution_width[PHOTO_RESOLUTION_MAX] = {640, 1280, 1920};
 static const uint32_t photo_resolution_height[PHOTO_RESOLUTION_MAX] = {480, 720, 1080};
 static int scale_level_res[SCALE_LEVELS] = {960, 480, 240, 120, 80, 60};
+
+static const uint32_t adj_resolution_width[SCALE_LEVELS] = {1920, 1680, 1440, 1280, 1080, 960};
+static const uint32_t adj_resolution_height[SCALE_LEVELS] = {1080, 945, 810, 675, 540, 405};
 
 static void photo_task(void *pvParameters);
 static void camera_video_frame_operation(uint8_t *camera_buf, uint8_t camera_buf_index, uint32_t camera_buf_hes, uint32_t camera_buf_ves, size_t camera_buf_len);
@@ -282,6 +286,11 @@ esp_err_t app_video_stream_init(i2c_master_bus_handle_t i2c_handle)
         }
     }
 
+    camera_buffer.adj_camera_buf = heap_caps_aligned_calloc(data_cache_line_size, 1, 1920 * 1080 * 2, MALLOC_CAP_SPIRAM);
+    if (camera_buffer.adj_camera_buf == NULL) {
+        ESP_LOGE(TAG, "Failed to allocate adjusted camera buffer");
+    }
+
     // Initialize JPEG encoder
     jpeg_encode_engine_cfg_t encode_eng_cfg = {
         .timeout_ms = 70,
@@ -415,6 +424,44 @@ static esp_err_t take_and_save_photo(uint8_t *camera_buf, uint32_t width, uint32
         photo_height = height;
     }
 
+    uint16_t magnification_factor = app_extra_get_magnification_factor();
+    uint8_t *pre_handle_buf = camera_buf;
+
+    if(magnification_factor > 1) {
+        ppa_srm_oper_config_t adj_srm_config = {
+            .in.buffer = camera_buf,
+            .in.pic_w = width,
+            .in.pic_h = height,
+            .in.block_w = adj_resolution_width[magnification_factor - 1],
+            .in.block_h = adj_resolution_height[magnification_factor - 1],
+            .in.block_offset_x = (width - adj_resolution_width[magnification_factor - 1]) / 2,
+            .in.block_offset_y = (height - adj_resolution_height[magnification_factor - 1]) / 2,
+            .in.srm_cm = PPA_SRM_COLOR_MODE_RGB565,
+            .out.buffer = camera_buffer.adj_camera_buf,
+            .out.buffer_size = ALIGN_UP(width * height * 2, data_cache_line_size),
+            .out.pic_w = width,
+            .out.pic_h = height,
+            .out.block_offset_x = 0,
+            .out.block_offset_y = 0,
+            .out.srm_cm = PPA_SRM_COLOR_MODE_RGB565,
+            .rotation_angle = PPA_SRM_ROTATION_ANGLE_0,
+            .scale_x = (float)width / adj_resolution_width[magnification_factor - 1],
+            .scale_y = (float)height / adj_resolution_height[magnification_factor - 1],
+            .rgb_swap = 0,
+            .byte_swap = 0,
+            .mode = PPA_TRANS_MODE_BLOCKING,
+        };
+
+        ret = ppa_do_scale_rotate_mirror(ppa_srm_handle, &adj_srm_config);
+        if (ret != ESP_OK) {
+            ESP_LOGE(TAG, "Failed to scale image: 0x%x", ret);
+            goto cleanup;
+        }
+        pre_handle_buf = camera_buffer.adj_camera_buf;
+    } else {
+        pre_handle_buf = camera_buf;
+    }
+
     // Process image based on resolution
     if(camera_state.current_resolution != PHOTO_RESOLUTION_1080P) {
         camera_buffer.photo_buf = (uint8_t*)heap_caps_aligned_calloc(data_cache_line_size, 1, 
@@ -427,7 +474,7 @@ static esp_err_t take_and_save_photo(uint8_t *camera_buf, uint32_t width, uint32
         }
 
         ppa_srm_oper_config_t srm_config = {
-            .in.buffer = camera_buf,
+            .in.buffer = pre_handle_buf,
             .in.pic_w = width,
             .in.pic_h = height,
             .in.block_w = CROP_PHOTO_WIDTH,
@@ -458,7 +505,11 @@ static esp_err_t take_and_save_photo(uint8_t *camera_buf, uint32_t width, uint32
 
         pic_buf = camera_buffer.photo_buf;
     } else {
-        pic_buf = camera_buf;
+        if(magnification_factor > 1) {
+            pic_buf = camera_buffer.adj_camera_buf;
+        } else {
+            pic_buf = camera_buf;
+        }
     }
 
     // Configure JPEG encoding
