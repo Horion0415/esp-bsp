@@ -922,9 +922,8 @@ bool ui_extra_get_sd_card_mounted(void)
 void ui_extra_set_usb_disk_mounted(bool mounted)
 {
     is_usb_disk_mounted = mounted;
-    if(current_page == UI_PAGE_MAIN || current_page == UI_PAGE_USB_DISK) {
-        ui_extra_goto_page(UI_PAGE_USB_DISK);
-    }
+    
+    ui_extra_goto_page(UI_PAGE_USB_DISK);
 }
 
 bool ui_extra_get_usb_disk_mounted(void)
