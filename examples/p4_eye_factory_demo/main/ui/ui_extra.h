@@ -151,4 +151,10 @@ void ui_extra_clear_page(void);
  */
 void ui_extra_start_interval_timer(void);
 
+/**
+ * @brief Handle USB disk page
+ * @return Whether USB disk page is handled
+ */
+bool ui_extra_handle_usb_disk_page(void);
+
 #endif

@@ -53,6 +53,7 @@ static lv_timer_t *lv_popup_timer = NULL;
 static lv_timer_t *lv_additional_photo_timer = NULL;
 static lv_timer_t *lv_interval_timer = NULL;
 static lv_timer_t *lv_video_timer = NULL;
+static lv_timer_t *lv_usb_disk_timer = NULL;
 
 static bool is_sd_card_mounted = false;
 static bool is_usb_disk_mounted = false;
@@ -535,6 +536,18 @@ static void pop_up_timer_callback(lv_timer_t * timer)
     }
 }
 
+static void usb_disk_timer_callback(lv_timer_t * timer)
+{
+    lv_obj_add_flag(ui_ImageScreenUSBWarning, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_add_flag(ui_ImageScreenUSB, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_clear_flag(ui_ImageScreenUSBSuccess, LV_OBJ_FLAG_HIDDEN);
+
+    if (lv_usb_disk_timer) {
+        lv_timer_del(lv_usb_disk_timer);
+        lv_usb_disk_timer = NULL;
+    }
+}
+
 static void video_timer_callback(lv_timer_t * timer)
 {
     video_recording_seconds++;
@@ -752,6 +765,25 @@ void ui_extra_popup_interval_timer_warning(void)
     if(!lv_additional_photo_timer){
         lv_additional_photo_timer = lv_timer_create(pop_up_additional_photo_callback, 5000, ui_PanelCanvasPopupIntervalTimerWarningEnd);
     }
+}
+
+bool ui_extra_handle_usb_disk_page(void)
+{
+    if(ui_extra_get_current_page() == UI_PAGE_USB_DISK) {
+        if(!lv_obj_has_flag(ui_ImageScreenUSB, LV_OBJ_FLAG_HIDDEN)) {
+            ui_extra_goto_page(UI_PAGE_MAIN);
+        } else if (!lv_obj_has_flag(ui_ImageScreenUSBSuccess, LV_OBJ_FLAG_HIDDEN)) {
+            lv_obj_clear_flag(ui_ImageScreenUSBWarning, LV_OBJ_FLAG_HIDDEN);
+            lv_obj_add_flag(ui_ImageScreenUSB, LV_OBJ_FLAG_HIDDEN);
+            lv_obj_add_flag(ui_ImageScreenUSBSuccess, LV_OBJ_FLAG_HIDDEN);
+
+            if (!lv_usb_disk_timer) {
+                lv_usb_disk_timer = lv_timer_create(usb_disk_timer_callback, 5000, NULL);
+            }
+        }
+        return true;  
+    }
+    return false;
 }
 
 void ui_extra_goto_page(ui_page_t page)

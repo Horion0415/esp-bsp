@@ -26,14 +26,7 @@ static void btn_handler(void *arg, void *data)
     
     bsp_display_lock(0);
 
-    if(ui_extra_get_current_page() == UI_PAGE_USB_DISK) {
-        if(!lv_obj_has_flag(ui_ImageScreenUSB, LV_OBJ_FLAG_HIDDEN)) {
-            ui_extra_goto_page(UI_PAGE_MAIN);
-        } else if (!lv_obj_has_flag(ui_ImageScreenUSBSuccess, LV_OBJ_FLAG_HIDDEN)) {
-            lv_obj_clear_flag(ui_ImageScreenUSBWarning, LV_OBJ_FLAG_HIDDEN);
-            lv_obj_add_flag(ui_ImageScreenUSB, LV_OBJ_FLAG_HIDDEN);
-            lv_obj_add_flag(ui_ImageScreenUSBSuccess, LV_OBJ_FLAG_HIDDEN);
-        }
+    if (ui_extra_handle_usb_disk_page()) {
         bsp_display_unlock();
         return;
     }
