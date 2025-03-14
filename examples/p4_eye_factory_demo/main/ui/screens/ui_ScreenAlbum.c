@@ -131,7 +131,7 @@ void ui_ScreenAlbum_screen_init(void)
     ui_PanelAlbumPopupSDWarning = lv_obj_create(ui_ScreenAlbum);
     lv_obj_set_width(ui_PanelAlbumPopupSDWarning, 212);
     lv_obj_set_height(ui_PanelAlbumPopupSDWarning, 212);
-    lv_obj_set_x(ui_PanelAlbumPopupSDWarning, -9);
+    lv_obj_set_x(ui_PanelAlbumPopupSDWarning, -15);
     lv_obj_set_y(ui_PanelAlbumPopupSDWarning, 0);
     lv_obj_set_align(ui_PanelAlbumPopupSDWarning, LV_ALIGN_CENTER);
     lv_obj_add_flag(ui_PanelAlbumPopupSDWarning, LV_OBJ_FLAG_HIDDEN);     /// Flags
@@ -170,7 +170,7 @@ void ui_ScreenAlbum_screen_init(void)
     lv_obj_set_y(ui_LabelPanelAlbumPopupCameraSDWarning, 39);
     lv_obj_set_align(ui_LabelPanelAlbumPopupCameraSDWarning, LV_ALIGN_CENTER);
     lv_label_set_text(ui_LabelPanelAlbumPopupCameraSDWarning,
-                      "No SD card detected\n\n  Insert SD Card to \n          continue");
+                      "No SDCard detected\n\n  Insert SDCard to \n          continue");
     lv_obj_set_style_text_color(ui_LabelPanelAlbumPopupCameraSDWarning, lv_color_hex(0x000000),
                                 LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_opa(ui_LabelPanelAlbumPopupCameraSDWarning, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
