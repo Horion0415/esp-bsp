@@ -21,7 +21,7 @@
 
 // Define constants to replace magic numbers
 #define JPEG_COMPRESSION_RATIO 5  // Assuming 10:1 compression ratio
-#define CAMERA_INIT_FRAMES 20     // Number of frames needed for camera initialization
+#define CAMERA_INIT_FRAMES 50     // Number of frames needed for camera initialization
 #define JPEG_QUALITY 90           // JPEG quality setting
 
 // Define camera state structure to integrate global variables
