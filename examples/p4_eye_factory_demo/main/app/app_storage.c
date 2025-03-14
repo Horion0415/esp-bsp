@@ -686,7 +686,6 @@ bool tud_msc_is_writable_cb(uint8_t lun)
 // - Start = 1 : active mode, if load_eject = 1 : load disk storage
 bool tud_msc_start_stop_cb(uint8_t lun, uint8_t power_condition, bool start, bool load_eject)
 {
-    ESP_LOGI(__func__, "");
     (void) power_condition;
 
     if (lun >= LOGICAL_DISK_NUM) {
@@ -716,6 +715,11 @@ bool tud_msc_start_stop_cb(uint8_t lun, uint8_t power_condition, bool start, boo
 
         // Always start the unit, even if ejected. Whether media is present is a separate check.
     }
+
+    ESP_LOGI(TAG, "USB MSC suspended");
+    bsp_display_lock(0);
+    ui_extra_set_usb_disk_mounted(false);
+    bsp_display_unlock();
 
     return true;
 }
