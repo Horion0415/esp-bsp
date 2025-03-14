@@ -10,7 +10,7 @@
 extern "C" {
 #endif
 
-#include "lvgl.h"
+#include "lvgl/lvgl.h"
 
 #include "ui_helpers.h"
 #include "ui_events.h"
@@ -79,6 +79,9 @@ extern lv_obj_t * ui_LabelPanelPanelSettingsFlashItem;
 extern lv_obj_t * ui_LabelPanelPanelSettingsFlashBody;
 extern lv_obj_t * ui_PanelSettingsMenu;
 extern lv_obj_t * ui_LabelPanelSettingsMenu;
+extern lv_obj_t * ui_PanelInrervalTimePrompt;
+extern lv_obj_t * ui_LabelPanelInrervalTimePrompt;
+extern lv_obj_t * ui_LabelPanelInrervalTimePromptMin;
 // SCREEN: ui_ScreenAlbum
 void ui_ScreenAlbum_screen_init(void);
 extern lv_obj_t * ui_ScreenAlbum;
@@ -92,11 +95,16 @@ extern lv_obj_t * ui_ButtonPanelImageScreenAlbumDeleteYES;
 extern lv_obj_t * ui_LabelButtonPanelImageScreenAlbumDeleteYES;
 extern lv_obj_t * ui_ButtonPanelImageScreenAlbumDeleteNO;
 extern lv_obj_t * ui_LabelButtonPanelImageScreenAlbumDeleteNO;
+extern lv_obj_t * ui_PanelAlbumPopupSDWarning;
+extern lv_obj_t * ui_LabelPanelAlbumPopupSDWarning;
+extern lv_obj_t * ui_PanelAlbumPopupCameraSDWarning;
+extern lv_obj_t * ui_LabelPanelAlbumPopupCameraSDWarning;
 // SCREEN: ui_ScreenUSB
 void ui_ScreenUSB_screen_init(void);
 extern lv_obj_t * ui_ScreenUSB;
 extern lv_obj_t * ui_ImageScreenUSB;
 extern lv_obj_t * ui_ImageScreenUSBSuccess;
+extern lv_obj_t * ui_ImageScreenUSBWarning;
 // SCREEN: ui_ScreenPicSave
 void ui_ScreenPicSave_screen_init(void);
 extern lv_obj_t * ui_ScreenPicSave;
@@ -120,6 +128,7 @@ LV_IMG_DECLARE(ui_img_video_small_png);    // assets/video_small.png
 LV_IMG_DECLARE(ui_img_reddot_recording_png);    // assets/reddot_recording.png
 LV_IMG_DECLARE(ui_img_usb_page1_png);    // assets/usb_page1.png
 LV_IMG_DECLARE(ui_img_usb_page2_png);    // assets/usb_page2.png
+LV_IMG_DECLARE(ui_img_usb_page_warning_png);    // assets/usb_page_warning.png
 LV_IMG_DECLARE(ui_img_album_big_png);    // assets/album_big.png
 LV_IMG_DECLARE(ui_img_camera_big_png);    // assets/camera_big.png
 LV_IMG_DECLARE(ui_img_interval_big_png);    // assets/interval_big.png

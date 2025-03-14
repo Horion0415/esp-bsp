@@ -26,4 +26,12 @@ void ui_ScreenUSB_screen_init(void)
     lv_obj_add_flag(ui_ImageScreenUSBSuccess, LV_OBJ_FLAG_HIDDEN | LV_OBJ_FLAG_ADV_HITTEST);     /// Flags
     lv_obj_clear_flag(ui_ImageScreenUSBSuccess, LV_OBJ_FLAG_SCROLLABLE);      /// Flags
 
+    ui_ImageScreenUSBWarning = lv_img_create(ui_ScreenUSB);
+    lv_img_set_src(ui_ImageScreenUSBWarning, &ui_img_usb_page_warning_png);
+    lv_obj_set_width(ui_ImageScreenUSBWarning, LV_SIZE_CONTENT);   /// 1
+    lv_obj_set_height(ui_ImageScreenUSBWarning, LV_SIZE_CONTENT);    /// 1
+    lv_obj_set_align(ui_ImageScreenUSBWarning, LV_ALIGN_CENTER);
+    lv_obj_add_flag(ui_ImageScreenUSBWarning, LV_OBJ_FLAG_HIDDEN | LV_OBJ_FLAG_ADV_HITTEST);     /// Flags
+    lv_obj_clear_flag(ui_ImageScreenUSBWarning, LV_OBJ_FLAG_SCROLLABLE);      /// Flags
+
 }

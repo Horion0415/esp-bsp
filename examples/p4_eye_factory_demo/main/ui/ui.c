@@ -73,6 +73,9 @@ lv_obj_t * ui_LabelPanelPanelSettingsFlashItem;
 lv_obj_t * ui_LabelPanelPanelSettingsFlashBody;
 lv_obj_t * ui_PanelSettingsMenu;
 lv_obj_t * ui_LabelPanelSettingsMenu;
+lv_obj_t * ui_PanelInrervalTimePrompt;
+lv_obj_t * ui_LabelPanelInrervalTimePrompt;
+lv_obj_t * ui_LabelPanelInrervalTimePromptMin;
 
 
 // SCREEN: ui_ScreenAlbum
@@ -88,6 +91,10 @@ lv_obj_t * ui_ButtonPanelImageScreenAlbumDeleteYES;
 lv_obj_t * ui_LabelButtonPanelImageScreenAlbumDeleteYES;
 lv_obj_t * ui_ButtonPanelImageScreenAlbumDeleteNO;
 lv_obj_t * ui_LabelButtonPanelImageScreenAlbumDeleteNO;
+lv_obj_t * ui_PanelAlbumPopupSDWarning;
+lv_obj_t * ui_LabelPanelAlbumPopupSDWarning;
+lv_obj_t * ui_PanelAlbumPopupCameraSDWarning;
+lv_obj_t * ui_LabelPanelAlbumPopupCameraSDWarning;
 
 
 // SCREEN: ui_ScreenUSB
@@ -95,6 +102,7 @@ void ui_ScreenUSB_screen_init(void);
 lv_obj_t * ui_ScreenUSB;
 lv_obj_t * ui_ImageScreenUSB;
 lv_obj_t * ui_ImageScreenUSBSuccess;
+lv_obj_t * ui_ImageScreenUSBWarning;
 
 
 // SCREEN: ui_ScreenPicSave

@@ -18,6 +18,7 @@ SET(SOURCES screens/ui_ScreenCamera.c
     images/ui_img_reddot_recording_png.c
     images/ui_img_usb_page1_png.c
     images/ui_img_usb_page2_png.c
+    images/ui_img_usb_page_warning_png.c
     images/ui_img_album_big_png.c
     images/ui_img_camera_big_png.c
     images/ui_img_interval_big_png.c
