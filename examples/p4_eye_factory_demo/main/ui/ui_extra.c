@@ -972,6 +972,17 @@ void ui_extra_popup_picture_delete_success(void)
 // Button event handler
 void ui_extra_btn_up(void)
 {
+    // Check if there are any popup windows that need to be cleared
+    if(!lv_obj_has_flag(ui_PanelCanvasPopupCamera, LV_OBJ_FLAG_HIDDEN) || 
+       !lv_obj_has_flag(ui_PanelCanvasPopupCameraInterval, LV_OBJ_FLAG_HIDDEN) ||
+       !lv_obj_has_flag(ui_PanelCanvasPopupVideoMode, LV_OBJ_FLAG_HIDDEN) ||
+       !lv_obj_has_flag(ui_PanelCanvasPopupSDWarning, LV_OBJ_FLAG_HIDDEN) ||
+       !lv_obj_has_flag(ui_PanelCanvasPopupIntervalTimerWarning, LV_OBJ_FLAG_HIDDEN) ||
+       !lv_obj_has_flag(ui_PanelCanvasPopupIntervalTimerWarningEnd, LV_OBJ_FLAG_HIDDEN)) {
+        
+        return;
+    }
+
     switch(current_page) {
         case UI_PAGE_MAIN:
             lv_obj_scroll_by(scroll_cont, 0, 40, LV_ANIM_ON);
@@ -1014,6 +1025,17 @@ void ui_extra_btn_up(void)
 
 void ui_extra_btn_down(void)
 {
+    // Check if there are any popup windows that need to be cleared
+    if(!lv_obj_has_flag(ui_PanelCanvasPopupCamera, LV_OBJ_FLAG_HIDDEN) || 
+       !lv_obj_has_flag(ui_PanelCanvasPopupCameraInterval, LV_OBJ_FLAG_HIDDEN) ||
+       !lv_obj_has_flag(ui_PanelCanvasPopupVideoMode, LV_OBJ_FLAG_HIDDEN) ||
+       !lv_obj_has_flag(ui_PanelCanvasPopupSDWarning, LV_OBJ_FLAG_HIDDEN) ||
+       !lv_obj_has_flag(ui_PanelCanvasPopupIntervalTimerWarning, LV_OBJ_FLAG_HIDDEN) ||
+       !lv_obj_has_flag(ui_PanelCanvasPopupIntervalTimerWarningEnd, LV_OBJ_FLAG_HIDDEN)) {
+        
+        return;
+    }
+
     switch(current_page) {
         case UI_PAGE_MAIN:
             lv_obj_scroll_by(scroll_cont, 0, -40, LV_ANIM_ON);
