@@ -49,6 +49,7 @@ static ui_page_t current_page = UI_PAGE_MAIN;
 
 static lv_timer_t *lv_popup_timer = NULL;
 static lv_timer_t *lv_additional_photo_timer = NULL;
+static lv_timer_t *lv_interval_timer = NULL;
 
 static bool is_sd_card_mounted = false;
 static bool is_usb_disk_mounted = false;
@@ -530,6 +531,16 @@ static void pop_up_timer_callback(lv_timer_t * timer)
     }
 }
 
+static void interval_timer_callback(lv_timer_t * timer)
+{
+    lv_obj_add_flag(ui_PanelInrervalTimePrompt, LV_OBJ_FLAG_HIDDEN);
+
+    if(lv_interval_timer){
+        lv_timer_del(lv_interval_timer);
+        lv_interval_timer = NULL;
+    }
+}
+
 static void pop_up_additional_photo_callback(lv_timer_t * timer)
 {
     if(timer->user_data == ui_PanelCanvasPopupIntervalTimerWarning) {
@@ -825,6 +836,7 @@ void app_extra_set_interval_time(uint16_t time)
     interval_time = time;
 
     lv_label_set_text_fmt(ui_LabelCanvasInvervalTime, "%dmin", interval_time);
+    lv_label_set_text_fmt(ui_LabelPanelInrervalTimePrompt, "%d", interval_time);
 
     save_current_settings();
 }
@@ -928,6 +940,13 @@ void ui_extra_btn_up(void)
             
         case UI_PAGE_INTERVAL_CAM:
             app_extra_set_interval_time(interval_time + INTERVAL_TIME_STEP);
+
+            if(lv_obj_has_flag(ui_PanelInrervalTimePrompt, LV_OBJ_FLAG_HIDDEN)) {
+                lv_obj_clear_flag(ui_PanelInrervalTimePrompt, LV_OBJ_FLAG_HIDDEN);
+                if(!lv_interval_timer) {
+                    lv_interval_timer = lv_timer_create(interval_timer_callback, 3000, NULL);
+                }
+            }
             break;
 
         case UI_PAGE_ALBUM:
@@ -963,6 +982,13 @@ void ui_extra_btn_down(void)
             
         case UI_PAGE_INTERVAL_CAM:
             app_extra_set_interval_time(interval_time - INTERVAL_TIME_STEP);
+            
+            if(lv_obj_has_flag(ui_PanelInrervalTimePrompt, LV_OBJ_FLAG_HIDDEN)) {
+                lv_obj_clear_flag(ui_PanelInrervalTimePrompt, LV_OBJ_FLAG_HIDDEN);
+                if(!lv_interval_timer) {
+                    lv_interval_timer = lv_timer_create(interval_timer_callback, 3000, NULL);
+                }
+            }
             break;
 
         case UI_PAGE_ALBUM:

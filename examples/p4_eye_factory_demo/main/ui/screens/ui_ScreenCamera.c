@@ -796,5 +796,6 @@ void ui_ScreenCamera_screen_init(void)
     lv_label_set_text(ui_LabelPanelInrervalTimePromptMin, "min");
     lv_obj_set_style_text_font(ui_LabelPanelInrervalTimePromptMin, &ui_font_FontKoHoMiniBold24,
                                LV_PART_MAIN | LV_STATE_DEFAULT);
-
+    lv_obj_set_style_border_color(ui_LabelPanelInrervalTimePromptMin, lv_color_hex(0x000000), LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_border_opa(ui_LabelPanelInrervalTimePromptMin, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
 }
