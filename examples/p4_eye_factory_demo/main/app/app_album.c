@@ -69,7 +69,8 @@ static esp_err_t app_album_scan_images(void) {
     // Scan all jpg files in the directory
     while ((entry = readdir(dir)) != NULL && album_ctx.count < MAX_IMAGES) {
         if ((strstr(entry->d_name, ".jpg") || strstr(entry->d_name, ".JPG")) && 
-            strncmp(entry->d_name, "._", 2) != 0) {
+            strncmp(entry->d_name, "._", 2) != 0 &&
+            strncmp(entry->d_name, "____~", 5) != 0) {  
             
             // Allocate temporary memory for full path
             filenames_temp[album_ctx.count] = malloc(MAX_PATH_LEN);
