@@ -47,12 +47,16 @@ static lv_obj_t * info_label = NULL;
 
 static ui_page_t current_page = UI_PAGE_MAIN;
 
+static uint32_t video_recording_seconds = 0; 
+
 static lv_timer_t *lv_popup_timer = NULL;
 static lv_timer_t *lv_additional_photo_timer = NULL;
 static lv_timer_t *lv_interval_timer = NULL;
+static lv_timer_t *lv_video_timer = NULL;
 
 static bool is_sd_card_mounted = false;
 static bool is_usb_disk_mounted = false;
+static bool is_video_recording = false; 
 
 typedef struct {
     const char* const* options;  
@@ -528,6 +532,20 @@ static void pop_up_timer_callback(lv_timer_t * timer)
     if(lv_popup_timer){
         lv_timer_del(lv_popup_timer);
         lv_popup_timer = NULL;
+    }
+}
+
+static void video_timer_callback(lv_timer_t * timer)
+{
+    video_recording_seconds++;
+    uint32_t hours = video_recording_seconds / 3600;
+    uint32_t minutes = (video_recording_seconds % 3600) / 60;
+    uint32_t seconds = video_recording_seconds % 60;
+    
+    if (hours > 0) {
+        lv_label_set_text_fmt(ui_LabelRedDotTime, "%02lu:%02lu:%02lu", hours, minutes, seconds);
+    } else {
+        lv_label_set_text_fmt(ui_LabelRedDotTime, "%02lu:%02lu", minutes, seconds);
     }
 }
 
@@ -1062,7 +1080,18 @@ void ui_extra_btn_menu(void)
                 ui_extra_goto_page(UI_PAGE_MAIN);
             }
             break;
+        case UI_PAGE_VIDEO_MODE:
+            lv_obj_add_flag(ui_ImageRedDot, LV_OBJ_FLAG_HIDDEN);
+            lv_obj_add_flag(ui_LabelRedDotTime, LV_OBJ_FLAG_HIDDEN);
             
+            // stop the video recording and pause the timer
+            is_video_recording = false;
+            if (lv_video_timer) {
+                lv_timer_pause(lv_video_timer);
+            }   
+            ui_extra_goto_page(UI_PAGE_MAIN); 
+            break;    
+        
         default:
             // For other pages, return to main page
             ui_extra_goto_page(UI_PAGE_MAIN);
@@ -1159,6 +1188,33 @@ void ui_extra_btn_encoder(void)
                 }
             }
             break;
+        case UI_PAGE_VIDEO_MODE:
+            if(lv_obj_has_flag(ui_ImageRedDot, LV_OBJ_FLAG_HIDDEN)) {
+                lv_obj_clear_flag(ui_ImageRedDot, LV_OBJ_FLAG_HIDDEN);
+                lv_obj_clear_flag(ui_LabelRedDotTime, LV_OBJ_FLAG_HIDDEN);
+                
+                // reset the video recording seconds and start the timer
+                video_recording_seconds = 0;
+                lv_label_set_text(ui_LabelRedDotTime, "00:00");
+                is_video_recording = true;
+                
+                if (!lv_video_timer) {
+                    lv_video_timer = lv_timer_create(video_timer_callback, 1000, NULL);
+                } else {
+                    lv_timer_resume(lv_video_timer);
+                }
+            } else {
+                lv_obj_add_flag(ui_ImageRedDot, LV_OBJ_FLAG_HIDDEN);
+                lv_obj_add_flag(ui_LabelRedDotTime, LV_OBJ_FLAG_HIDDEN);
+                
+                // stop the video recording and pause the timer
+                is_video_recording = false;
+                if (lv_video_timer) {
+                    lv_timer_pause(lv_video_timer);
+                }
+            }
+            break;
+
         default:
             break;
     }
@@ -1233,6 +1289,9 @@ void ui_extra_init(void)
         interval_time = loaded_interval_time;
         magnification_factor = loaded_magnification;
         
+        is_video_recording = false;
+        video_recording_seconds = 0;
+
         // Update the display
         lv_label_set_text_fmt(ui_LabelCanvasFactor, "%dX", magnification_factor);
         lv_label_set_text_fmt(ui_LabelCanvasInvervalTime, "%dmin", interval_time);
