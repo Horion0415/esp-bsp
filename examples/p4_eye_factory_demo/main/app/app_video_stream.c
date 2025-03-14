@@ -14,7 +14,7 @@
 #include "app_album.h"
 
 #define ALIGN_UP(num, align)    (((num) + ((align) - 1)) & ~((align) - 1))
-#define SCALE_LEVELS 6                         // resolution scale levels
+#define SCALE_LEVELS 5                         // resolution scale levels
 #define DEBUG_MODE   1
 #define CROP_PHOTO_WIDTH 1280
 #define CROP_PHOTO_HEIGHT 960
@@ -81,10 +81,10 @@ static SemaphoreHandle_t photo_take_sem = NULL;
 
 static const uint32_t photo_resolution_width[PHOTO_RESOLUTION_MAX] = {640, 1280, 1920};
 static const uint32_t photo_resolution_height[PHOTO_RESOLUTION_MAX] = {480, 720, 1080};
-static int scale_level_res[SCALE_LEVELS] = {960, 480, 240, 120, 80, 60};
 
-static const uint32_t adj_resolution_width[SCALE_LEVELS] = {1920, 1680, 1440, 1280, 1080, 960};
-static const uint32_t adj_resolution_height[SCALE_LEVELS] = {1080, 945, 810, 675, 540, 405};
+static int scale_level_res[SCALE_LEVELS] = {960, 480, 240, 120, 80};
+static const uint32_t adj_resolution_width[SCALE_LEVELS] = {1920, 1200, 960, 480, 240};
+static const uint32_t adj_resolution_height[SCALE_LEVELS] = {1080, 675, 540, 270, 135};
 
 static void photo_task(void *pvParameters);
 static void camera_video_frame_operation(uint8_t *camera_buf, uint8_t camera_buf_index, uint32_t camera_buf_hes, uint32_t camera_buf_ves, size_t camera_buf_len);
@@ -425,6 +425,7 @@ static esp_err_t take_and_save_photo(uint8_t *camera_buf, uint32_t width, uint32
     }
 
     uint16_t magnification_factor = app_extra_get_magnification_factor();
+    memset(camera_buffer.adj_camera_buf, 0, 1920 * 1080 * 2);
     uint8_t *pre_handle_buf = camera_buf;
 
     if(magnification_factor > 1) {
