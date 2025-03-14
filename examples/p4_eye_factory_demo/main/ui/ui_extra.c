@@ -628,6 +628,12 @@ static void ui_extra_redirect_to_album_page(void)
     ui_extra_clear_page();
     
     _ui_screen_change(&ui_ScreenAlbum, LV_SCR_LOAD_ANIM_NONE, 0, 0, ui_ScreenAlbum_screen_init);
+
+    if(is_sd_card_mounted) {
+        lv_obj_add_flag(ui_PanelAlbumPopupSDWarning, LV_OBJ_FLAG_HIDDEN);
+    } else {
+        lv_obj_clear_flag(ui_PanelAlbumPopupSDWarning, LV_OBJ_FLAG_HIDDEN);
+    }
 }
 
 static void ui_extra_redirect_to_usb_disk_page(void)
