@@ -1056,6 +1056,10 @@ void ui_extra_btn_down(void)
 
 void ui_extra_btn_menu(void)
 {
+    if(!lv_obj_has_flag(ui_PanelCanvasPopupSDWarning, LV_OBJ_FLAG_HIDDEN)) {
+        return;
+    }
+
     // Check if there are any popup windows that need to be cleared
     if(!lv_obj_has_flag(ui_PanelCanvasPopupCamera, LV_OBJ_FLAG_HIDDEN) || 
        !lv_obj_has_flag(ui_PanelCanvasPopupCameraInterval, LV_OBJ_FLAG_HIDDEN) ||

@@ -310,6 +310,7 @@ void ui_ScreenCamera_screen_init(void)
     lv_obj_add_flag(ui_LabelCanvasInvervalTime, LV_OBJ_FLAG_HIDDEN);     /// Flags
     lv_obj_set_style_text_color(ui_LabelCanvasInvervalTime, lv_color_hex(0x000000), LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_opa(ui_LabelCanvasInvervalTime, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_font(ui_LabelCanvasInvervalTime, &ui_font_FontKoHoMiniBold18, LV_PART_MAIN | LV_STATE_DEFAULT);
 
     ui_PanelCanvasPopupVideoMode = lv_obj_create(ui_PanelCanvas);
     lv_obj_set_width(ui_PanelCanvasPopupVideoMode, 212);
