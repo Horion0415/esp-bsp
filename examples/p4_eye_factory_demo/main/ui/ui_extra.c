@@ -1160,7 +1160,7 @@ void ui_extra_btn_menu(void)
         default:
             // For other pages, return to main page
             ui_extra_goto_page(UI_PAGE_MAIN);
-            if(ui_PanelInrervalTimePrompt) {
+            if(lv_interval_timer) {
                 lv_timer_ready(lv_interval_timer);
             }
             break;
