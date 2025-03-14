@@ -695,6 +695,13 @@ static void ui_extra_redirect_to_usb_disk_page(void)
         lv_obj_add_flag(ui_ImageScreenUSBSuccess, LV_OBJ_FLAG_HIDDEN);
         lv_obj_add_flag(ui_ImageScreenUSBWarning, LV_OBJ_FLAG_HIDDEN);
     }
+
+    if(is_sd_card_mounted) {
+        lv_obj_add_flag(ui_ImageUSBNOSDcard, LV_OBJ_FLAG_HIDDEN);
+    } else {
+        lv_obj_clear_flag(ui_ImageUSBNOSDcard, LV_OBJ_FLAG_HIDDEN);
+    }
+
 }
 
 static void ui_extra_redirect_to_settings_page(void)

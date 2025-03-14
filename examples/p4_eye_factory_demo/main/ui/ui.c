@@ -103,6 +103,7 @@ lv_obj_t * ui_ScreenUSB;
 lv_obj_t * ui_ImageScreenUSB;
 lv_obj_t * ui_ImageScreenUSBSuccess;
 lv_obj_t * ui_ImageScreenUSBWarning;
+lv_obj_t * ui_ImageUSBNOSDcard;
 
 
 // SCREEN: ui_ScreenPicSave

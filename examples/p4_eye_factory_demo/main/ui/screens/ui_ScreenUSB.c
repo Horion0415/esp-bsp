@@ -34,4 +34,14 @@ void ui_ScreenUSB_screen_init(void)
     lv_obj_add_flag(ui_ImageScreenUSBWarning, LV_OBJ_FLAG_HIDDEN | LV_OBJ_FLAG_ADV_HITTEST);     /// Flags
     lv_obj_clear_flag(ui_ImageScreenUSBWarning, LV_OBJ_FLAG_SCROLLABLE);      /// Flags
 
+    ui_ImageUSBNOSDcard = lv_img_create(ui_ScreenUSB);
+    lv_img_set_src(ui_ImageUSBNOSDcard, &ui_img_sdcard_no_png);
+    lv_obj_set_width(ui_ImageUSBNOSDcard, LV_SIZE_CONTENT);   /// 1
+    lv_obj_set_height(ui_ImageUSBNOSDcard, LV_SIZE_CONTENT);    /// 1
+    lv_obj_set_x(ui_ImageUSBNOSDcard, -102);
+    lv_obj_set_y(ui_ImageUSBNOSDcard, -101);
+    lv_obj_set_align(ui_ImageUSBNOSDcard, LV_ALIGN_CENTER);
+    lv_obj_add_flag(ui_ImageUSBNOSDcard, LV_OBJ_FLAG_HIDDEN | LV_OBJ_FLAG_ADV_HITTEST);     /// Flags
+    lv_obj_clear_flag(ui_ImageUSBNOSDcard, LV_OBJ_FLAG_SCROLLABLE);      /// Flags
+
 }

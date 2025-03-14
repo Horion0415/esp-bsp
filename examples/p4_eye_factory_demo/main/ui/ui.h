@@ -105,6 +105,7 @@ extern lv_obj_t * ui_ScreenUSB;
 extern lv_obj_t * ui_ImageScreenUSB;
 extern lv_obj_t * ui_ImageScreenUSBSuccess;
 extern lv_obj_t * ui_ImageScreenUSBWarning;
+extern lv_obj_t * ui_ImageUSBNOSDcard;
 // SCREEN: ui_ScreenPicSave
 void ui_ScreenPicSave_screen_init(void);
 extern lv_obj_t * ui_ScreenPicSave;
