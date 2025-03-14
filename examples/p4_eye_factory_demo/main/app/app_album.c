@@ -288,39 +288,39 @@ static void app_album_show_no_data_message(void) {
         return;
     }
     
-    // 将画布设置为白色背景
+    // Set canvas 
     uint16_t *buf = (uint16_t *)album_ctx.canvas_buffer;
     for (int i = 0; i < album_ctx.canvas_width * album_ctx.canvas_height; i++) {
-        buf[i] = 0xFFFF; // 白色 (RGB565格式)
+        buf[i] = 0xFFFF; 
     }
     
     bsp_display_lock(0);
     
-    // 设置画布缓冲区
+    // Set canvas buffer
     lv_canvas_set_buffer(album_ctx.canvas, album_ctx.canvas_buffer, 
                          album_ctx.canvas_width, album_ctx.canvas_height, 
                          LV_IMG_CF_TRUE_COLOR);
     
-    // 创建"No data Found"文本
+    // Create "No data found" text
     lv_draw_label_dsc_t label_dsc;
     lv_draw_label_dsc_init(&label_dsc);
-    label_dsc.color = lv_color_black(); // 黑色文字
+    label_dsc.color = lv_color_black(); 
     label_dsc.font = &ui_font_FontKoHoMiniBold24;
     
-    // 计算文本位置（向右移动一些）
+    // Calculate text position (move to the right)
     lv_point_t label_pos;
-    label_pos.x = album_ctx.canvas_width / 2 - 90; // 向右移动20像素
-    label_pos.y = album_ctx.canvas_height / 2 - 12; // 垂直居中
+    label_pos.x = album_ctx.canvas_width / 2 - 90; 
+    label_pos.y = album_ctx.canvas_height / 2 - 12; 
     
-    // 在画布上绘制文本
+    // Draw text on canvas
     lv_canvas_draw_text(album_ctx.canvas, label_pos.x, label_pos.y, 200, &label_dsc, "No data found");
     
-    // 强制刷新
+    // Force refresh
     lv_obj_invalidate(album_ctx.canvas);
     
     bsp_display_unlock();
     
-    ESP_LOGI(TAG, "Displayed 'No data Found' message");
+    ESP_LOGI(TAG, "Displayed 'No data found' message");
 }
 
 // Delete current image and load next one
@@ -365,7 +365,7 @@ esp_err_t app_album_delete_current_image(void) {
             bsp_display_unlock();
         }
         
-        // 显示"No data Found"消息
+        // Show "No data found" message
         app_album_show_no_data_message();
 
         // Free image buffer
@@ -480,15 +480,14 @@ esp_err_t app_album_refresh(void) {
     // Rescan images from SD card
     esp_err_t ret = app_album_scan_images();
     if (ret != ESP_OK) {
-        // 如果没有找到图片，显示"No data Found"
         app_album_show_no_data_message();
-        return ESP_OK; // 返回OK，因为这不是真正的错误
+        return ESP_OK; 
     }
     
     // Load first image
     ret = app_album_load_current_image();
     if (ret != ESP_OK) {
-        // 如果加载图片失败，显示"No data Found"
+        // If failed to load image, show "No data found"
         app_album_show_no_data_message();
         return ESP_OK;
     }
