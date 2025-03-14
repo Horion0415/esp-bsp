@@ -25,7 +25,7 @@ typedef enum {
 } video_fmt_t;
 
 #define EXAMPLE_CAM_DEV_PATH                (ESP_VIDEO_MIPI_CSI_DEVICE_NAME)
-#define EXAMPLE_CAM_BUF_NUM                 (3)
+#define EXAMPLE_CAM_BUF_NUM                 (2)
 
 #define APP_VIDEO_FMT                       (APP_VIDEO_FMT_RGB565)
 
