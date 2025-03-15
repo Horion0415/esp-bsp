@@ -324,46 +324,6 @@ esp_err_t app_video_stream_stop_interval_photo(void)
     return ESP_OK;
 }
 
-/**
- * @brief Check if device should resume interval photo after wakeup
- * 
- * @return ESP_OK on success
- */
-esp_err_t app_video_stream_check_interval_wakeup(void)
-{
-    bool is_active = false;
-    uint32_t next_time = 0;
-    
-    // Get the saved interval photo state
-    esp_err_t ret = app_storage_get_interval_state(&is_active, &next_time);
-    if (ret != ESP_OK) {
-        return ret;
-    }
-    
-    // If interval photo is active, start it
-    if (is_active) {
-        uint32_t current_time = esp_timer_get_time() / 1000000;
-        uint32_t elapsed_time = current_time - next_time;
-        
-        // Calculate the next interval time
-        uint16_t interval_minutes = 0;
-        if (elapsed_time < 60) {
-            // If less than a minute has passed, use the default interval
-            interval_minutes = 1;
-        } else {
-            // Calculate the interval in minutes
-            interval_minutes = elapsed_time / 60;
-        }
-        
-        // Start the interval photo
-        app_video_stream_start_interval_photo(interval_minutes);
-        
-        return ESP_OK;
-    }
-    
-    return ESP_OK;
-}
-
 /* Photo processing functions */
 /**
  * @brief Process and save a photo
@@ -809,12 +769,6 @@ esp_err_t app_video_stream_init(i2c_master_bus_handle_t i2c_handle)
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "Failed to start video stream task: 0x%x", ret);
         goto cleanup;
-    }
-
-    // Check if we need to resume interval photo
-    ret = app_video_stream_check_interval_wakeup();
-    if (ret != ESP_OK) {
-        ESP_LOGW(TAG, "Failed to check interval wakeup: 0x%x", ret);
     }
 
     resources_initialized = true;
