@@ -9,17 +9,27 @@
 #include "ui_extra.h"
 #include "app_video_stream.h"
 #include "app_album.h"
+#include "app_control.h"
 
+/* Private definitions */
 static const char *TAG = "app_control";
 
+/* Button related variables */
 static button_handle_t btns[BSP_BUTTON_NUM];
 
+/* Knob related variables */
 static int knob_step_counter = 0;
 static int knob_last_direction = 0;  // 0: no direction, 1: right, -1: left
 static int64_t knob_last_time = 0;   // timestamp of last rotation
 static const int knob_timeout_ms = 500;  // timeout in milliseconds
 static int knob_step_threshold = 6;  // threshold for knob step counter
 
+/* Private function prototypes */
+static void btn_handler(void *arg, void *data);
+static void knob_right_cb(void *arg, void *data);
+static void knob_left_cb(void *arg, void *data);
+
+/* Button handler implementation */
 static void btn_handler(void *arg, void *data)
 {
     int button_id = (int)data;
@@ -38,14 +48,16 @@ static void btn_handler(void *arg, void *data)
             
         case BSP_BUTTON_2:
             ui_extra_btn_up();
-            if (ui_extra_get_current_page() == UI_PAGE_ALBUM && lv_obj_has_flag(ui_PanelImageScreenAlbumDelete, LV_OBJ_FLAG_HIDDEN)) {
+            if (ui_extra_get_current_page() == UI_PAGE_ALBUM && 
+                lv_obj_has_flag(ui_PanelImageScreenAlbumDelete, LV_OBJ_FLAG_HIDDEN)) {
                 app_album_prev_image();
             }
             break;
             
         case BSP_BUTTON_3:
             ui_extra_btn_down();
-            if (ui_extra_get_current_page() == UI_PAGE_ALBUM && lv_obj_has_flag(ui_PanelImageScreenAlbumDelete, LV_OBJ_FLAG_HIDDEN)) {
+            if (ui_extra_get_current_page() == UI_PAGE_ALBUM && 
+                lv_obj_has_flag(ui_PanelImageScreenAlbumDelete, LV_OBJ_FLAG_HIDDEN)) {
                 app_album_next_image();
             }
             break;
@@ -62,9 +74,11 @@ static void btn_handler(void *arg, void *data)
     bsp_display_unlock();
 }
 
+/* Knob callbacks implementation */
 static void knob_right_cb(void *arg, void *data)
 {
-    if(ui_extra_get_current_page() == UI_PAGE_ALBUM || ui_extra_get_current_page() == UI_PAGE_USB_DISK) {
+    if (ui_extra_get_current_page() == UI_PAGE_ALBUM || 
+        ui_extra_get_current_page() == UI_PAGE_USB_DISK) {
         return;
     }
     
@@ -88,9 +102,11 @@ static void knob_right_cb(void *arg, void *data)
         knob_step_counter = 0;  // Reset counter
         
         bsp_display_lock(0);
-        if(ui_extra_get_current_page() == UI_PAGE_CAMERA || ui_extra_get_current_page() == UI_PAGE_INTERVAL_CAM || ui_extra_get_current_page() == UI_PAGE_VIDEO_MODE) {
+        if (ui_extra_get_current_page() == UI_PAGE_CAMERA || 
+            ui_extra_get_current_page() == UI_PAGE_INTERVAL_CAM || 
+            ui_extra_get_current_page() == UI_PAGE_VIDEO_MODE) {
             app_extra_set_magnification_factor(app_extra_get_magnification_factor() - 1);
-        } else if(ui_extra_get_current_page() == UI_PAGE_MAIN) {
+        } else if (ui_extra_get_current_page() == UI_PAGE_MAIN) {
             ui_extra_btn_up();
         }
         bsp_display_unlock();
@@ -99,7 +115,8 @@ static void knob_right_cb(void *arg, void *data)
 
 static void knob_left_cb(void *arg, void *data)
 {
-    if(ui_extra_get_current_page() == UI_PAGE_ALBUM || ui_extra_get_current_page() == UI_PAGE_USB_DISK) {
+    if (ui_extra_get_current_page() == UI_PAGE_ALBUM || 
+        ui_extra_get_current_page() == UI_PAGE_USB_DISK) {
         return;
     }
 
@@ -123,16 +140,24 @@ static void knob_left_cb(void *arg, void *data)
         ESP_LOGD(TAG, "Continuous right rotation detected: %d steps, value +1", knob_step_counter);
         
         bsp_display_lock(0);
-        if(ui_extra_get_current_page() == UI_PAGE_CAMERA || ui_extra_get_current_page() == UI_PAGE_INTERVAL_CAM || ui_extra_get_current_page() == UI_PAGE_VIDEO_MODE) {
+        if (ui_extra_get_current_page() == UI_PAGE_CAMERA || 
+            ui_extra_get_current_page() == UI_PAGE_INTERVAL_CAM || 
+            ui_extra_get_current_page() == UI_PAGE_VIDEO_MODE) {
             app_extra_set_magnification_factor(app_extra_get_magnification_factor() + 1);
-        } else if(ui_extra_get_current_page() == UI_PAGE_MAIN) {
+        } else if (ui_extra_get_current_page() == UI_PAGE_MAIN) {
             ui_extra_btn_down();
         }
         bsp_display_unlock();
     }
 }
 
-// Function to set encoder step threshold
+/* Public functions implementation */
+
+/**
+ * @brief Set encoder step threshold for knob sensitivity
+ * 
+ * @param threshold Sensitivity threshold value (higher = less sensitive)
+ */
 void app_control_set_knob_sensitivity(int threshold)
 {
     if (threshold > 0) {
@@ -141,6 +166,15 @@ void app_control_set_knob_sensitivity(int threshold)
     }
 }
 
+/**
+ * @brief Initialize application control module
+ * 
+ * This function initializes buttons and knob controls, and registers corresponding callbacks
+ * 
+ * @return
+ *      - ESP_OK: Success
+ *      - Others: Fail
+ */
 esp_err_t app_control_init(void)
 {
     // Initialize the wake buttons
@@ -150,7 +184,8 @@ esp_err_t app_control_init(void)
     };
 
     ESP_ERROR_CHECK(gpio_config(&config));
-    ESP_ERROR_CHECK(esp_deep_sleep_enable_gpio_wakeup(BIT(BSP_BUTTON_NUM1) | BIT(BSP_BUTTON_NUM2) | BIT(BSP_BUTTON_NUM3), 0));
+    ESP_ERROR_CHECK(esp_deep_sleep_enable_gpio_wakeup(
+        BIT(BSP_BUTTON_NUM1) | BIT(BSP_BUTTON_NUM2) | BIT(BSP_BUTTON_NUM3), 0));
 
     // Initialize the buttons
     ESP_ERROR_CHECK(bsp_iot_button_create(btns, NULL, BSP_BUTTON_NUM));
