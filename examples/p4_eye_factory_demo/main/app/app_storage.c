@@ -18,13 +18,10 @@
 #include "ui_extra.h"
 #include "app_album.h"
 #include "app_video_stream.h"
+#include "app_storage.h"
 
+/* Constants and definitions */
 #define PIC_FOLDER_NAME "esp32_p4_pic_save"
-static uint32_t pic_num = 0;
-
-static const char *TAG = "app_storage";
-
-// Nvs namespace and key name definition
 #define NVS_NAMESPACE "p4_eye_cfg"
 #define NVS_KEY_LANGUAGE "language"
 #define NVS_KEY_RESOLUTION "resolution"
@@ -34,7 +31,25 @@ static const char *TAG = "app_storage";
 #define NVS_KEY_INTERVAL_ACTIVE "int_active"  // timed shooting flag
 #define NVS_KEY_NEXT_WAKE_TIME "wake_time"    // next wake time
 #define NVS_KEY_PHOTO_COUNT "photo_count"     // photo count
+#define LOGICAL_DISK_NUM 1
 
+/* Static variables */
+static const char *TAG = "app_storage";
+static uint32_t pic_num = 0;
+static uint8_t s_pdrv = 0;
+static int s_disk_block_size = 0;
+static bool ejected[LOGICAL_DISK_NUM] = {true};
+
+/* Forward declarations for static functions */
+static void app_storage_find_max_pic_num(void);
+static void app_storage_check_sd_card_task(void *pvParameters);
+static bool _logical_disk_ejected(void);
+
+/* NVS functions */
+
+/**
+ * @brief Save photo count to NVS
+ */
 esp_err_t app_storage_save_photo_count(uint16_t count)
 {
     nvs_handle_t nvs_handle;
@@ -70,6 +85,9 @@ esp_err_t app_storage_save_photo_count(uint16_t count)
     return ESP_OK;
 }
 
+/**
+ * @brief Get photo count from NVS
+ */
 esp_err_t app_storage_get_photo_count(uint16_t *count)
 {
     nvs_handle_t nvs_handle;
@@ -100,7 +118,9 @@ esp_err_t app_storage_get_photo_count(uint16_t *count)
     return ESP_OK;
 }
 
-// Save timed shooting state
+/**
+ * @brief Save interval shooting state to NVS
+ */
 esp_err_t app_storage_save_interval_state(bool is_active, uint32_t next_wake_time)
 {
     nvs_handle_t nvs_handle;
@@ -144,7 +164,9 @@ esp_err_t app_storage_save_interval_state(bool is_active, uint32_t next_wake_tim
     return ESP_OK;
 }
 
-// Get timed shooting state
+/**
+ * @brief Get interval shooting state from NVS
+ */
 esp_err_t app_storage_get_interval_state(bool *is_active, uint32_t *next_wake_time)
 {
     nvs_handle_t nvs_handle;
@@ -189,7 +211,9 @@ esp_err_t app_storage_get_interval_state(bool *is_active, uint32_t *next_wake_ti
     return ESP_OK;
 }
 
-// Save settings to NVS
+/**
+ * @brief Save application settings to NVS
+ */
 esp_err_t app_storage_save_settings(settings_info_t *settings, uint16_t interval_time, uint16_t magnification)
 {
     nvs_handle_t nvs_handle;
@@ -271,7 +295,9 @@ esp_err_t app_storage_save_settings(settings_info_t *settings, uint16_t interval
     return ESP_OK;
 }
 
-// Load settings from NVS
+/**
+ * @brief Load application settings from NVS
+ */
 esp_err_t app_storage_load_settings(settings_info_t *settings, uint16_t *interval_time, uint16_t *magnification)
 {
     nvs_handle_t nvs_handle;
@@ -336,7 +362,11 @@ esp_err_t app_storage_load_settings(settings_info_t *settings, uint16_t *interva
     return ESP_OK;
 }
 
-// Find the highest picture number in the directory to continue incrementing
+/* SD Card and file operations */
+
+/**
+ * @brief Find the highest picture number in the directory
+ */
 static void app_storage_find_max_pic_num(void) 
 {
     DIR *dir = opendir(BSP_SD_MOUNT_POINT"/"PIC_FOLDER_NAME);
@@ -364,7 +394,9 @@ static void app_storage_find_max_pic_num(void)
     ESP_LOGI(TAG, "Next picture number will be: %lu", pic_num);
 }
 
-// Save picture to SD card with filename pic_XXXX.jpg
+/**
+ * @brief Save picture to SD card
+ */
 esp_err_t app_storage_save_picture(const uint8_t *data, size_t len) 
 {
     if (data == NULL || len == 0) {
@@ -397,6 +429,9 @@ esp_err_t app_storage_save_picture(const uint8_t *data, size_t len)
     return ESP_OK;
 }
 
+/**
+ * @brief Task to check for SD card insertion
+ */
 static void app_storage_check_sd_card_task(void *pvParameters)
 {
     while(1) {
@@ -448,6 +483,9 @@ static void app_storage_check_sd_card_task(void *pvParameters)
     vTaskDelete(NULL);
 }
 
+/**
+ * @brief Initialize storage subsystem
+ */
 esp_err_t app_storage_init(void) {
     esp_err_t ret = ESP_OK;
     
@@ -541,14 +579,19 @@ esp_err_t app_storage_init(void) {
     return ESP_OK;
 }
 
-static uint8_t s_pdrv = 0;
-static int s_disk_block_size = 0;
-#define LOGICAL_DISK_NUM 1
-static bool ejected[LOGICAL_DISK_NUM] = {true};
+/* USB MSC helper functions */
+static bool _logical_disk_ejected(void)
+{
+    bool all_ejected = true;
 
-//--------------------------------------------------------------------+
-// tinyusb callbacks
-//--------------------------------------------------------------------+
+    for (uint8_t i = 0; i < LOGICAL_DISK_NUM; i++) {
+        all_ejected &= ejected[i];
+    }
+
+    return all_ejected;
+}
+
+/* TinyUSB callbacks */
 
 // Invoked when device is mounted
 void tud_mount_cb(void)
@@ -599,17 +642,6 @@ void tud_msc_write10_complete_cb(uint8_t lun)
 
     // This write is complete, start the auto reload clock.
     ESP_LOGD(__func__, "");
-}
-
-static bool _logical_disk_ejected(void)
-{
-    bool all_ejected = true;
-
-    for (uint8_t i = 0; i < LOGICAL_DISK_NUM; i++) {
-        all_ejected &= ejected[i];
-    }
-
-    return all_ejected;
 }
 
 // Invoked when received SCSI_CMD_INQUIRY
@@ -806,4 +838,3 @@ int32_t tud_msc_scsi_cb(uint8_t lun, uint8_t const scsi_cmd[16], void *buffer, u
 
     return resplen;
 }
-/*********************************************************************** TinyUSB MSC callbacks*/
