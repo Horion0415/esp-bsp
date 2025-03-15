@@ -58,7 +58,7 @@ typedef struct {
     uint8_t *jpg_buf;
     uint32_t jpg_size;
     size_t rx_buffer_size;
-    uint8_t *adj_camera_buf;
+    uint8_t *scaled_camera_buf;
 } camera_buffer_t;
 
 /**
@@ -396,7 +396,7 @@ static esp_err_t take_and_save_photo(uint8_t *camera_buf, uint32_t width, uint32
     }
 
     uint16_t magnification_factor = app_extra_get_magnification_factor();
-    memset(camera_buffer.adj_camera_buf, 0, 1920 * 1080 * 2);
+    memset(camera_buffer.scaled_camera_buf, 0, 1920 * 1080 * 2);
     uint8_t *pre_handle_buf = camera_buf;
 
     // Apply magnification if needed
@@ -410,7 +410,7 @@ static esp_err_t take_and_save_photo(uint8_t *camera_buf, uint32_t width, uint32
             .in.block_offset_x = (width - adj_resolution_width[magnification_factor - 1]) / 2,
             .in.block_offset_y = (height - adj_resolution_height[magnification_factor - 1]) / 2,
             .in.srm_cm = PPA_SRM_COLOR_MODE_RGB565,
-            .out.buffer = camera_buffer.adj_camera_buf,
+            .out.buffer = camera_buffer.scaled_camera_buf,
             .out.buffer_size = ALIGN_UP(width * height * 2, data_cache_line_size),
             .out.pic_w = width,
             .out.pic_h = height,
@@ -430,7 +430,7 @@ static esp_err_t take_and_save_photo(uint8_t *camera_buf, uint32_t width, uint32
             ESP_LOGE(TAG, "Failed to scale image: 0x%x", ret);
             goto cleanup;
         }
-        pre_handle_buf = camera_buffer.adj_camera_buf;
+        pre_handle_buf = camera_buffer.scaled_camera_buf;
     } else {
         pre_handle_buf = camera_buf;
     }
@@ -479,7 +479,7 @@ static esp_err_t take_and_save_photo(uint8_t *camera_buf, uint32_t width, uint32
         pic_buf = camera_buffer.photo_buf;
     } else {
         if(magnification_factor > 1) {
-            pic_buf = camera_buffer.adj_camera_buf;
+            pic_buf = camera_buffer.scaled_camera_buf;
         } else {
             pic_buf = camera_buf;
         }
@@ -737,8 +737,8 @@ esp_err_t app_video_stream_init(i2c_master_bus_handle_t i2c_handle)
         }
     }
 
-    camera_buffer.adj_camera_buf = heap_caps_aligned_calloc(data_cache_line_size, 1, 1920 * 1080 * 2, MALLOC_CAP_SPIRAM);
-    if (camera_buffer.adj_camera_buf == NULL) {
+    camera_buffer.scaled_camera_buf = heap_caps_aligned_calloc(data_cache_line_size, 1, 1920 * 1080 * 2, MALLOC_CAP_SPIRAM);
+    if (camera_buffer.scaled_camera_buf == NULL) {
         ESP_LOGE(TAG, "Failed to allocate adjusted camera buffer");
         ret = ESP_FAIL;
         goto cleanup;
@@ -842,9 +842,9 @@ cleanup:
             jpeg_handle = NULL;
         }
         
-        if (camera_buffer.adj_camera_buf != NULL) {
-            heap_caps_free(camera_buffer.adj_camera_buf);
-            camera_buffer.adj_camera_buf = NULL;
+        if (camera_buffer.scaled_camera_buf != NULL) {
+            heap_caps_free(camera_buffer.scaled_camera_buf);
+            camera_buffer.scaled_camera_buf = NULL;
         }
         
         for (int i = 0; i < EXAMPLE_CAM_BUF_NUM; i++) {
