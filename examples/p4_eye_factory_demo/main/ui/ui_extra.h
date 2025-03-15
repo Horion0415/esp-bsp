@@ -4,6 +4,9 @@
 #include "ui.h"
 #include <stdbool.h>
 
+/**
+ * @brief UI page enumeration
+ */
 typedef enum {
     UI_PAGE_MAIN,           // Main page
     UI_PAGE_CAMERA,         // Camera page
@@ -15,17 +18,22 @@ typedef enum {
     UI_PAGE_MAX             // Page count
 } ui_page_t;
 
+/**
+ * @brief Settings information structure
+ */
 typedef struct {
-    const char* language;
-    const char* resolution;
-    const char* flash;
+    const char* language;   // Language setting
+    const char* resolution; // Resolution setting
+    const char* flash;      // Flash setting
 } settings_info_t;
 
+/* Initialization */
 /**
  * @brief Initialize UI extra functionality
  */
 void ui_extra_init(void);
 
+/* Button handlers */
 /**
  * @brief Menu button handler
  */
@@ -46,6 +54,7 @@ void ui_extra_btn_down(void);
  */
 void ui_extra_btn_encoder(void);
 
+/* Page management */
 /**
  * @brief Get current page
  * @return Current page enum value
@@ -64,6 +73,12 @@ ui_page_t ui_extra_get_choosed_page(void);
  */
 void ui_extra_goto_page(ui_page_t page);
 
+/**
+ * @brief Clear page
+ */
+void ui_extra_clear_page(void);
+
+/* Settings management */
 /**
  * @brief Get current settings information
  * @return Pointer to settings information structure
@@ -94,6 +109,7 @@ void app_extra_set_interval_time(uint16_t time);
  */
 uint16_t app_extra_get_interval_time(void);
 
+/* Storage management */
 /**
  * @brief Set SD card mount status
  * @param mounted Whether SD card is mounted
@@ -119,12 +135,6 @@ void app_extra_set_saved_photo_count(uint16_t count);
 uint16_t app_extra_get_saved_photo_count(void);
 
 /**
- * @brief Get popup window visible status
- * @return Whether popup window is visible
- */
-bool ui_extra_get_popup_window_visible(void);
-
-/**
  * @brief Set USB disk mount status
  * @param mounted Whether USB disk is mounted
  */
@@ -136,15 +146,12 @@ void ui_extra_set_usb_disk_mounted(bool mounted);
  */
 bool ui_extra_get_usb_disk_mounted(void);
 
+/* Popup management */
 /**
- * @brief Show interval timer warning popup
+ * @brief Get popup window visible status
+ * @return Whether popup window is visible
  */
-void ui_extra_popup_interval_timer_warning(void);
-
-/**
- * @brief Clear page
- */
-void ui_extra_clear_page(void);
+bool ui_extra_get_popup_window_visible(void);
 
 /**
  * @brief Start interval timer
@@ -152,9 +159,24 @@ void ui_extra_clear_page(void);
 void ui_extra_start_interval_timer(void);
 
 /**
+ * @brief Show interval timer warning popup
+ */
+void ui_extra_popup_interval_timer_warning(void);
+
+/**
  * @brief Handle USB disk page
  * @return Whether USB disk page is handled
  */
 bool ui_extra_handle_usb_disk_page(void);
 
-#endif
+/**
+ * @brief Show picture delete warning popup
+ */
+void ui_extra_popup_picture_delete_warning(void);
+
+/**
+ * @brief Show picture delete success popup
+ */
+void ui_extra_popup_picture_delete_success(void);
+
+#endif /* UI_EXTRA_H */

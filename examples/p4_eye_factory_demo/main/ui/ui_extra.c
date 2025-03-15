@@ -8,6 +8,7 @@
 #include "app_album.h"
 #include "app_video_stream.h"
 
+/* Constants */
 #define IMG_BASE_ZOOM       60
 #define BTN_ZOOM_FACTOR     2.3
 #define IMG_ZOOM_FACTOR     2.4
@@ -25,53 +26,54 @@
 
 static const char * TAG = "ui_extra";
 
+/* Global variables */
+// UI state variables
+static ui_page_t current_page = UI_PAGE_MAIN;
+static bool is_scrolling = false;
+static bool is_sd_card_mounted = false;
+static bool is_usb_disk_mounted = false;
+static bool is_video_recording = false;
+
+// UI settings
 static uint16_t magnification_factor = DEFAULT_MAGNIFICATION_FACTOR;
 static uint16_t interval_time = DEFAULT_INTERVAL_TIME;
 static uint16_t saved_photo_count = DEFAULT_SAVED_PHOTO_COUNT;
+static uint32_t video_recording_seconds = 0;
 
-// language options
-static const char* const language_options[] = {"English", "English"};
-// resolution options
-static const char* const resolution_options[] = {"720P", "1080P", "480P"};
-// flash options
-static const char* const flash_options[] = {"Off", "On"};
-
+// UI elements
+static lv_obj_t *scroll_cont = NULL;
+static lv_obj_t *info_label = NULL;
+static lv_obj_t *selected_btn = NULL;
 static lv_coord_t btn_width = 0;
 static lv_coord_t btn_height = 0;
 
-static lv_obj_t * selected_btn = NULL;  
-static bool is_scrolling = false; 
-
-static lv_obj_t * scroll_cont = NULL;
-static lv_obj_t * info_label = NULL;  
-
-static ui_page_t current_page = UI_PAGE_MAIN;
-
-static uint32_t video_recording_seconds = 0; 
-
+// Timers
 static lv_timer_t *lv_popup_timer = NULL;
 static lv_timer_t *lv_additional_photo_timer = NULL;
 static lv_timer_t *lv_interval_timer = NULL;
 static lv_timer_t *lv_video_timer = NULL;
 static lv_timer_t *lv_usb_disk_timer = NULL;
 
-static bool is_sd_card_mounted = false;
-static bool is_usb_disk_mounted = false;
-static bool is_video_recording = false; 
+// Settings options
+static const char* const language_options[] = {"English", "English"};
+static const char* const resolution_options[] = {"720P", "1080P", "480P"};
+static const char* const flash_options[] = {"Off", "On"};
 
-typedef struct {
-    const char* const* options;  
-    int option_count;      
-    int current_option;    
-    lv_obj_t* label;       
-} setting_options_t;
-
-// All settings options
+// Settings state
 static int current_settings_item = 0;
-static lv_obj_t* settings_items[4]; 
-static setting_options_t settings_options[4];
+static lv_obj_t* settings_items[4];
 static settings_info_t current_settings;
 
+typedef struct {
+    const char* const* options;
+    int option_count;
+    int current_option;
+    lv_obj_t* label;
+} setting_options_t;
+
+static setting_options_t settings_options[4];
+
+// Page mapping
 typedef struct {
     const char *name;
     int page;
@@ -84,10 +86,24 @@ static const PageMapping page_map[] = {
     {"ALBUM", UI_PAGE_ALBUM},
     {"USB DISK", UI_PAGE_USB_DISK},
     {"SETTINGS", UI_PAGE_SETTINGS},
-    {NULL, -1}  
+    {NULL, -1}
 };
 
-// Other functions
+/* Forward declarations */
+static void ui_extra_redirect_to_main_page(void);
+static void ui_extra_redirect_to_camera_page(void);
+static void ui_extra_redirect_to_interval_camera_page(void);
+static void ui_extra_redirect_to_video_mode_page(void);
+static void ui_extra_redirect_to_album_page(void);
+static void ui_extra_redirect_to_usb_disk_page(void);
+static void ui_extra_redirect_to_settings_page(void);
+static void ui_extra_clear_popup_window(void);
+static void ui_extra_focus_on_picture_delete(void);
+
+/* Helper functions */
+/**
+ * @brief Save current settings to storage
+ */
 static void save_current_settings(void)
 {
     settings_info_t *settings = &current_settings;
@@ -97,6 +113,10 @@ static void save_current_settings(void)
     app_storage_save_settings(settings, interval, magnify);
 }
 
+/**
+ * @brief Update display for a specific setting
+ * @param setting_index Index of the setting to update
+ */
 static void update_setting_display(int setting_index) {
     if (setting_index < 0 || setting_index >= 4) {
         ESP_LOGW(TAG, "Invalid setting index: %d", setting_index);
@@ -106,12 +126,12 @@ static void update_setting_display(int setting_index) {
     setting_options_t* opt = &settings_options[setting_index];
     const char* current_text = opt->options[opt->current_option];
     
-    // update the label text
+    // Update the label text
     if (opt->label) {
         lv_label_set_text(opt->label, current_text);
     }
     
-    // update the current settings info
+    // Update the current settings info
     switch (setting_index) {
         case 0:
             current_settings.language = current_text;
@@ -129,43 +149,54 @@ static void update_setting_display(int setting_index) {
     ESP_LOGD(TAG, "Setting %d updated to: %s", setting_index, current_text);
 }
 
+/**
+ * @brief Initialize settings options
+ */
 static void init_settings_options(void) {
-    // language options
+    // Language options
     settings_options[0].options = language_options;
     settings_options[0].option_count = sizeof(language_options) / sizeof(language_options[0]);
     settings_options[0].current_option = 0;
     settings_options[0].label = ui_LabelPanelPanelSettingsLanguageBody;
     
-    // resolution options
+    // Resolution options
     settings_options[1].options = resolution_options;
     settings_options[1].option_count = sizeof(resolution_options) / sizeof(resolution_options[0]);
     settings_options[1].current_option = 0;
     settings_options[1].label = ui_LabelPanelPanelSettingsResBody;
     
-    // flash options
+    // Flash options
     settings_options[2].options = flash_options;
     settings_options[2].option_count = sizeof(flash_options) / sizeof(flash_options[0]);
     settings_options[2].current_option = 0;
     settings_options[2].label = ui_LabelPanelPanelSettingsFlashBody;
     
-    // menu options
+    // Menu options
     settings_options[3].options = NULL;
     settings_options[3].option_count = 0;
     settings_options[3].current_option = 0;
     settings_options[3].label = ui_LabelPanelSettingsMenu;
     
-    // initialize the current settings info
+    // Initialize the current settings info
     current_settings.language = language_options[0];
     current_settings.resolution = resolution_options[0];
     current_settings.flash = flash_options[0];
 }
 
+/**
+ * @brief Initialize settings display
+ */
 static void init_settings_display(void) {
-    for (int i = 0; i < 3; i++) {  // only update the first three settings items
+    for (int i = 0; i < 3; i++) {  // Only update the first three settings items
         update_setting_display(i);
     }
 }
 
+/**
+ * @brief Set zoom level for an image object
+ * @param obj Image object
+ * @param zoom Zoom level
+ */
 static void app_extra_img_set_zoom(lv_obj_t * obj, uint16_t zoom)
 {
     if (!obj) return;
@@ -202,6 +233,13 @@ static void app_extra_img_set_zoom(lv_obj_t * obj, uint16_t zoom)
     lv_obj_invalidate_area(obj, &a);
 }
 
+/**
+ * @brief Create an image button
+ * @param parent Parent object
+ * @param img_src Image source
+ * @param btn_text Button text
+ * @return Created button object
+ */
 static lv_obj_t * create_img_button(lv_obj_t *parent, const void *img_src, const char *btn_text) {
     if (!parent || !img_src || !btn_text) {
         ESP_LOGW(TAG, "Invalid parameters for create_img_button");
@@ -238,6 +276,28 @@ static lv_obj_t * create_img_button(lv_obj_t *parent, const void *img_src, const
     return btn;
 }
 
+/**
+ * @brief Update settings focus
+ * @param new_item New selected item index
+ */
+static void update_settings_focus(int new_item)
+{
+    // Clear the focus of all settings items
+    for (int i = 0; i < 4; i++) {
+        lv_event_send(settings_items[i], LV_EVENT_DEFOCUSED, NULL);
+    }
+    
+    // Set the focus of the new selected item
+    current_settings_item = new_item;
+    lv_event_send(settings_items[current_settings_item], LV_EVENT_FOCUSED, NULL);
+    ESP_LOGD(TAG, "Settings: selected item %d", current_settings_item);
+}
+
+/* Event callbacks */
+/**
+ * @brief Scroll event callback
+ * @param e Event data
+ */
 static void scroll_event_cb(lv_event_t * e)
 {
     is_scrolling = true; 
@@ -274,7 +334,7 @@ static void scroll_event_cb(lv_event_t * e)
         lv_sqrt(r * r - diff_y * diff_y, &sqrt_res, 0x8000);
         lv_coord_t x = (diff_y >= r) ? r : sqrt_res.i - r;
 
-        // // Apply transformations
+        // Apply transformations
         lv_obj_set_style_translate_x(child, x, 0);
         lv_obj_set_style_opa(child, LV_OPA_COVER - lv_map(x, 0, r, LV_OPA_TRANSP, LV_OPA_COVER), 0);
         lv_obj_set_size(child, btn_width, btn_height);
@@ -300,16 +360,20 @@ static void scroll_event_cb(lv_event_t * e)
     }
 }
 
+/**
+ * @brief Scroll end event callback
+ * @param e Event data
+ */
 static void scroll_end_event_cb(lv_event_t * e)
 {
     lv_obj_t * cont = lv_event_get_target(e);
     
-    // get the center coordinates of the container
+    // Get the center coordinates of the container
     lv_area_t cont_a;
     lv_obj_get_coords(cont, &cont_a);
     lv_coord_t cont_y_center = cont_a.y1 + lv_area_get_height(&cont_a) / 2;
     
-    // find the closest child to the center
+    // Find the closest child to the center
     uint32_t child_cnt = lv_obj_get_child_cnt(cont);
     lv_obj_t * closest_child = NULL;
     lv_coord_t min_diff = LV_COORD_MAX;
@@ -328,7 +392,7 @@ static void scroll_end_event_cb(lv_event_t * e)
         }
     }
     
-    // after scroll end, apply the styles again
+    // After scroll end, apply the styles again
     if(closest_child) {
         selected_btn = closest_child;
         const char* btn_text = lv_obj_get_user_data(selected_btn);
@@ -358,12 +422,12 @@ static void scroll_end_event_cb(lv_event_t * e)
             }
         }
 
-        // reset the styles of all children
+        // Reset the styles of all children
         for(uint32_t i = 0; i < child_cnt; i++) {
             lv_obj_t * child = lv_obj_get_child(cont, i);
             lv_obj_set_size(child, btn_width, btn_height);
 
-            // reset the icon position to the default position
+            // Reset the icon position to the default position
             lv_obj_t * img = lv_obj_get_child(child, 0);
             if(img) {
                 lv_img_set_zoom(img, IMG_BASE_ZOOM);
@@ -372,10 +436,10 @@ static void scroll_end_event_cb(lv_event_t * e)
             }
         }
         
-        // zoom the selected child
+        // Zoom the selected child
         lv_obj_set_size(closest_child, btn_width * BTN_ZOOM_FACTOR, btn_height * BTN_ZOOM_FACTOR);
 
-        // set the special position for the center button
+        // Set the special position for the center button
         lv_obj_t * img = lv_obj_get_child(closest_child, 0);
         if(img) {
             lv_img_set_zoom(img, IMG_BASE_ZOOM * IMG_ZOOM_FACTOR);
@@ -383,116 +447,17 @@ static void scroll_end_event_cb(lv_event_t * e)
             lv_obj_set_pos(img, IMG_ZOOM_OFFSET, 0);
         }
         
-        // scroll to the view
+        // Scroll to the view
         lv_obj_scroll_to_view(closest_child, LV_ANIM_ON);
     }
 
     is_scrolling = false; 
 }
 
-static void lv_scroll_create(void)
-{
-    // Create main container
-    scroll_cont = lv_obj_create(ui_PanelCanvas);
-    lv_obj_set_size(scroll_cont, 240, 240);
-    lv_obj_align(scroll_cont, LV_ALIGN_CENTER, -65, 0);
-    
-    // Set container properties
-    lv_obj_set_style_pad_row(scroll_cont, 10, 0);
-    lv_obj_set_flex_flow(scroll_cont, LV_FLEX_FLOW_COLUMN);
-    lv_obj_set_style_radius(scroll_cont, LV_RADIUS_CIRCLE, 0);
-    lv_obj_set_style_clip_corner(scroll_cont, true, 0);
-    
-    // Configure scrolling behavior
-    lv_obj_set_scroll_dir(scroll_cont, LV_DIR_VER);
-    lv_obj_set_scroll_snap_y(scroll_cont, LV_SCROLL_SNAP_CENTER);
-    lv_obj_set_scrollbar_mode(scroll_cont, LV_SCROLLBAR_MODE_OFF);
-    
-    // Add scroll event handlers
-    lv_obj_add_event_cb(scroll_cont, scroll_event_cb, LV_EVENT_SCROLL, NULL);
-    lv_obj_add_event_cb(scroll_cont, scroll_end_event_cb, LV_EVENT_SCROLL_END, NULL);
-
-    // Set container visual style
-    lv_obj_set_style_bg_opa(scroll_cont, LV_OPA_TRANSP, 0);
-    lv_obj_set_style_border_opa(scroll_cont, LV_OPA_TRANSP, 0);
-
-    info_label = lv_label_create(ui_PanelCanvas);
-    lv_obj_set_style_text_font(info_label, &lv_font_montserrat_16, 0);
-    lv_obj_set_style_text_color(info_label, lv_color_hex(0x000000), 0);
-    lv_obj_align(info_label, LV_ALIGN_CENTER, 3, 50);
-    lv_label_set_text(info_label, "");  
-
-    const char* btn_texts[] = {
-        "CAMERA", "INTERVAL CAM", "VIDEO MODE", "ALBUM", 
-        "USB DISK", "SETTINGS",
-    };
-
-    // define the image source for each button
-    const void* img_srcs[] = {
-        &ui_img_camera_big_png,
-        &ui_img_interval_big_png,
-        &ui_img_video_big_png,
-        &ui_img_album_big_png,
-        &ui_img_usb_big_png,
-        &ui_img_settings_big_png
-    };
-    
-    // Use a loop to create all buttons
-    lv_obj_t *btn = NULL;
-    for (int i = 0; i < sizeof(btn_texts)/sizeof(btn_texts[0]); i++) {
-        btn = create_img_button(
-            scroll_cont,
-            img_srcs[i],
-            btn_texts[i]
-        );
-    }
-        
-    lv_obj_update_layout(btn);
-    btn_width = lv_obj_get_width(btn);
-    btn_height = lv_obj_get_height(btn);
-
-    // Initialize scroll position
-    lv_event_send(scroll_cont, LV_EVENT_SCROLL, NULL);
-    lv_obj_scroll_to_view(lv_obj_get_child(scroll_cont, 0), LV_ANIM_OFF);
-
-    const char* initial_text = lv_obj_get_user_data(lv_obj_get_child(scroll_cont, 0));
-    if (initial_text) {
-        lv_label_set_text(info_label, initial_text);
-    }
-}
-
-void ui_extra_clear_page(void)
-{
-    lv_obj_add_flag(ui_ImageCanvasSelect, LV_OBJ_FLAG_HIDDEN | LV_OBJ_FLAG_ADV_HITTEST);     /// Flags
-    lv_obj_add_flag(ui_ImageCanvasUp, LV_OBJ_FLAG_HIDDEN | LV_OBJ_FLAG_ADV_HITTEST);     /// Flags
-    lv_obj_add_flag(ui_ImageCanvasDown, LV_OBJ_FLAG_HIDDEN | LV_OBJ_FLAG_ADV_HITTEST);     /// Flags
-    lv_obj_add_flag(ui_PanelCanvasMaskLarge, LV_OBJ_FLAG_HIDDEN);     /// Flags
-    lv_obj_add_flag(ui_PanelCanvasPopupCamera, LV_OBJ_FLAG_HIDDEN);     /// Flags
-    lv_obj_add_flag(ui_ImageCanvasNOSDcard, LV_OBJ_FLAG_HIDDEN | LV_OBJ_FLAG_ADV_HITTEST);     /// Flags
-    lv_obj_add_flag(ui_ImageCanvasSDcard, LV_OBJ_FLAG_HIDDEN | LV_OBJ_FLAG_ADV_HITTEST);     /// Flags
-    lv_obj_add_flag(ui_ImageCanvasMenu, LV_OBJ_FLAG_HIDDEN | LV_OBJ_FLAG_ADV_HITTEST);     /// Flags
-    lv_obj_add_flag(ui_LabelCanvas2X, LV_OBJ_FLAG_HIDDEN);     /// Flags
-    lv_obj_add_flag(ui_LabelCanvas3X, LV_OBJ_FLAG_HIDDEN);     /// Flags
-    lv_obj_add_flag(ui_LabelCanvasFactor, LV_OBJ_FLAG_HIDDEN);     /// Flags
-    lv_obj_add_flag(ui_PanelCanvasMaskCamera, LV_OBJ_FLAG_HIDDEN);     /// Flags
-    lv_obj_add_flag(ui_PanelCanvasPopupCameraInterval, LV_OBJ_FLAG_HIDDEN);     /// Flags
-    lv_obj_add_flag(ui_PanelCanvasMaskCameraInterval, LV_OBJ_FLAG_HIDDEN);     /// Flags
-    lv_obj_add_flag(ui_LabelCanvas5mplus, LV_OBJ_FLAG_HIDDEN);     /// Flags
-    lv_obj_add_flag(ui_LabelCanvas5mSub, LV_OBJ_FLAG_HIDDEN);     /// Flags
-    lv_obj_add_flag(ui_LabelCanvasInvervalTime, LV_OBJ_FLAG_HIDDEN);     /// Flags
-    lv_obj_add_flag(ui_PanelCanvasPopupVideoMode, LV_OBJ_FLAG_HIDDEN);     /// Flags
-    lv_obj_add_flag(ui_PanelCanvasMaskVideoMode, LV_OBJ_FLAG_HIDDEN);     /// Flags
-    lv_obj_add_flag(ui_PanelCanvasPopupSDWarning, LV_OBJ_FLAG_HIDDEN);     /// Flags
-    lv_obj_add_flag(ui_PanelCanvasPopupIntervalTimerWarning, LV_OBJ_FLAG_HIDDEN);     /// Flags
-    lv_obj_add_flag(ui_PanelCanvasPopupIntervalTimerWarningEnd, LV_OBJ_FLAG_HIDDEN);     /// Flags
-    lv_obj_add_flag(ui_ImageRedDot, LV_OBJ_FLAG_HIDDEN | LV_OBJ_FLAG_ADV_HITTEST);     /// Flags
-    lv_obj_add_flag(ui_LabelRedDotTime, LV_OBJ_FLAG_HIDDEN);     /// Flags
-    lv_obj_add_flag(ui_PanelSettings, LV_OBJ_FLAG_HIDDEN);     /// Flags
-    lv_obj_add_flag(ui_PanelSettingsMenu, LV_OBJ_FLAG_HIDDEN);     /// Flags
-    lv_obj_add_flag(scroll_cont, LV_OBJ_FLAG_HIDDEN);     /// Flags
-    lv_obj_add_flag(info_label, LV_OBJ_FLAG_HIDDEN);     /// Flags
-}
-
+/**
+ * @brief Popup timer callback
+ * @param timer Timer object
+ */
 static void pop_up_timer_callback(lv_timer_t * timer)
 {
     if(timer->user_data == ui_PanelCanvasPopupCamera) {
@@ -536,6 +501,10 @@ static void pop_up_timer_callback(lv_timer_t * timer)
     }
 }
 
+/**
+ * @brief USB disk timer callback
+ * @param timer Timer object
+ */
 static void usb_disk_timer_callback(lv_timer_t * timer)
 {
     lv_obj_add_flag(ui_ImageScreenUSBWarning, LV_OBJ_FLAG_HIDDEN);
@@ -548,6 +517,10 @@ static void usb_disk_timer_callback(lv_timer_t * timer)
     }
 }
 
+/**
+ * @brief Video timer callback
+ * @param timer Timer object
+ */
 static void video_timer_callback(lv_timer_t * timer)
 {
     video_recording_seconds++;
@@ -562,6 +535,10 @@ static void video_timer_callback(lv_timer_t * timer)
     }
 }
 
+/**
+ * @brief Interval timer callback
+ * @param timer Timer object
+ */
 static void interval_timer_callback(lv_timer_t * timer)
 {
     lv_obj_add_flag(ui_PanelInrervalTimePrompt, LV_OBJ_FLAG_HIDDEN);
@@ -572,6 +549,10 @@ static void interval_timer_callback(lv_timer_t * timer)
     }
 }
 
+/**
+ * @brief Additional photo popup callback
+ * @param timer Timer object
+ */
 static void pop_up_additional_photo_callback(lv_timer_t * timer)
 {
     if(timer->user_data == ui_PanelCanvasPopupIntervalTimerWarning) {
@@ -597,139 +578,120 @@ static void pop_up_additional_photo_callback(lv_timer_t * timer)
     }
 }
 
-static void update_settings_focus(int new_item)
+/* UI creation functions */
+/**
+ * @brief Create scroll container
+ */
+static void lv_scroll_create(void)
 {
-    // Clear the focus of all settings items
-    for (int i = 0; i < 4; i++) {
-        lv_event_send(settings_items[i], LV_EVENT_DEFOCUSED, NULL);
-    }
+    // Create main container
+    scroll_cont = lv_obj_create(ui_PanelCanvas);
+    lv_obj_set_size(scroll_cont, 240, 240);
+    lv_obj_align(scroll_cont, LV_ALIGN_CENTER, -65, 0);
     
-    // Set the focus of the new selected item
-    current_settings_item = new_item;
-    lv_event_send(settings_items[current_settings_item], LV_EVENT_FOCUSED, NULL);
-    ESP_LOGD(TAG, "Settings: selected item %d", current_settings_item);
-}
-
-// Redirect to page functions
-static void ui_extra_redirect_to_main_page(void)
-{
-    current_page = UI_PAGE_MAIN;
-
-    ui_extra_clear_page();
-
-    lv_obj_clear_flag(scroll_cont, LV_OBJ_FLAG_HIDDEN);
-    lv_obj_clear_flag(info_label, LV_OBJ_FLAG_HIDDEN);
-    lv_obj_clear_flag(ui_ImageCanvasSelect, LV_OBJ_FLAG_HIDDEN);
-    lv_obj_clear_flag(ui_ImageCanvasUp, LV_OBJ_FLAG_HIDDEN);
-    lv_obj_clear_flag(ui_ImageCanvasDown, LV_OBJ_FLAG_HIDDEN);
-    lv_obj_clear_flag(ui_PanelCanvasMaskLarge, LV_OBJ_FLAG_HIDDEN);
-
-    _ui_screen_change(&ui_ScreenCamera, LV_SCR_LOAD_ANIM_NONE, 0, 0, ui_ScreenCamera_screen_init);
-}
-
-static void ui_extra_redirect_to_camera_page(void)
-{
-    current_page = UI_PAGE_CAMERA;
-
-    ui_extra_clear_page();
-
-    lv_obj_clear_flag(ui_PanelCanvasPopupCamera, LV_OBJ_FLAG_HIDDEN);
-    if(!lv_popup_timer){
-        lv_popup_timer = lv_timer_create(pop_up_timer_callback, 5000, ui_PanelCanvasPopupCamera);
-    }
-}
-
-static void ui_extra_redirect_to_interval_camera_page(void)
-{
-    current_page = UI_PAGE_INTERVAL_CAM;
-
-    ui_extra_clear_page();
-
-    lv_obj_clear_flag(ui_PanelCanvasPopupCameraInterval, LV_OBJ_FLAG_HIDDEN);
-    if(!lv_popup_timer){
-        lv_popup_timer = lv_timer_create(pop_up_timer_callback, 5000, ui_PanelCanvasPopupCameraInterval);
-    }
-}
-
-static void ui_extra_redirect_to_video_mode_page(void)
-{
-    current_page = UI_PAGE_VIDEO_MODE;
-
-    ui_extra_clear_page();
+    // Set container properties
+    lv_obj_set_style_pad_row(scroll_cont, 10, 0);
+    lv_obj_set_flex_flow(scroll_cont, LV_FLEX_FLOW_COLUMN);
+    lv_obj_set_style_radius(scroll_cont, LV_RADIUS_CIRCLE, 0);
+    lv_obj_set_style_clip_corner(scroll_cont, true, 0);
     
-    lv_obj_clear_flag(ui_PanelCanvasPopupVideoMode, LV_OBJ_FLAG_HIDDEN);
-    if(!lv_popup_timer){
-        lv_popup_timer = lv_timer_create(pop_up_timer_callback, 5000, ui_PanelCanvasPopupVideoMode);
-    }
-}
-
-static void ui_extra_redirect_to_album_page(void)
-{
-    current_page = UI_PAGE_ALBUM;
-
-    ui_extra_clear_page();
+    // Configure scrolling behavior
+    lv_obj_set_scroll_dir(scroll_cont, LV_DIR_VER);
+    lv_obj_set_scroll_snap_y(scroll_cont, LV_SCROLL_SNAP_CENTER);
+    lv_obj_set_scrollbar_mode(scroll_cont, LV_SCROLLBAR_MODE_OFF);
     
-    _ui_screen_change(&ui_ScreenAlbum, LV_SCR_LOAD_ANIM_NONE, 0, 0, ui_ScreenAlbum_screen_init);
+    // Add scroll event handlers
+    lv_obj_add_event_cb(scroll_cont, scroll_event_cb, LV_EVENT_SCROLL, NULL);
+    lv_obj_add_event_cb(scroll_cont, scroll_end_event_cb, LV_EVENT_SCROLL_END, NULL);
 
-    if(is_sd_card_mounted) {
-        lv_obj_add_flag(ui_PanelAlbumPopupSDWarning, LV_OBJ_FLAG_HIDDEN);
-    } else {
-        lv_obj_clear_flag(ui_PanelAlbumPopupSDWarning, LV_OBJ_FLAG_HIDDEN);
+    // Set container visual style
+    lv_obj_set_style_bg_opa(scroll_cont, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_border_opa(scroll_cont, LV_OPA_TRANSP, 0);
+
+    info_label = lv_label_create(ui_PanelCanvas);
+    lv_obj_set_style_text_font(info_label, &lv_font_montserrat_16, 0);
+    lv_obj_set_style_text_color(info_label, lv_color_hex(0x000000), 0);
+    lv_obj_align(info_label, LV_ALIGN_CENTER, 3, 50);
+    lv_label_set_text(info_label, "");  
+
+    const char* btn_texts[] = {
+        "CAMERA", "INTERVAL CAM", "VIDEO MODE", "ALBUM", 
+        "USB DISK", "SETTINGS",
+    };
+
+    // Define the image source for each button
+    const void* img_srcs[] = {
+        &ui_img_camera_big_png,
+        &ui_img_interval_big_png,
+        &ui_img_video_big_png,
+        &ui_img_album_big_png,
+        &ui_img_usb_big_png,
+        &ui_img_settings_big_png
+    };
+    
+    // Use a loop to create all buttons
+    lv_obj_t *btn = NULL;
+    for (int i = 0; i < sizeof(btn_texts)/sizeof(btn_texts[0]); i++) {
+        btn = create_img_button(
+            scroll_cont,
+            img_srcs[i],
+            btn_texts[i]
+        );
+    }
+        
+    lv_obj_update_layout(btn);
+    btn_width = lv_obj_get_width(btn);
+    btn_height = lv_obj_get_height(btn);
+
+    // Initialize scroll position
+    lv_event_send(scroll_cont, LV_EVENT_SCROLL, NULL);
+    lv_obj_scroll_to_view(lv_obj_get_child(scroll_cont, 0), LV_ANIM_OFF);
+
+    const char* initial_text = lv_obj_get_user_data(lv_obj_get_child(scroll_cont, 0));
+    if (initial_text) {
+        lv_label_set_text(info_label, initial_text);
     }
 }
 
-static void ui_extra_redirect_to_usb_disk_page(void)
+/* Page management functions */
+/**
+ * @brief Clear all UI elements from the current page
+ */
+void ui_extra_clear_page(void)
 {
-    current_page = UI_PAGE_USB_DISK;
-
-    ui_extra_clear_page();
-    
-    _ui_screen_change(&ui_ScreenUSB, LV_SCR_LOAD_ANIM_NONE, 0, 0, ui_ScreenUSB_screen_init);
-
-    if(is_usb_disk_mounted) {
-        lv_obj_add_flag(ui_ImageScreenUSB, LV_OBJ_FLAG_HIDDEN);
-        lv_obj_add_flag(ui_ImageScreenUSBWarning, LV_OBJ_FLAG_HIDDEN);
-        lv_obj_clear_flag(ui_ImageScreenUSBSuccess, LV_OBJ_FLAG_HIDDEN);
-    } else {
-        lv_obj_clear_flag(ui_ImageScreenUSB, LV_OBJ_FLAG_HIDDEN);
-        lv_obj_add_flag(ui_ImageScreenUSBSuccess, LV_OBJ_FLAG_HIDDEN);
-        lv_obj_add_flag(ui_ImageScreenUSBWarning, LV_OBJ_FLAG_HIDDEN);
-    }
-
-    if(is_sd_card_mounted) {
-        lv_obj_add_flag(ui_ImageUSBNOSDcard, LV_OBJ_FLAG_HIDDEN);
-    } else {
-        lv_obj_clear_flag(ui_ImageUSBNOSDcard, LV_OBJ_FLAG_HIDDEN);
-    }
-
+    lv_obj_add_flag(ui_ImageCanvasSelect, LV_OBJ_FLAG_HIDDEN | LV_OBJ_FLAG_ADV_HITTEST);
+    lv_obj_add_flag(ui_ImageCanvasUp, LV_OBJ_FLAG_HIDDEN | LV_OBJ_FLAG_ADV_HITTEST);
+    lv_obj_add_flag(ui_ImageCanvasDown, LV_OBJ_FLAG_HIDDEN | LV_OBJ_FLAG_ADV_HITTEST);
+    lv_obj_add_flag(ui_PanelCanvasMaskLarge, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_add_flag(ui_PanelCanvasPopupCamera, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_add_flag(ui_ImageCanvasNOSDcard, LV_OBJ_FLAG_HIDDEN | LV_OBJ_FLAG_ADV_HITTEST);
+    lv_obj_add_flag(ui_ImageCanvasSDcard, LV_OBJ_FLAG_HIDDEN | LV_OBJ_FLAG_ADV_HITTEST);
+    lv_obj_add_flag(ui_ImageCanvasMenu, LV_OBJ_FLAG_HIDDEN | LV_OBJ_FLAG_ADV_HITTEST);
+    lv_obj_add_flag(ui_LabelCanvas2X, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_add_flag(ui_LabelCanvas3X, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_add_flag(ui_LabelCanvasFactor, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_add_flag(ui_PanelCanvasMaskCamera, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_add_flag(ui_PanelCanvasPopupCameraInterval, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_add_flag(ui_PanelCanvasMaskCameraInterval, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_add_flag(ui_LabelCanvas5mplus, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_add_flag(ui_LabelCanvas5mSub, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_add_flag(ui_LabelCanvasInvervalTime, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_add_flag(ui_PanelCanvasPopupVideoMode, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_add_flag(ui_PanelCanvasMaskVideoMode, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_add_flag(ui_PanelCanvasPopupSDWarning, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_add_flag(ui_PanelCanvasPopupIntervalTimerWarning, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_add_flag(ui_PanelCanvasPopupIntervalTimerWarningEnd, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_add_flag(ui_ImageRedDot, LV_OBJ_FLAG_HIDDEN | LV_OBJ_FLAG_ADV_HITTEST);
+    lv_obj_add_flag(ui_LabelRedDotTime, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_add_flag(ui_PanelSettings, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_add_flag(ui_PanelSettingsMenu, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_add_flag(scroll_cont, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_add_flag(info_label, LV_OBJ_FLAG_HIDDEN);
 }
 
-static void ui_extra_redirect_to_settings_page(void)
-{
-    current_page = UI_PAGE_SETTINGS;
-
-    ui_extra_clear_page();
-    
-    lv_obj_clear_flag(ui_PanelSettings, LV_OBJ_FLAG_HIDDEN);
-    lv_obj_clear_flag(ui_PanelSettingsMenu, LV_OBJ_FLAG_HIDDEN);
-    lv_obj_clear_flag(ui_ImageCanvasSelect, LV_OBJ_FLAG_HIDDEN);
-    lv_obj_clear_flag(ui_ImageCanvasUp, LV_OBJ_FLAG_HIDDEN);
-    lv_obj_clear_flag(ui_ImageCanvasDown, LV_OBJ_FLAG_HIDDEN);
-
-    // Initialize settings items
-    settings_items[0] = ui_PanelPanelSettingsLanguage;
-    settings_items[1] = ui_PanelPanelSettingsRes;
-    settings_items[2] = ui_PanelPanelSettingsFlash;
-    settings_items[3] = ui_PanelSettingsMenu;
-    
-    // Initialize the settings display
-    init_settings_display();
-    
-    // reset the current selected item and focus the first item
-    current_settings_item = 0;
-    update_settings_focus(current_settings_item);
-}
-
+/**
+ * @brief Clear popup windows
+ */
 static void ui_extra_clear_popup_window(void)
 {
     if(!lv_obj_has_flag(ui_PanelCanvasPopupCamera, LV_OBJ_FLAG_HIDDEN) || 
@@ -758,47 +720,170 @@ static void ui_extra_clear_popup_window(void)
     }
 }
 
-void ui_extra_popup_interval_timer_warning(void)
+/**
+ * @brief Redirect to main page
+ */
+static void ui_extra_redirect_to_main_page(void)
 {
-    if(!(current_page == UI_PAGE_INTERVAL_CAM)) {
-        return;
-    }
-    app_storage_get_photo_count(&saved_photo_count);
+    current_page = UI_PAGE_MAIN;
+
     ui_extra_clear_page();
-    lv_label_set_text_fmt(ui_LabelPanelCanvasPopupIntervalTimerEnd, "Ended %d min", interval_time);
-    lv_label_set_text_fmt(ui_LabelPanelCanvasPopupCameraIntervalTimerWarningEnd, "%d photos saved to \n       SD Card", saved_photo_count);
-    lv_obj_clear_flag(ui_PanelCanvasPopupIntervalTimerWarningEnd, LV_OBJ_FLAG_HIDDEN);
 
-    if(!lv_additional_photo_timer){
-        lv_additional_photo_timer = lv_timer_create(pop_up_additional_photo_callback, 5000, ui_PanelCanvasPopupIntervalTimerWarningEnd);
-    }
+    lv_obj_clear_flag(scroll_cont, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_clear_flag(info_label, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_clear_flag(ui_ImageCanvasSelect, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_clear_flag(ui_ImageCanvasUp, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_clear_flag(ui_ImageCanvasDown, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_clear_flag(ui_PanelCanvasMaskLarge, LV_OBJ_FLAG_HIDDEN);
+
+    _ui_screen_change(&ui_ScreenCamera, LV_SCR_LOAD_ANIM_NONE, 0, 0, ui_ScreenCamera_screen_init);
 }
 
-bool ui_extra_handle_usb_disk_page(void)
+/**
+ * @brief Redirect to camera page
+ */
+static void ui_extra_redirect_to_camera_page(void)
 {
-    if(ui_extra_get_current_page() == UI_PAGE_USB_DISK) {
-        if(!lv_obj_has_flag(ui_ImageScreenUSB, LV_OBJ_FLAG_HIDDEN)) {
-            ui_extra_goto_page(UI_PAGE_MAIN);
-        } else if (!lv_obj_has_flag(ui_ImageScreenUSBSuccess, LV_OBJ_FLAG_HIDDEN)) {
-            lv_obj_clear_flag(ui_ImageScreenUSBWarning, LV_OBJ_FLAG_HIDDEN);
-            lv_obj_add_flag(ui_ImageScreenUSB, LV_OBJ_FLAG_HIDDEN);
-            lv_obj_add_flag(ui_ImageScreenUSBSuccess, LV_OBJ_FLAG_HIDDEN);
+    current_page = UI_PAGE_CAMERA;
 
-            if (!lv_usb_disk_timer) {
-                lv_usb_disk_timer = lv_timer_create(usb_disk_timer_callback, 5000, NULL);
-            }
-        }
-        return true;  
+    ui_extra_clear_page();
+
+    lv_obj_clear_flag(ui_PanelCanvasPopupCamera, LV_OBJ_FLAG_HIDDEN);
+    if(!lv_popup_timer){
+        lv_popup_timer = lv_timer_create(pop_up_timer_callback, 5000, ui_PanelCanvasPopupCamera);
     }
-    return false;
 }
 
+/**
+ * @brief Redirect to interval camera page
+ */
+static void ui_extra_redirect_to_interval_camera_page(void)
+{
+    current_page = UI_PAGE_INTERVAL_CAM;
+
+    ui_extra_clear_page();
+
+    lv_obj_clear_flag(ui_PanelCanvasPopupCameraInterval, LV_OBJ_FLAG_HIDDEN);
+    if(!lv_popup_timer){
+        lv_popup_timer = lv_timer_create(pop_up_timer_callback, 5000, ui_PanelCanvasPopupCameraInterval);
+    }
+}
+
+/**
+ * @brief Redirect to video mode page
+ */
+static void ui_extra_redirect_to_video_mode_page(void)
+{
+    current_page = UI_PAGE_VIDEO_MODE;
+
+    ui_extra_clear_page();
+    
+    lv_obj_clear_flag(ui_PanelCanvasPopupVideoMode, LV_OBJ_FLAG_HIDDEN);
+    if(!lv_popup_timer){
+        lv_popup_timer = lv_timer_create(pop_up_timer_callback, 5000, ui_PanelCanvasPopupVideoMode);
+    }
+}
+
+/**
+ * @brief Redirect to album page
+ */
+static void ui_extra_redirect_to_album_page(void)
+{
+    current_page = UI_PAGE_ALBUM;
+
+    ui_extra_clear_page();
+    
+    _ui_screen_change(&ui_ScreenAlbum, LV_SCR_LOAD_ANIM_NONE, 0, 0, ui_ScreenAlbum_screen_init);
+
+    if(is_sd_card_mounted) {
+        lv_obj_add_flag(ui_PanelAlbumPopupSDWarning, LV_OBJ_FLAG_HIDDEN);
+    } else {
+        lv_obj_clear_flag(ui_PanelAlbumPopupSDWarning, LV_OBJ_FLAG_HIDDEN);
+    }
+}
+
+/**
+ * @brief Redirect to USB disk page
+ */
+static void ui_extra_redirect_to_usb_disk_page(void)
+{
+    current_page = UI_PAGE_USB_DISK;
+
+    ui_extra_clear_page();
+    
+    _ui_screen_change(&ui_ScreenUSB, LV_SCR_LOAD_ANIM_NONE, 0, 0, ui_ScreenUSB_screen_init);
+
+    if(is_usb_disk_mounted) {
+        lv_obj_add_flag(ui_ImageScreenUSB, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_add_flag(ui_ImageScreenUSBWarning, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_clear_flag(ui_ImageScreenUSBSuccess, LV_OBJ_FLAG_HIDDEN);
+    } else {
+        lv_obj_clear_flag(ui_ImageScreenUSB, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_add_flag(ui_ImageScreenUSBSuccess, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_add_flag(ui_ImageScreenUSBWarning, LV_OBJ_FLAG_HIDDEN);
+    }
+
+    if(is_sd_card_mounted) {
+        lv_obj_add_flag(ui_ImageUSBNOSDcard, LV_OBJ_FLAG_HIDDEN);
+    } else {
+        lv_obj_clear_flag(ui_ImageUSBNOSDcard, LV_OBJ_FLAG_HIDDEN);
+    }
+}
+
+/**
+ * @brief Redirect to settings page
+ */
+static void ui_extra_redirect_to_settings_page(void)
+{
+    current_page = UI_PAGE_SETTINGS;
+
+    ui_extra_clear_page();
+    
+    lv_obj_clear_flag(ui_PanelSettings, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_clear_flag(ui_PanelSettingsMenu, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_clear_flag(ui_ImageCanvasSelect, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_clear_flag(ui_ImageCanvasUp, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_clear_flag(ui_ImageCanvasDown, LV_OBJ_FLAG_HIDDEN);
+
+    // Initialize settings items
+    settings_items[0] = ui_PanelPanelSettingsLanguage;
+    settings_items[1] = ui_PanelPanelSettingsRes;
+    settings_items[2] = ui_PanelPanelSettingsFlash;
+    settings_items[3] = ui_PanelSettingsMenu;
+    
+    // Initialize the settings display
+    init_settings_display();
+    
+    // Reset the current selected item and focus the first item
+    current_settings_item = 0;
+    update_settings_focus(current_settings_item);
+}
+
+/**
+ * @brief Toggle focus between YES and NO in picture delete dialog
+ */
+static void ui_extra_focus_on_picture_delete(void)
+{
+    if(lv_obj_has_state(ui_ButtonPanelImageScreenAlbumDeleteYES, LV_STATE_FOCUSED)) {
+        lv_obj_add_state(ui_ButtonPanelImageScreenAlbumDeleteNO, LV_STATE_FOCUSED);
+        lv_obj_clear_state(ui_ButtonPanelImageScreenAlbumDeleteYES, LV_STATE_FOCUSED);
+    } else {
+        lv_obj_clear_state(ui_ButtonPanelImageScreenAlbumDeleteNO, LV_STATE_FOCUSED);
+        lv_obj_add_state(ui_ButtonPanelImageScreenAlbumDeleteYES, LV_STATE_FOCUSED);
+    }
+}
+
+/* Public API functions */
+/**
+ * @brief Navigate to specified page
+ * @param page Target page enum value
+ */
 void ui_extra_goto_page(ui_page_t page)
 {
-    // save the current page
+    // Save the current page
     current_page = page;
     
-    // redirect to the page
+    // Redirect to the page
     switch(page) {
         case UI_PAGE_MAIN:
             ui_extra_redirect_to_main_page();
@@ -828,12 +913,19 @@ void ui_extra_goto_page(ui_page_t page)
     }   
 }
 
-// Set and get functions
+/**
+ * @brief Get current page
+ * @return Current page enum value
+ */
 ui_page_t ui_extra_get_current_page(void)
 {
     return current_page;
 }
 
+/**
+ * @brief Get chosen page from selected button
+ * @return Chosen page enum value
+ */
 ui_page_t ui_extra_get_choosed_page(void)
 {
     const char * user_data = lv_obj_get_user_data(selected_btn);
@@ -847,11 +939,19 @@ ui_page_t ui_extra_get_choosed_page(void)
     return UI_PAGE_MAIN;
 }
 
+/**
+ * @brief Get current settings information
+ * @return Pointer to settings information structure
+ */
 settings_info_t* ui_extra_get_settings(void)
 {
     return &current_settings;
 }
 
+/**
+ * @brief Set magnification factor
+ * @param factor Magnification factor value
+ */
 void app_extra_set_magnification_factor(uint16_t factor)
 {
     if(factor > MAX_MAGNIFICATION_FACTOR) {
@@ -867,22 +967,38 @@ void app_extra_set_magnification_factor(uint16_t factor)
     save_current_settings();
 }
 
+/**
+ * @brief Get magnification factor
+ * @return Current magnification factor value
+ */
 uint16_t app_extra_get_magnification_factor(void)
 {
     return magnification_factor;
 }   
 
+/**
+ * @brief Set saved photo count
+ * @param count Number of saved photos
+ */
 void app_extra_set_saved_photo_count(uint16_t count)
 {
     saved_photo_count = count;
     app_storage_save_photo_count(saved_photo_count);
 }
 
+/**
+ * @brief Get saved photo count
+ * @return Current saved photo count
+ */
 uint16_t app_extra_get_saved_photo_count(void)
 {
     return saved_photo_count;
 }
 
+/**
+ * @brief Set interval time
+ * @param time Interval time in minutes
+ */
 void app_extra_set_interval_time(uint16_t time)
 {
     // Limit time range
@@ -900,11 +1016,19 @@ void app_extra_set_interval_time(uint16_t time)
     save_current_settings();
 }
 
+/**
+ * @brief Get interval time
+ * @return Current interval time in minutes
+ */
 uint16_t app_extra_get_interval_time(void)
 {
     return interval_time;
 }
 
+/**
+ * @brief Set SD card mount status
+ * @param mounted Whether SD card is mounted
+ */
 void ui_extra_set_sd_card_mounted(bool mounted)
 {
     is_sd_card_mounted = mounted;
@@ -914,11 +1038,19 @@ void ui_extra_set_sd_card_mounted(bool mounted)
     }
 }
 
+/**
+ * @brief Get SD card mount status
+ * @return Whether SD card is mounted
+ */
 bool ui_extra_get_sd_card_mounted(void)
 {
     return is_sd_card_mounted;
 }
 
+/**
+ * @brief Set USB disk mount status
+ * @param mounted Whether USB disk is mounted
+ */
 void ui_extra_set_usb_disk_mounted(bool mounted)
 {
     is_usb_disk_mounted = mounted;
@@ -926,11 +1058,19 @@ void ui_extra_set_usb_disk_mounted(bool mounted)
     ui_extra_goto_page(UI_PAGE_USB_DISK);
 }
 
+/**
+ * @brief Get USB disk mount status
+ * @return Whether USB disk is mounted
+ */
 bool ui_extra_get_usb_disk_mounted(void)
 {
     return is_usb_disk_mounted;
 }
 
+/**
+ * @brief Get popup window visible status
+ * @return Whether popup window is visible
+ */
 bool ui_extra_get_popup_window_visible(void)
 {
     if(!lv_obj_has_flag(ui_PanelCanvasPopupCamera, LV_OBJ_FLAG_HIDDEN) || 
@@ -946,6 +1086,9 @@ bool ui_extra_get_popup_window_visible(void)
     return false;
 }
 
+/**
+ * @brief Start interval timer
+ */
 void ui_extra_start_interval_timer(void)
 {
     ui_extra_clear_page();
@@ -953,29 +1096,69 @@ void ui_extra_start_interval_timer(void)
     lv_obj_clear_flag(ui_PanelCanvasPopupIntervalTimerWarning, LV_OBJ_FLAG_HIDDEN);
 }
 
-static void ui_extra_focus_on_picture_delete(void)
+/**
+ * @brief Show interval timer warning popup
+ */
+void ui_extra_popup_interval_timer_warning(void)
 {
-    if(lv_obj_has_state(ui_ButtonPanelImageScreenAlbumDeleteYES, LV_STATE_FOCUSED)) {
-        lv_obj_add_state(ui_ButtonPanelImageScreenAlbumDeleteNO, LV_STATE_FOCUSED);
-        lv_obj_clear_state(ui_ButtonPanelImageScreenAlbumDeleteYES, LV_STATE_FOCUSED);
-    } else {
-        lv_obj_clear_state(ui_ButtonPanelImageScreenAlbumDeleteNO, LV_STATE_FOCUSED);
-        lv_obj_add_state(ui_ButtonPanelImageScreenAlbumDeleteYES, LV_STATE_FOCUSED);
+    if(!(current_page == UI_PAGE_INTERVAL_CAM)) {
+        return;
+    }
+    app_storage_get_photo_count(&saved_photo_count);
+    ui_extra_clear_page();
+    lv_label_set_text_fmt(ui_LabelPanelCanvasPopupIntervalTimerEnd, "Ended %d min", interval_time);
+    lv_label_set_text_fmt(ui_LabelPanelCanvasPopupCameraIntervalTimerWarningEnd, "%d photos saved to \n       SD Card", saved_photo_count);
+    lv_obj_clear_flag(ui_PanelCanvasPopupIntervalTimerWarningEnd, LV_OBJ_FLAG_HIDDEN);
+
+    if(!lv_additional_photo_timer){
+        lv_additional_photo_timer = lv_timer_create(pop_up_additional_photo_callback, 5000, ui_PanelCanvasPopupIntervalTimerWarningEnd);
     }
 }
 
+/**
+ * @brief Handle USB disk page
+ * @return Whether USB disk page is handled
+ */
+bool ui_extra_handle_usb_disk_page(void)
+{
+    if(ui_extra_get_current_page() == UI_PAGE_USB_DISK) {
+        if(!lv_obj_has_flag(ui_ImageScreenUSB, LV_OBJ_FLAG_HIDDEN)) {
+            ui_extra_goto_page(UI_PAGE_MAIN);
+        } else if (!lv_obj_has_flag(ui_ImageScreenUSBSuccess, LV_OBJ_FLAG_HIDDEN)) {
+            lv_obj_clear_flag(ui_ImageScreenUSBWarning, LV_OBJ_FLAG_HIDDEN);
+            lv_obj_add_flag(ui_ImageScreenUSB, LV_OBJ_FLAG_HIDDEN);
+            lv_obj_add_flag(ui_ImageScreenUSBSuccess, LV_OBJ_FLAG_HIDDEN);
+
+            if (!lv_usb_disk_timer) {
+                lv_usb_disk_timer = lv_timer_create(usb_disk_timer_callback, 5000, NULL);
+            }
+        }
+        return true;  
+    }
+    return false;
+}
+
+/**
+ * @brief Show picture delete warning popup
+ */
 void ui_extra_popup_picture_delete_warning(void)
 {
     lv_obj_clear_flag(ui_PanelImageScreenAlbumDelete, LV_OBJ_FLAG_HIDDEN);
     ui_extra_focus_on_picture_delete();
 }
 
+/**
+ * @brief Show picture delete success popup
+ */
 void ui_extra_popup_picture_delete_success(void)
 {
     lv_obj_add_flag(ui_PanelImageScreenAlbumDelete, LV_OBJ_FLAG_HIDDEN);
 }
 
-// Button event handler
+/* Button event handlers */
+/**
+ * @brief Up button handler
+ */
 void ui_extra_btn_up(void)
 {
     // Check if there are any popup windows that need to be cleared
@@ -1029,6 +1212,9 @@ void ui_extra_btn_up(void)
     }
 }
 
+/**
+ * @brief Down button handler
+ */
 void ui_extra_btn_down(void)
 {
     // Check if there are any popup windows that need to be cleared
@@ -1082,6 +1268,9 @@ void ui_extra_btn_down(void)
     }
 }
 
+/**
+ * @brief Menu button handler
+ */
 void ui_extra_btn_menu(void)
 {
     if(!lv_obj_has_flag(ui_PanelCanvasPopupSDWarning, LV_OBJ_FLAG_HIDDEN)) {
@@ -1148,7 +1337,7 @@ void ui_extra_btn_menu(void)
             lv_obj_add_flag(ui_ImageRedDot, LV_OBJ_FLAG_HIDDEN);
             lv_obj_add_flag(ui_LabelRedDotTime, LV_OBJ_FLAG_HIDDEN);
             
-            // stop the video recording and pause the timer
+            // Stop the video recording and pause the timer
             is_video_recording = false;
             if (lv_video_timer) {
                 lv_timer_pause(lv_video_timer);
@@ -1166,6 +1355,9 @@ void ui_extra_btn_menu(void)
     }
 }
 
+/**
+ * @brief Encoder button handler
+ */
 void ui_extra_btn_encoder(void)
 {
     if(!lv_obj_has_flag(ui_PanelCanvasPopupCamera, LV_OBJ_FLAG_HIDDEN) || 
@@ -1260,7 +1452,7 @@ void ui_extra_btn_encoder(void)
                 lv_obj_clear_flag(ui_ImageRedDot, LV_OBJ_FLAG_HIDDEN);
                 lv_obj_clear_flag(ui_LabelRedDotTime, LV_OBJ_FLAG_HIDDEN);
                 
-                // reset the video recording seconds and start the timer
+                // Reset the video recording seconds and start the timer
                 video_recording_seconds = 0;
                 lv_label_set_text(ui_LabelRedDotTime, "00:00");
                 is_video_recording = true;
@@ -1274,7 +1466,7 @@ void ui_extra_btn_encoder(void)
                 lv_obj_add_flag(ui_ImageRedDot, LV_OBJ_FLAG_HIDDEN);
                 lv_obj_add_flag(ui_LabelRedDotTime, LV_OBJ_FLAG_HIDDEN);
                 
-                // stop the video recording and pause the timer
+                // Stop the video recording and pause the timer
                 is_video_recording = false;
                 if (lv_video_timer) {
                     lv_timer_pause(lv_video_timer);
@@ -1285,11 +1477,11 @@ void ui_extra_btn_encoder(void)
         default:
             break;
     }
-
-    return;
 }
 
-// Initialize the UI extra module
+/**
+ * @brief Initialize the UI extra module
+ */
 void ui_extra_init(void)
 {
     ui_init();
@@ -1367,6 +1559,6 @@ void ui_extra_init(void)
         init_settings_display();
     }
 
-    // redirect to the main page
+    // Redirect to the main page
     ui_extra_goto_page(UI_PAGE_MAIN);
 }
