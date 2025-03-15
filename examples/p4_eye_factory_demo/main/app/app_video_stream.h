@@ -4,7 +4,7 @@
  *
  * This module provides functionality for initializing and managing video streaming
  * from a camera to a display. It handles camera initialization, buffer management,
- * and frame processing with scaling capabilities.
+ * frame processing with scaling capabilities, photo capture, and interval photography.
  */
 
 #pragma once
@@ -16,6 +16,9 @@
 extern "C" {
 #endif
 
+/**
+ * @brief Photo resolution enumeration
+ */
 typedef enum {
     PHOTO_RESOLUTION_480P = 0,  // 640x480
     PHOTO_RESOLUTION_720P = 1,  // 1280x720
@@ -23,6 +26,7 @@ typedef enum {
     PHOTO_RESOLUTION_MAX
 } photo_resolution_t;
 
+/* Initialization */
 /**
  * @brief Initialize the video streaming application
  *
@@ -35,20 +39,89 @@ typedef enum {
  */
 esp_err_t app_video_stream_init(i2c_master_bus_handle_t i2c_handle);
 
+/* Photo and video control */
+/**
+ * @brief Take a photo with the current settings
+ *
+ * @return ESP_OK on success, or an error code on failure
+ */
 esp_err_t app_video_stream_take_photo(void);
+
+/**
+ * @brief Stop photo capture process
+ *
+ * @return ESP_OK on success, or an error code on failure
+ */
 esp_err_t app_video_stream_stop_take_photo(void);
+
+/**
+ * @brief Start video recording
+ *
+ * @return ESP_OK on success, or an error code on failure
+ */
 esp_err_t app_video_stream_take_video(void);
+
+/**
+ * @brief Stop video recording
+ *
+ * @return ESP_OK on success, or an error code on failure
+ */
 esp_err_t app_video_stream_stop_take_video(void);
 
-esp_err_t app_video_stream_start_interval_photo(uint16_t interval_minutes);
-esp_err_t app_video_stream_stop_interval_photo(void);
-esp_err_t app_video_stream_check_interval_wakeup(void);
-
+/**
+ * @brief Set flash light state
+ *
+ * @param is_on Whether to turn flash on or off
+ * @return ESP_OK on success, or an error code on failure
+ */
 esp_err_t app_video_stream_set_flash_light(bool is_on);
 
+/* Interval photo functions */
+/**
+ * @brief Start interval photo mode
+ *
+ * @param interval_minutes Interval between photos in minutes
+ * @return ESP_OK on success, or an error code on failure
+ */
+esp_err_t app_video_stream_start_interval_photo(uint16_t interval_minutes);
+
+/**
+ * @brief Stop interval photo mode
+ *
+ * @return ESP_OK on success, or an error code on failure
+ */
+esp_err_t app_video_stream_stop_interval_photo(void);
+
+/**
+ * @brief Check if device woke up for interval photo
+ *
+ * @return ESP_OK if interval photo should continue, ESP_FAIL otherwise
+ */
+esp_err_t app_video_stream_check_interval_wakeup(void);
+
+/* Resolution management */
+/**
+ * @brief Get current photo resolution
+ *
+ * @return Current photo resolution enum value
+ */
 photo_resolution_t app_video_stream_get_photo_resolution(void);
+
+/**
+ * @brief Set photo resolution by string
+ *
+ * @param resolution_str Resolution string ("480P", "720P", "1080P")
+ * @return ESP_OK on success, or an error code on failure
+ */
 esp_err_t app_video_stream_set_photo_resolution_by_string(const char *resolution_str);
 
+/* Utility functions */
+/**
+ * @brief Swap RGB565 bytes for correct display format
+ *
+ * @param buffer RGB565 buffer to process
+ * @param pixel_count Number of pixels in the buffer
+ */
 void swap_rgb565_bytes(uint16_t *buffer, int pixel_count);
 
 #ifdef __cplusplus
