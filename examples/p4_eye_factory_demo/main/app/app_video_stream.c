@@ -500,7 +500,7 @@ static esp_err_t take_and_save_video(uint8_t *camera_buf, uint32_t width, uint32
     jpeg_encode_cfg_t enc_config = {
         .src_type = JPEG_ENCODE_IN_FORMAT_RGB565,
         .sub_sample = JPEG_DOWN_SAMPLING_YUV420,
-        .image_quality = JPEG_QUALITY,
+        .image_quality = 50,
         .width = photo_width,
         .height = photo_height,
     };
