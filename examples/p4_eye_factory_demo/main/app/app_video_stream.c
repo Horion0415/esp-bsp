@@ -37,7 +37,7 @@
 #define CROP_PHOTO_WIDTH        1280
 #define CROP_PHOTO_HEIGHT       960
 
-#define JPEG_COMPRESSION_RATIO  5             // Assuming 10:1 compression ratio
+#define JPEG_COMPRESSION_RATIO  5             // Assuming 5:1 compression ratio
 #define CAMERA_INIT_FRAMES      50            // Number of frames needed for camera initialization
 #define JPEG_PHOTO_QUALITY      90            // JPEG quality setting
 #define JPEG_VIDEO_QUALITY      60            // JPEG quality setting
@@ -78,6 +78,14 @@ typedef struct {
 } camera_buffer_t;
 
 /**
+ * @brief Audio data structure
+ */
+typedef struct {
+    uint8_t *data;
+    size_t len;
+} audio_data_t;
+
+/**
  * @brief Recorder context structure
  */
 typedef struct {
@@ -93,26 +101,6 @@ typedef struct {
     TaskHandle_t audio_encode_task_handle; // Audio encode task handle
     uint32_t video_frame_count;          // Video frame count
 } recorder_ctx_t;
-
-/**
- * @brief Audio data structure
- */
-typedef struct {
-    uint8_t *data;
-    size_t len;
-} audio_data_t;
-
-// Global recorder context
-static recorder_ctx_t recorder_ctx = {
-    .muxer = NULL,
-    .video_stream_idx = -1,
-    .audio_stream_idx = -1,
-    .recording = false,
-    .recording_mutex = NULL,
-    .encoder = NULL,
-    .start_time = 0,
-    .video_frame_count = 0
-};
 
 /**
  * @brief Photo task parameters structure
@@ -148,6 +136,18 @@ static TaskHandle_t photo_task_handle = NULL;
 static QueueHandle_t photo_queue = NULL;
 static SemaphoreHandle_t photo_take_sem = NULL;
 
+// Global recorder context
+static recorder_ctx_t recorder_ctx = {
+    .muxer = NULL,
+    .video_stream_idx = -1,
+    .audio_stream_idx = -1,
+    .recording = false,
+    .recording_mutex = NULL,
+    .encoder = NULL,
+    .start_time = 0,
+    .video_frame_count = 0
+};
+
 static const uint32_t photo_resolution_width[PHOTO_RESOLUTION_MAX] = {640, 1280, 1920};
 static const uint32_t photo_resolution_height[PHOTO_RESOLUTION_MAX] = {480, 720, 1080};
 
@@ -161,11 +161,18 @@ static void camera_video_frame_operation(uint8_t *camera_buf, uint8_t camera_buf
                                         uint32_t camera_buf_hes, uint32_t camera_buf_ves, 
                                         size_t camera_buf_len);
 static esp_err_t take_and_save_photo(uint8_t *camera_buf, uint32_t width, uint32_t height);
+static esp_err_t take_and_save_video(uint8_t *camera_buf, uint32_t width, uint32_t height);
 static esp_err_t app_video_stream_set_photo_resolution(photo_resolution_t resolution);
 static void interval_photo_complete_callback(void);
 static void enter_deep_sleep(uint16_t sleep_minutes);
 static esp_err_t app_video_stream_start_recording(void);
 static esp_err_t app_video_stream_stop_recording(void);
+static esp_err_t init_mp4_muxer(void);
+static esp_err_t deinit_mp4_muxer(void);
+static void audio_capture_task(void *pvParameters);
+static void audio_encode_task(void *pvParameters);
+static int get_next_file_number(const char *dir_path);
+static int file_pattern_cb(char *file_name, int len, int slice_idx);
 
 /* Utility functions */
 /**
@@ -381,9 +388,8 @@ esp_err_t app_video_stream_stop_interval_photo(void)
     return ESP_OK;
 }
 
-/* Photo processing functions */
 /**
- * @brief Process and save a photo
+ * @brief Process and save a video frame
  * 
  * @param camera_buf Camera buffer containing the image
  * @param width Image width
@@ -546,7 +552,6 @@ cleanup:
     return ret;
 }
 
-/* Photo processing functions */
 /**
  * @brief Process and save a photo
  * 
@@ -845,7 +850,12 @@ static void camera_video_frame_operation(uint8_t *camera_buf, uint8_t camera_buf
     }
 }
 
-// Get the next available file number by scanning the directory
+/**
+ * @brief Get the next available file number by scanning the directory
+ * 
+ * @param dir_path Directory path to scan
+ * @return Next available file number
+ */
 static int get_next_file_number(const char *dir_path)
 {
     DIR *dir = opendir(dir_path);
@@ -874,7 +884,14 @@ static int get_next_file_number(const char *dir_path)
     return max_num + 1;  // Return next available number
 }
 
-// File name callback function
+/**
+ * @brief File name pattern callback function for MP4 muxer
+ * 
+ * @param file_name Buffer to store the generated file name
+ * @param len Buffer length
+ * @param slice_idx Slice index
+ * @return 0 on success, -1 on failure
+ */
 static int file_pattern_cb(char *file_name, int len, int slice_idx)
 {
     // Ensure directory exists
@@ -902,7 +919,11 @@ static int file_pattern_cb(char *file_name, int len, int slice_idx)
     return 0;
 }
 
-// Initialize MP4 muxer
+/**
+ * @brief Initialize MP4 muxer
+ * 
+ * @return ESP_OK on success, error code otherwise
+ */
 static esp_err_t init_mp4_muxer(void)
 {
     ESP_LOGI(TAG, "Initializing MP4 muxer");
@@ -958,6 +979,35 @@ static esp_err_t init_mp4_muxer(void)
     return ESP_OK;
 }
 
+/**
+ * @brief Deinitialize MP4 muxer
+ * 
+ * @return ESP_OK on success, error code otherwise
+ */
+static esp_err_t deinit_mp4_muxer(void)
+{
+    esp_err_t ret = ESP_OK;
+    ESP_LOGI(TAG, "Deinitializing MP4 muxer");
+    
+    // Close muxer
+    if (recorder_ctx.muxer) {
+        esp_muxer_close(recorder_ctx.muxer);
+        recorder_ctx.muxer = NULL;
+        ESP_LOGI(TAG, "MP4 muxer closed successfully");
+    }
+    
+    // unregister all muxer
+    esp_muxer_unreg_all();  
+
+    ESP_LOGI(TAG, "MP4 muxer deinitialized successfully");
+    return ret;
+}
+
+/**
+ * @brief Audio capture task
+ * 
+ * @param pvParameters Task parameters (unused)
+ */
 static void audio_capture_task(void *pvParameters)
 {
     ESP_LOGI(TAG, "Audio capture task started");
@@ -1005,6 +1055,11 @@ static void audio_capture_task(void *pvParameters)
     vTaskDelete(NULL);
 }
 
+/**
+ * @brief Audio encode task
+ * 
+ * @param pvParameters Task parameters (unused)
+ */
 static void audio_encode_task(void *pvParameters)
 {
     ESP_LOGI(TAG, "Audio encode task started");
@@ -1059,6 +1114,11 @@ static void audio_encode_task(void *pvParameters)
     vTaskDelete(NULL);
 }
 
+/**
+ * @brief Start video recording
+ * 
+ * @return ESP_OK on success, error code otherwise
+ */
 static esp_err_t app_video_stream_start_recording(void)
 {
     esp_err_t ret = ESP_OK;
@@ -1097,25 +1157,11 @@ static esp_err_t app_video_stream_start_recording(void)
     return ret;
 }
 
-static esp_err_t deinit_mp4_muxer(void)
-{
-    esp_err_t ret = ESP_OK;
-    ESP_LOGI(TAG, "Deinitializing MP4 muxer");
-    
-    // Close muxer
-    if (recorder_ctx.muxer) {
-        esp_muxer_close(recorder_ctx.muxer);
-        recorder_ctx.muxer = NULL;
-        ESP_LOGI(TAG, "MP4 muxer closed successfully");
-    }
-    
-    // unregister all muxer
-    esp_muxer_unreg_all();  
-
-    ESP_LOGI(TAG, "MP4 muxer deinitialized successfully");
-    return ret;
-}
-
+/**
+ * @brief Stop video recording
+ * 
+ * @return ESP_OK on success, error code otherwise
+ */
 static esp_err_t app_video_stream_stop_recording(void)
 {
     esp_err_t ret = ESP_OK;
