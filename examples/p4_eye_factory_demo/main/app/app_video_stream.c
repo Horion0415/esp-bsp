@@ -89,6 +89,7 @@ typedef struct {
     QueueHandle_t audio_data_queue;     // Audio data queue
     TaskHandle_t audio_capture_task_handle; // Audio capture task handle
     TaskHandle_t audio_encode_task_handle; // Audio encode task handle
+    uint32_t video_frame_count;          // Video frame count
 } recorder_ctx_t;
 
 /**
@@ -107,7 +108,8 @@ static recorder_ctx_t recorder_ctx = {
     .recording = false,
     .recording_mutex = NULL,
     .encoder = NULL,
-    .start_time = 0
+    .start_time = 0,
+    .video_frame_count = 0
 };
 
 /**
@@ -137,17 +139,6 @@ static camera_state_t camera_state = {
     .next_wake_time = 0,
     .current_resolution = PHOTO_RESOLUTION_1080P
 };
-
-typedef struct {
-    uint8_t *camera_buf;
-    uint32_t width;
-    uint32_t height;
-    uint32_t timestamp;
-} video_frame_params_t;
-
-static QueueHandle_t video_queue = NULL;
-static TaskHandle_t video_task_handle = NULL;
-static SemaphoreHandle_t video_frame_sem = NULL;
 
 static camera_buffer_t camera_buffer = {0};
 
@@ -314,6 +305,7 @@ esp_err_t app_video_stream_stop_take_photo(void)
 esp_err_t app_video_stream_take_video(void)
 {
     camera_state.is_take_video = true;
+    app_video_stream_start_recording();
     return ESP_OK;
 }
 
@@ -325,6 +317,7 @@ esp_err_t app_video_stream_take_video(void)
 esp_err_t app_video_stream_stop_take_video(void)
 {
     camera_state.is_take_video = false;
+    app_video_stream_stop_recording();
     return ESP_OK;
 }
 
@@ -538,6 +531,31 @@ static esp_err_t take_and_save_photo(uint8_t *camera_buf, uint32_t width, uint32
         ESP_LOGE(TAG, "JPEG encoding failed: 0x%x", ret);
         goto cleanup;
     }
+
+    if(camera_state.is_take_video) {
+        uint32_t frame_time = esp_timer_get_time() / 1000 - recorder_ctx.start_time;
+        ESP_LOGI(TAG, "frame_time: %d", frame_time);
+        xSemaphoreTake(recording_mutex, portMAX_DELAY);
+        if (recorder_ctx.recording) {
+            esp_muxer_video_packet_t video_packet = {
+                .data = camera_buffer.jpg_buf,
+                .len = camera_buffer.jpg_size,
+                .pts = frame_time,
+                .dts = frame_time,
+                .key_frame = (recorder_ctx.video_frame_count % 30 == 0), 
+            };
+            
+            int ret = esp_muxer_add_video_packet(muxer, video_stream_idx, &video_packet);
+            if (ret != ESP_MUXER_ERR_OK) {
+                ESP_LOGE(TAG, "Failed to add video packet, error: %d", ret);
+            } else {
+                recorder_ctx.video_frame_count++;
+            }
+        }
+        xSemaphoreGive(recording_mutex);
+        
+        return ret;
+    }
     
     // Save the picture
     ret = app_storage_save_picture(camera_buffer.jpg_buf, camera_buffer.jpg_size);
@@ -571,90 +589,6 @@ cleanup:
     }
 
     return ret;
-}
-
-// todo 
-static void video_task(void *pvParameters)
-{
-    video_frame_params_t params;
-    uint8_t *video_buffer = NULL;
-    size_t buffer_size = app_video_get_buf_size();
-    
-    // 分配视频缓冲区
-    video_buffer = heap_caps_aligned_calloc(data_cache_line_size, 1, buffer_size, MALLOC_CAP_SPIRAM);
-    if (video_buffer == NULL) {
-        ESP_LOGE(TAG, "无法分配视频缓冲区");
-        vTaskDelete(NULL);
-        return;
-    }
-    
-    // 分配JPEG缓冲区
-    uint8_t *jpg_buf = NULL;
-    uint32_t jpg_size = 0;
-    size_t rx_buffer_size = 0;
-    
-    jpg_buf = (uint8_t*)jpeg_alloc_encoder_mem(
-        photo_resolution_width[camera_state.current_resolution] * 
-        photo_resolution_height[camera_state.current_resolution] * 2 / JPEG_COMPRESSION_RATIO, 
-        &(jpeg_encode_memory_alloc_cfg_t){.buffer_direction = JPEG_DEC_ALLOC_OUTPUT_BUFFER}, 
-        &rx_buffer_size
-    );
-    
-    if (jpg_buf == NULL) {
-        ESP_LOGE(TAG, "无法分配JPEG缓冲区");
-        heap_caps_free(video_buffer);
-        vTaskDelete(NULL);
-        return;
-    }
-    while (1) {
-        if (xQueueReceive(video_queue, &params, portMAX_DELAY) == pdTRUE) {
-            // 复制图像数据到本地缓冲区
-            memcpy(video_buffer, params.camera_buf, buffer_size);
-            
-            // 配置JPEG编码
-            jpeg_encode_cfg_t enc_config = {
-                .src_type = JPEG_ENCODE_IN_FORMAT_RGB565,
-                .sub_sample = JPEG_DOWN_SAMPLING_YUV420,
-                .image_quality = JPEG_QUALITY,
-                .width = params.width,
-                .height = params.height,
-            };
-            
-            // 执行JPEG编码
-            esp_err_t ret = jpeg_encoder_process(jpeg_handle, &enc_config, video_buffer, 
-                                               params.width * params.height * 2, 
-                                               jpg_buf, rx_buffer_size, &jpg_size);
-            if (ret != ESP_OK) {
-                ESP_LOGE(TAG, "JPEG编码失败: 0x%x", ret);
-                xSemaphoreGive(video_frame_sem);
-                continue;
-            }
-            
-            // 添加视频帧到MP4文件
-            xSemaphoreTake(recorder_ctx.recording_mutex, portMAX_DELAY);
-            if (recorder_ctx.recording) {
-                esp_muxer_video_packet_t video_packet = {
-                    .data = jpg_buf,
-                    .len = jpg_size,
-                    .pts = params.timestamp,
-                    .dts = params.timestamp,
-                };
-                
-                ret = esp_muxer_add_video_packet(recorder_ctx.muxer, recorder_ctx.video_stream_idx, &video_packet);
-                if (ret != ESP_MUXER_ERR_OK) {
-                    ESP_LOGE(TAG, "添加视频帧失败, 错误: %d", ret);
-                }
-            }
-            xSemaphoreGive(recorder_ctx.recording_mutex);
-            
-            xSemaphoreGive(video_frame_sem);
-        }
-    }
-    
-    // 释放资源（此代码永远不会执行，但为了代码完整性而包含）
-    heap_caps_free(video_buffer);
-    heap_caps_free(jpg_buf);
-    vTaskDelete(NULL);
 }
 
 /**
@@ -765,7 +699,7 @@ static void camera_video_frame_operation(uint8_t *camera_buf, uint8_t camera_buf
     bsp_display_unlock();
 
     // Handle photo request
-    if(camera_state.is_take_photo && 
+    if((camera_state.is_take_photo || camera_state.is_take_video) && 
        (ui_extra_get_current_page() == UI_PAGE_CAMERA || ui_extra_get_current_page() == UI_PAGE_INTERVAL_CAM) && 
        camera_state.is_initialized) {
         // Reset photo flag
@@ -784,30 +718,6 @@ static void camera_video_frame_operation(uint8_t *camera_buf, uint8_t camera_buf
             xSemaphoreTake(photo_take_sem, portMAX_DELAY);
         }
     }
-
-    // todo
-    // 处理视频请求
-    if(recorder_ctx.recording && 
-       ui_extra_get_current_page() == UI_PAGE_CAMERA && 
-       camera_state.is_initialized
-       ) {
-        uint32_t timestamp = esp_timer_get_time() / 1000 - recorder_ctx.start_time;
-        
-        video_frame_params_t params = {
-            .camera_buf = camera_buf,
-            .width = camera_buf_hes,
-            .height = camera_buf_ves,
-            .timestamp = timestamp
-        };
-        
-        // 发送视频帧参数到视频任务
-        if (xQueueSend(video_queue, &params, 0) != pdTRUE) {
-            ESP_LOGW(TAG, "视频队列已满，跳过此帧");
-        } else {
-            xSemaphoreTake(video_frame_sem, portMAX_DELAY);
-        }
-    }
-
 }
 
 // Get the next available file number by scanning the directory
@@ -1087,6 +997,7 @@ esp_err_t app_video_stream_stop_recording(void)
     // Set stop flag
     xSemaphoreTake(recorder_ctx.recording_mutex, portMAX_DELAY);
     recorder_ctx.recording = false;
+    recorder_ctx.video_frame_count = 0;
     xSemaphoreGive(recorder_ctx.recording_mutex);
 
     // Wait for tasks to end
@@ -1226,34 +1137,6 @@ esp_err_t app_video_stream_init(i2c_master_bus_handle_t i2c_handle)
     photo_take_sem = xSemaphoreCreateBinary();
     if (photo_take_sem == NULL) {
         ESP_LOGE(TAG, "Failed to create photo take semaphore");
-        ret = ESP_FAIL;
-        goto cleanup;
-    }
-
-    video_queue = xQueueCreate(5, sizeof(video_frame_params_t));
-    if (video_queue == NULL) {
-        ESP_LOGE(TAG, "Failed to create video queue");
-        ret = ESP_FAIL;
-        goto cleanup;
-    }
-    
-    task_created = xTaskCreate(
-        video_task,
-        "video_task",
-        4096,
-        NULL,
-        5,
-        &video_task_handle);
-    
-    if (task_created != pdPASS) {
-        ESP_LOGE(TAG, "Failed to create video task");
-        ret = ESP_FAIL;
-        goto cleanup;
-    }
-
-    video_frame_sem = xSemaphoreCreateBinary();
-    if (video_frame_sem == NULL) {
-        ESP_LOGE(TAG, "Failed to create video frame semaphore");
         ret = ESP_FAIL;
         goto cleanup;
     }
