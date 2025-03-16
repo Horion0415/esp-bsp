@@ -37,7 +37,7 @@
 #define CROP_PHOTO_WIDTH        1280
 #define CROP_PHOTO_HEIGHT       960
 
-#define JPEG_COMPRESSION_RATIO  8             // Assuming 10:1 compression ratio
+#define JPEG_COMPRESSION_RATIO  5             // Assuming 10:1 compression ratio
 #define CAMERA_INIT_FRAMES      50            // Number of frames needed for camera initialization
 #define JPEG_PHOTO_QUALITY      90            // JPEG quality setting
 #define JPEG_VIDEO_QUALITY      60            // JPEG quality setting
@@ -968,7 +968,7 @@ static void audio_capture_task(void *pvParameters)
     
     #define BUFFER_COUNT 3
     uint8_t *sample_buffers[BUFFER_COUNT];
-    size_t sample_size = pcm_frame_size * 15;
+    size_t sample_size = pcm_frame_size * 20;
     for (int i = 0; i < BUFFER_COUNT; i++) {
         sample_buffers[i] = heap_caps_aligned_calloc(data_cache_line_size, 1, sample_size, MALLOC_CAP_SPIRAM);
     }
@@ -1012,7 +1012,7 @@ static void audio_encode_task(void *pvParameters)
     int pcm_frame_size = 0, output_frame_size = 0;
     esp_audio_enc_get_frame_size(recorder_ctx.encoder, &pcm_frame_size, &output_frame_size);
     
-    size_t enc_size = output_frame_size * 15;
+    size_t enc_size = output_frame_size * 20;
     uint8_t *enc_data = heap_caps_aligned_calloc(data_cache_line_size, 1, enc_size, MALLOC_CAP_SPIRAM);
     
     audio_data_t audio_data;
