@@ -7,3 +7,11 @@ dependencies:
 
   espressif/esp_tinyusb:
     version: "1.4.*"
+
+  espressif/esp_audio_codec:
+    version: "*"
+    public: true
+
+  espressif/esp_muxer:
+    version: "*"
+    public: true
