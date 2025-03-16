@@ -7,6 +7,7 @@
  * and frame processing with scaling capabilities.
  */
 
+#include <sys/stat.h> 
 #include <dirent.h>
 #include <stdio.h>
 #include "esp_log.h"
@@ -36,9 +37,9 @@
 #define CROP_PHOTO_WIDTH        1280
 #define CROP_PHOTO_HEIGHT       960
 
-#define JPEG_COMPRESSION_RATIO  5             // Assuming 10:1 compression ratio
+#define JPEG_COMPRESSION_RATIO  8             // Assuming 10:1 compression ratio
 #define CAMERA_INIT_FRAMES      50            // Number of frames needed for camera initialization
-#define JPEG_QUALITY            93            // JPEG quality setting
+#define JPEG_QUALITY            90            // JPEG quality setting
 
 #define REC_AUDIO_SAMPLE_RATE     16000
 #define REC_AUDIO_CHANNEL         2
@@ -162,6 +163,8 @@ static esp_err_t take_and_save_photo(uint8_t *camera_buf, uint32_t width, uint32
 static esp_err_t app_video_stream_set_photo_resolution(photo_resolution_t resolution);
 static void interval_photo_complete_callback(void);
 static void enter_deep_sleep(uint16_t sleep_minutes);
+static esp_err_t app_video_stream_start_recording(void);
+static esp_err_t app_video_stream_stop_recording(void);
 
 /* Utility functions */
 /**
@@ -386,14 +389,10 @@ esp_err_t app_video_stream_stop_interval_photo(void)
  * @param height Image height
  * @return ESP_OK on success, error code otherwise
  */
-static esp_err_t take_and_save_photo(uint8_t *camera_buf, uint32_t width, uint32_t height)
+static esp_err_t take_and_save_video(uint8_t *camera_buf, uint32_t width, uint32_t height)
 {
     esp_err_t ret = ESP_OK;
     uint8_t *pic_buf = NULL;
-    
-    bsp_display_backlight_off();
-
-    camera_state.is_flash_light_on ? bsp_led_set(BSP_LED_WHITE, true) : bsp_led_set(BSP_LED_WHITE, false);
 
     uint32_t photo_width = photo_resolution_width[camera_state.current_resolution];
     uint32_t photo_height = photo_resolution_height[camera_state.current_resolution];
@@ -409,7 +408,6 @@ static esp_err_t take_and_save_photo(uint8_t *camera_buf, uint32_t width, uint32
     }
 
     uint16_t magnification_factor = app_extra_get_magnification_factor();
-    memset(camera_buffer.scaled_camera_buf, 0, 1920 * 1080 * 2);
     uint8_t *pre_handle_buf = camera_buf;
 
     // Apply magnification if needed
@@ -507,22 +505,174 @@ static esp_err_t take_and_save_photo(uint8_t *camera_buf, uint32_t width, uint32
         .height = photo_height,
     };
 
-    jpeg_encode_memory_alloc_cfg_t rx_mem_cfg = {
-        .buffer_direction = JPEG_DEC_ALLOC_OUTPUT_BUFFER,
-    };
-
-    // Allocate JPEG buffer, assuming compression ratio of JPEG_COMPRESSION_RATIO
-    camera_buffer.jpg_buf = (uint8_t*)jpeg_alloc_encoder_mem(
-        photo_width * photo_height * 2 / JPEG_COMPRESSION_RATIO, 
-        &rx_mem_cfg, 
-        &camera_buffer.rx_buffer_size
-    );
-    
-    if (camera_buffer.jpg_buf == NULL) {
-        ESP_LOGE(TAG, "Failed to allocate JPEG buffer");
-        ret = ESP_FAIL;
+    // Perform JPEG encoding
+    ret = jpeg_encoder_process(jpeg_handle, &enc_config, pic_buf, photo_width * photo_height * 2, 
+                              camera_buffer.jpg_buf, camera_buffer.rx_buffer_size, &camera_buffer.jpg_size);
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "JPEG encoding failed: 0x%x", ret);
         goto cleanup;
     }
+
+    uint32_t frame_time = esp_timer_get_time() / 1000 - recorder_ctx.start_time;
+    ESP_LOGI(TAG, "frame_time: %d", frame_time);
+
+    xSemaphoreTake(recorder_ctx.recording_mutex, portMAX_DELAY);
+    if (recorder_ctx.recording) {
+        esp_muxer_video_packet_t video_packet = {
+            .data = camera_buffer.jpg_buf,
+            .len = camera_buffer.jpg_size,
+            .pts = frame_time,
+            .dts = frame_time,
+            .key_frame = (recorder_ctx.video_frame_count % 30 == 0), 
+        };
+        
+        int ret = esp_muxer_add_video_packet(recorder_ctx.muxer, recorder_ctx.video_stream_idx, &video_packet);
+        if (ret != ESP_MUXER_ERR_OK) {
+            ESP_LOGE(TAG, "Failed to add video packet, error: %d", ret);
+        } else {
+            recorder_ctx.video_frame_count++;
+        }
+    }
+    xSemaphoreGive(recorder_ctx.recording_mutex);
+    
+cleanup:
+    // Free resources
+    if (camera_buffer.photo_buf != NULL && pic_buf == camera_buffer.photo_buf) {
+        heap_caps_free(camera_buffer.photo_buf);
+        camera_buffer.photo_buf = NULL;
+    }
+
+    return ret;
+}
+
+/* Photo processing functions */
+/**
+ * @brief Process and save a photo
+ * 
+ * @param camera_buf Camera buffer containing the image
+ * @param width Image width
+ * @param height Image height
+ * @return ESP_OK on success, error code otherwise
+ */
+static esp_err_t take_and_save_photo(uint8_t *camera_buf, uint32_t width, uint32_t height)
+{
+    esp_err_t ret = ESP_OK;
+    uint8_t *pic_buf = NULL;
+    
+    bsp_display_backlight_off();
+    
+    camera_state.is_flash_light_on ? bsp_led_set(BSP_LED_WHITE, true) : bsp_led_set(BSP_LED_WHITE, false);
+
+    uint32_t photo_width = photo_resolution_width[camera_state.current_resolution];
+    uint32_t photo_height = photo_resolution_height[camera_state.current_resolution];
+
+    // Adjust resolution to match camera capabilities
+    if (photo_width > width) {
+        ESP_LOGW(TAG, "Requested width %d exceeds camera capability %d, adjusting", photo_width, width);
+        photo_width = width;
+    }
+    if (photo_height > height) {
+        ESP_LOGW(TAG, "Requested height %d exceeds camera capability %d, adjusting", photo_height, height);
+        photo_height = height;
+    }
+
+    uint16_t magnification_factor = app_extra_get_magnification_factor();
+    uint8_t *pre_handle_buf = camera_buf;
+
+    // Apply magnification if needed
+    if(magnification_factor > 1) {
+        ppa_srm_oper_config_t adj_srm_config = {
+            .in.buffer = camera_buf,
+            .in.pic_w = width,
+            .in.pic_h = height,
+            .in.block_w = adj_resolution_width[magnification_factor - 1],
+            .in.block_h = adj_resolution_height[magnification_factor - 1],
+            .in.block_offset_x = (width - adj_resolution_width[magnification_factor - 1]) / 2,
+            .in.block_offset_y = (height - adj_resolution_height[magnification_factor - 1]) / 2,
+            .in.srm_cm = PPA_SRM_COLOR_MODE_RGB565,
+            .out.buffer = camera_buffer.scaled_camera_buf,
+            .out.buffer_size = ALIGN_UP(width * height * 2, data_cache_line_size),
+            .out.pic_w = width,
+            .out.pic_h = height,
+            .out.block_offset_x = 0,
+            .out.block_offset_y = 0,
+            .out.srm_cm = PPA_SRM_COLOR_MODE_RGB565,
+            .rotation_angle = PPA_SRM_ROTATION_ANGLE_0,
+            .scale_x = (float)width / adj_resolution_width[magnification_factor - 1],
+            .scale_y = (float)height / adj_resolution_height[magnification_factor - 1],
+            .rgb_swap = 0,
+            .byte_swap = 0,
+            .mode = PPA_TRANS_MODE_BLOCKING,
+        };
+
+        ret = ppa_do_scale_rotate_mirror(ppa_srm_handle, &adj_srm_config);
+        if (ret != ESP_OK) {
+            ESP_LOGE(TAG, "Failed to scale image: 0x%x", ret);
+            goto cleanup;
+        }
+        pre_handle_buf = camera_buffer.scaled_camera_buf;
+    } else {
+        pre_handle_buf = camera_buf;
+    }
+
+    // Process image based on resolution
+    if(camera_state.current_resolution != PHOTO_RESOLUTION_1080P) {
+        camera_buffer.photo_buf = (uint8_t*)heap_caps_aligned_calloc(data_cache_line_size, 1, 
+                                                                   photo_width * photo_height * 2, 
+                                                                   MALLOC_CAP_SPIRAM);
+        if (camera_buffer.photo_buf == NULL) {
+            ESP_LOGE(TAG, "Failed to allocate photo buffer");
+            ret = ESP_FAIL;
+            goto cleanup;
+        }
+
+        ppa_srm_oper_config_t srm_config = {
+            .in.buffer = pre_handle_buf,
+            .in.pic_w = width,
+            .in.pic_h = height,
+            .in.block_w = CROP_PHOTO_WIDTH,
+            .in.block_h = CROP_PHOTO_HEIGHT,
+            .in.block_offset_x = (width - CROP_PHOTO_WIDTH) / 2,
+            .in.block_offset_y = (height - CROP_PHOTO_HEIGHT) / 2,
+            .in.srm_cm = PPA_SRM_COLOR_MODE_RGB565,
+            .out.buffer = camera_buffer.photo_buf,
+            .out.buffer_size = ALIGN_UP(photo_width * photo_height * 2, data_cache_line_size),
+            .out.pic_w = photo_width,
+            .out.pic_h = photo_height,
+            .out.block_offset_x = 0,
+            .out.block_offset_y = 0,
+            .out.srm_cm = PPA_SRM_COLOR_MODE_RGB565,
+            .rotation_angle = PPA_SRM_ROTATION_ANGLE_0,
+            .scale_x = (float)photo_width / CROP_PHOTO_WIDTH,
+            .scale_y = (float)photo_height / CROP_PHOTO_HEIGHT,
+            .rgb_swap = 0,
+            .byte_swap = 0,
+            .mode = PPA_TRANS_MODE_BLOCKING,
+        };
+
+        ret = ppa_do_scale_rotate_mirror(ppa_srm_handle, &srm_config);
+        if (ret != ESP_OK) {
+            ESP_LOGE(TAG, "Failed to scale image: 0x%x", ret);
+            goto cleanup;
+        }
+
+        pic_buf = camera_buffer.photo_buf;
+    } else {
+        if(magnification_factor > 1) {
+            pic_buf = camera_buffer.scaled_camera_buf;
+        } else {
+            pic_buf = camera_buf;
+        }
+    }
+
+    // Configure JPEG encoding
+    jpeg_encode_cfg_t enc_config = {
+        .src_type = JPEG_ENCODE_IN_FORMAT_RGB565,
+        .sub_sample = JPEG_DOWN_SAMPLING_YUV420,
+        .image_quality = JPEG_QUALITY,
+        .width = photo_width,
+        .height = photo_height,
+    };
 
     // Perform JPEG encoding
     ret = jpeg_encoder_process(jpeg_handle, &enc_config, pic_buf, photo_width * photo_height * 2, 
@@ -532,31 +682,6 @@ static esp_err_t take_and_save_photo(uint8_t *camera_buf, uint32_t width, uint32
         goto cleanup;
     }
 
-    if(camera_state.is_take_video) {
-        uint32_t frame_time = esp_timer_get_time() / 1000 - recorder_ctx.start_time;
-        ESP_LOGI(TAG, "frame_time: %d", frame_time);
-        xSemaphoreTake(recording_mutex, portMAX_DELAY);
-        if (recorder_ctx.recording) {
-            esp_muxer_video_packet_t video_packet = {
-                .data = camera_buffer.jpg_buf,
-                .len = camera_buffer.jpg_size,
-                .pts = frame_time,
-                .dts = frame_time,
-                .key_frame = (recorder_ctx.video_frame_count % 30 == 0), 
-            };
-            
-            int ret = esp_muxer_add_video_packet(muxer, video_stream_idx, &video_packet);
-            if (ret != ESP_MUXER_ERR_OK) {
-                ESP_LOGE(TAG, "Failed to add video packet, error: %d", ret);
-            } else {
-                recorder_ctx.video_frame_count++;
-            }
-        }
-        xSemaphoreGive(recording_mutex);
-        
-        return ret;
-    }
-    
     // Save the picture
     ret = app_storage_save_picture(camera_buffer.jpg_buf, camera_buffer.jpg_size);
     if (ret != ESP_OK) {
@@ -570,11 +695,6 @@ cleanup:
     if (camera_buffer.photo_buf != NULL && pic_buf == camera_buffer.photo_buf) {
         heap_caps_free(camera_buffer.photo_buf);
         camera_buffer.photo_buf = NULL;
-    }
-
-    if (camera_buffer.jpg_buf != NULL) {
-        heap_caps_free(camera_buffer.jpg_buf);
-        camera_buffer.jpg_buf = NULL;
     }
 
     xSemaphoreGive(photo_take_sem);
@@ -699,7 +819,7 @@ static void camera_video_frame_operation(uint8_t *camera_buf, uint8_t camera_buf
     bsp_display_unlock();
 
     // Handle photo request
-    if((camera_state.is_take_photo || camera_state.is_take_video) && 
+    if(camera_state.is_take_photo && 
        (ui_extra_get_current_page() == UI_PAGE_CAMERA || ui_extra_get_current_page() == UI_PAGE_INTERVAL_CAM) && 
        camera_state.is_initialized) {
         // Reset photo flag
@@ -717,6 +837,10 @@ static void camera_video_frame_operation(uint8_t *camera_buf, uint8_t camera_buf
         } else {
             xSemaphoreTake(photo_take_sem, portMAX_DELAY);
         }
+    } else if(camera_state.is_take_video && 
+       (ui_extra_get_current_page() == UI_PAGE_VIDEO_MODE) && 
+       camera_state.is_initialized) {
+        take_and_save_video(camera_buf, camera_buf_hes, camera_buf_ves);
     }
 }
 
@@ -934,7 +1058,7 @@ static void audio_encode_task(void *pvParameters)
     vTaskDelete(NULL);
 }
 
-esp_err_t app_video_stream_start_recording(void)
+static esp_err_t app_video_stream_start_recording(void)
 {
     esp_err_t ret = ESP_OK;
     ESP_LOGI(TAG, "Starting recording");
@@ -960,12 +1084,13 @@ esp_err_t app_video_stream_start_recording(void)
         return ret;
     }
 
-    xTaskCreatePinnedToCore(audio_capture_task, "audio_capture_task", 4096, NULL, 5, NULL, 0);
-    xTaskCreatePinnedToCore(audio_encode_task, "audio_encode_task", 4096, NULL, 5, NULL, 1);
-    
     // Set recording flag
     recorder_ctx.recording = true;
     recorder_ctx.start_time = esp_timer_get_time() / 1000;
+
+    xTaskCreatePinnedToCore(audio_capture_task, "audio_capture_task", 4096, NULL, 5, NULL, 0);
+    xTaskCreatePinnedToCore(audio_encode_task, "audio_encode_task", 4096, NULL, 5, NULL, 1);
+    
     ESP_LOGI(TAG, "Recording started at %lld", recorder_ctx.start_time);
 
     return ret;
@@ -980,6 +1105,7 @@ static esp_err_t deinit_mp4_muxer(void)
     if (recorder_ctx.muxer) {
         esp_muxer_close(recorder_ctx.muxer);
         recorder_ctx.muxer = NULL;
+        ESP_LOGI(TAG, "MP4 muxer closed successfully");
     }
     
     // unregister all muxer
@@ -989,7 +1115,7 @@ static esp_err_t deinit_mp4_muxer(void)
     return ret;
 }
 
-esp_err_t app_video_stream_stop_recording(void)
+static esp_err_t app_video_stream_stop_recording(void)
 {
     esp_err_t ret = ESP_OK;
     ESP_LOGI(TAG, "Stopping recording");
@@ -997,11 +1123,12 @@ esp_err_t app_video_stream_stop_recording(void)
     // Set stop flag
     xSemaphoreTake(recorder_ctx.recording_mutex, portMAX_DELAY);
     recorder_ctx.recording = false;
-    recorder_ctx.video_frame_count = 0;
     xSemaphoreGive(recorder_ctx.recording_mutex);
 
     // Wait for tasks to end
-    vTaskDelay(pdMS_TO_TICKS(1000));
+    vTaskDelay(pdMS_TO_TICKS(3000));
+
+    recorder_ctx.video_frame_count = 0;
     
     // Deinitialize MP4 muxer
     ret = deinit_mp4_muxer();
@@ -1011,7 +1138,7 @@ esp_err_t app_video_stream_stop_recording(void)
 
     // Delete audio data queue
     if (recorder_ctx.audio_data_queue) {
-        xQueueDelete(recorder_ctx.audio_data_queue);
+        vQueueDelete(recorder_ctx.audio_data_queue);
         recorder_ctx.audio_data_queue = NULL;
     }
 
@@ -1083,6 +1210,21 @@ esp_err_t app_video_stream_init(i2c_master_bus_handle_t i2c_handle)
     camera_buffer.scaled_camera_buf = heap_caps_aligned_calloc(data_cache_line_size, 1, 1920 * 1080 * 2, MALLOC_CAP_SPIRAM);
     if (camera_buffer.scaled_camera_buf == NULL) {
         ESP_LOGE(TAG, "Failed to allocate adjusted camera buffer");
+        ret = ESP_FAIL;
+        goto cleanup;
+    }
+
+    // Allocate JPEG buffer, assuming compression ratio of JPEG_COMPRESSION_RATIO
+    jpeg_encode_memory_alloc_cfg_t rx_mem_cfg = {
+        .buffer_direction = JPEG_DEC_ALLOC_OUTPUT_BUFFER,
+    };
+    camera_buffer.jpg_buf = (uint8_t*)jpeg_alloc_encoder_mem(
+        1920 * 1088 * 2 / JPEG_COMPRESSION_RATIO, 
+        &rx_mem_cfg, 
+        &camera_buffer.rx_buffer_size
+    );
+    if (camera_buffer.jpg_buf == NULL) {
+        ESP_LOGE(TAG, "Failed to allocate JPEG buffer");
         ret = ESP_FAIL;
         goto cleanup;
     }
@@ -1167,7 +1309,7 @@ esp_err_t app_video_stream_init(i2c_master_bus_handle_t i2c_handle)
         .sample_rate = REC_AUDIO_SAMPLE_RATE,
         .channel = REC_AUDIO_CHANNEL,
         .bits_per_sample = REC_AUDIO_BITS_PER_SAMPLE,
-        .bitrate = 90000,
+        .bitrate = 128000,
         .adts_used = true,
     };
     esp_audio_enc_config_t enc_cfg = {
