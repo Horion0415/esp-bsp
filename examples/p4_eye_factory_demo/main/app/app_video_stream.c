@@ -1126,9 +1126,6 @@ static esp_err_t app_video_stream_stop_recording(void)
     recorder_ctx.recording = false;
     xSemaphoreGive(recorder_ctx.recording_mutex);
 
-    // Wait for tasks to end
-    //vTaskDelay(pdMS_TO_TICKS(3000));
-
     if (recorder_ctx.audio_capture_task_handle != NULL) {
         vTaskDelay(pdMS_TO_TICKS(100));
         if (eTaskGetState(recorder_ctx.audio_capture_task_handle) != eDeleted) {
