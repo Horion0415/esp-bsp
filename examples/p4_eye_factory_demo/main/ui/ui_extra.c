@@ -1448,9 +1448,9 @@ void ui_extra_btn_encoder(void)
             }
             break;
         case UI_PAGE_VIDEO_MODE:
-            app_video_stream_take_video();
-
             if(lv_obj_has_flag(ui_ImageRedDot, LV_OBJ_FLAG_HIDDEN)) {
+                app_video_stream_take_video();
+
                 lv_obj_clear_flag(ui_ImageRedDot, LV_OBJ_FLAG_HIDDEN);
                 lv_obj_clear_flag(ui_LabelRedDotTime, LV_OBJ_FLAG_HIDDEN);
                 

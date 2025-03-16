@@ -39,7 +39,8 @@
 
 #define JPEG_COMPRESSION_RATIO  8             // Assuming 10:1 compression ratio
 #define CAMERA_INIT_FRAMES      50            // Number of frames needed for camera initialization
-#define JPEG_QUALITY            90            // JPEG quality setting
+#define JPEG_PHOTO_QUALITY      90            // JPEG quality setting
+#define JPEG_VIDEO_QUALITY      50            // JPEG quality setting
 
 #define REC_AUDIO_SAMPLE_RATE     16000
 #define REC_AUDIO_CHANNEL         2
@@ -500,7 +501,7 @@ static esp_err_t take_and_save_video(uint8_t *camera_buf, uint32_t width, uint32
     jpeg_encode_cfg_t enc_config = {
         .src_type = JPEG_ENCODE_IN_FORMAT_RGB565,
         .sub_sample = JPEG_DOWN_SAMPLING_YUV420,
-        .image_quality = 50,
+        .image_quality = JPEG_VIDEO_QUALITY,
         .width = photo_width,
         .height = photo_height,
     };
@@ -669,7 +670,7 @@ static esp_err_t take_and_save_photo(uint8_t *camera_buf, uint32_t width, uint32
     jpeg_encode_cfg_t enc_config = {
         .src_type = JPEG_ENCODE_IN_FORMAT_RGB565,
         .sub_sample = JPEG_DOWN_SAMPLING_YUV420,
-        .image_quality = JPEG_QUALITY,
+        .image_quality = JPEG_PHOTO_QUALITY,
         .width = photo_width,
         .height = photo_height,
     };
