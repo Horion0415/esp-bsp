@@ -1089,8 +1089,8 @@ static esp_err_t app_video_stream_start_recording(void)
     recorder_ctx.recording = true;
     recorder_ctx.start_time = esp_timer_get_time() / 1000;
 
-    xTaskCreatePinnedToCore(audio_capture_task, "audio_capture_task", 4096, NULL, 5, NULL, 0);
-    xTaskCreatePinnedToCore(audio_encode_task, "audio_encode_task", 4096, NULL, 5, NULL, 1);
+    xTaskCreatePinnedToCore(audio_capture_task, "audio_capture_task", 4096, NULL, 5, &recorder_ctx.audio_capture_task_handle, 0);
+    xTaskCreatePinnedToCore(audio_encode_task, "audio_encode_task", 4096, NULL, 5, &recorder_ctx.audio_encode_task_handle, 1);
     
     ESP_LOGI(TAG, "Recording started at %lld", recorder_ctx.start_time);
 
@@ -1127,7 +1127,37 @@ static esp_err_t app_video_stream_stop_recording(void)
     xSemaphoreGive(recorder_ctx.recording_mutex);
 
     // Wait for tasks to end
-    vTaskDelay(pdMS_TO_TICKS(3000));
+    //vTaskDelay(pdMS_TO_TICKS(3000));
+
+    if (recorder_ctx.audio_capture_task_handle != NULL) {
+        vTaskDelay(pdMS_TO_TICKS(100));
+        if (eTaskGetState(recorder_ctx.audio_capture_task_handle) != eDeleted) {
+            ESP_LOGI(TAG, "Waiting for audio capture task to end");
+            for (int i = 0; i < 30 && eTaskGetState(recorder_ctx.audio_capture_task_handle) != eDeleted; i++) {
+                vTaskDelay(pdMS_TO_TICKS(100));
+            }
+            if (eTaskGetState(recorder_ctx.audio_capture_task_handle) != eDeleted) {
+                ESP_LOGW(TAG, "Force deleting audio capture task");
+                vTaskDelete(recorder_ctx.audio_capture_task_handle);
+            }
+        }
+        recorder_ctx.audio_capture_task_handle = NULL;
+    }
+
+    if (recorder_ctx.audio_encode_task_handle != NULL) {
+        vTaskDelay(pdMS_TO_TICKS(100));
+        if (eTaskGetState(recorder_ctx.audio_encode_task_handle) != eDeleted) {
+            ESP_LOGI(TAG, "Waiting for audio encode task to end");
+            for (int i = 0; i < 30 && eTaskGetState(recorder_ctx.audio_encode_task_handle) != eDeleted; i++) {
+                vTaskDelay(pdMS_TO_TICKS(100));
+            }
+            if (eTaskGetState(recorder_ctx.audio_encode_task_handle) != eDeleted) {
+                ESP_LOGW(TAG, "Force deleting audio encode task");
+                vTaskDelete(recorder_ctx.audio_encode_task_handle);
+            }
+        }
+        recorder_ctx.audio_encode_task_handle = NULL;
+    }
 
     recorder_ctx.video_frame_count = 0;
     
