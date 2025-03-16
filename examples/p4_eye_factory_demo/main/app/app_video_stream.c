@@ -40,7 +40,7 @@
 #define JPEG_COMPRESSION_RATIO  8             // Assuming 10:1 compression ratio
 #define CAMERA_INIT_FRAMES      50            // Number of frames needed for camera initialization
 #define JPEG_PHOTO_QUALITY      90            // JPEG quality setting
-#define JPEG_VIDEO_QUALITY      50            // JPEG quality setting
+#define JPEG_VIDEO_QUALITY      60            // JPEG quality setting
 
 #define REC_AUDIO_SAMPLE_RATE     16000
 #define REC_AUDIO_CHANNEL         2
@@ -968,11 +968,11 @@ static void audio_capture_task(void *pvParameters)
     
     #define BUFFER_COUNT 3
     uint8_t *sample_buffers[BUFFER_COUNT];
+    size_t sample_size = pcm_frame_size * 15;
     for (int i = 0; i < BUFFER_COUNT; i++) {
-        sample_buffers[i] = heap_caps_aligned_calloc(data_cache_line_size, 1, pcm_frame_size * 20, MALLOC_CAP_SPIRAM);
+        sample_buffers[i] = heap_caps_aligned_calloc(data_cache_line_size, 1, sample_size, MALLOC_CAP_SPIRAM);
     }
     
-    size_t sample_size = pcm_frame_size * 20;
     int current_buffer = 0;
     
     while (recorder_ctx.recording) {
@@ -990,7 +990,7 @@ static void audio_capture_task(void *pvParameters)
         audio_data.data = current_sample_buffer;
         audio_data.len = bytes_read;
         
-        if (xQueueSend(recorder_ctx.audio_data_queue, &audio_data, pdMS_TO_TICKS(100)) != pdTRUE) {
+        if (xQueueSend(recorder_ctx.audio_data_queue, &audio_data, pdMS_TO_TICKS(20)) != pdTRUE) {
             ESP_LOGE(TAG, "Failed to send audio data to queue");
         } else {
             current_buffer = (current_buffer + 1) % BUFFER_COUNT;
@@ -1012,13 +1012,13 @@ static void audio_encode_task(void *pvParameters)
     int pcm_frame_size = 0, output_frame_size = 0;
     esp_audio_enc_get_frame_size(recorder_ctx.encoder, &pcm_frame_size, &output_frame_size);
     
-    uint8_t *enc_data = heap_caps_aligned_calloc(data_cache_line_size, 1, output_frame_size * 20, MALLOC_CAP_SPIRAM);
-    size_t enc_size = output_frame_size * 20;
+    size_t enc_size = output_frame_size * 15;
+    uint8_t *enc_data = heap_caps_aligned_calloc(data_cache_line_size, 1, enc_size, MALLOC_CAP_SPIRAM);
     
     audio_data_t audio_data;
     
     while (recorder_ctx.recording) {
-        if (xQueueReceive(recorder_ctx.audio_data_queue, &audio_data, pdMS_TO_TICKS(100)) != pdTRUE) {
+        if (xQueueReceive(recorder_ctx.audio_data_queue, &audio_data, pdMS_TO_TICKS(20)) != pdTRUE) {
             continue;
         }
         
@@ -1072,7 +1072,7 @@ static esp_err_t app_video_stream_start_recording(void)
     }
 
     // Create audio data queue
-    recorder_ctx.audio_data_queue = xQueueCreate(10, sizeof(audio_data_t));
+    recorder_ctx.audio_data_queue = xQueueCreate(30, sizeof(audio_data_t));
     if (!recorder_ctx.audio_data_queue) {
         ESP_LOGE(TAG, "Failed to create audio data queue");
         return ESP_FAIL;
@@ -1337,7 +1337,7 @@ esp_err_t app_video_stream_init(i2c_master_bus_handle_t i2c_handle)
         .sample_rate = REC_AUDIO_SAMPLE_RATE,
         .channel = REC_AUDIO_CHANNEL,
         .bits_per_sample = REC_AUDIO_BITS_PER_SAMPLE,
-        .bitrate = 128000,
+        .bitrate = 96000,
         .adts_used = true,
     };
     esp_audio_enc_config_t enc_cfg = {
