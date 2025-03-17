@@ -46,8 +46,7 @@
 #define REC_AUDIO_CHANNEL         2
 #define REC_AUDIO_BITS_PER_SAMPLE 16
 
-#define FILE_SLICE_DURATION       60000 * 10    
-#define VIDEO_BUF_MULTIPLIER      50
+#define FILE_SLICE_DURATION       600000    
 #define VIDEO_FRAME_RATE          30
 
 /* Type definitions */
@@ -97,9 +96,7 @@ typedef struct {
     SemaphoreHandle_t recording_mutex;  // Recording mutex
     esp_audio_enc_handle_t encoder;     // Audio encoder handle
     uint32_t start_time;                // Recording start time
-    QueueHandle_t audio_data_queue;     // Audio data queue
     TaskHandle_t audio_capture_task_handle; // Audio capture task handle
-    TaskHandle_t audio_encode_task_handle; // Audio encode task handle
     uint32_t video_frame_count;          // Video frame count
 } recorder_ctx_t;
 
@@ -156,8 +153,6 @@ static esp_err_t app_video_stream_start_recording(void);
 static esp_err_t app_video_stream_stop_recording(void);
 static esp_err_t init_mp4_muxer(void);
 static esp_err_t deinit_mp4_muxer(void);
-static void audio_capture_task(void *pvParameters);
-static void audio_encode_task(void *pvParameters);
 static int get_next_file_number(const char *dir_path);
 static int file_pattern_cb(char *file_name, int len, int slice_idx);
 
@@ -899,11 +894,10 @@ static esp_err_t init_mp4_muxer(void)
     
     // Add audio stream
     esp_muxer_audio_stream_info_t audio_stream = {
-        .min_packet_duration = 1000 / VIDEO_FRAME_RATE,
         .bits_per_sample = REC_AUDIO_BITS_PER_SAMPLE,
         .sample_rate = REC_AUDIO_SAMPLE_RATE,
         .channel = REC_AUDIO_CHANNEL,  
-        .codec = ESP_MUXER_ADEC_AAC,  
+        .codec = ESP_MUXER_ADEC_PCM,  
     };
     ret = esp_muxer_add_audio_stream(recorder_ctx.muxer, &audio_stream, &recorder_ctx.audio_stream_idx);
     if (ret != ESP_MUXER_ERR_OK) {
@@ -940,96 +934,69 @@ static esp_err_t deinit_mp4_muxer(void)
 }
 
 /**
- * @brief Audio capture task
+ * @brief Combined audio capture and encode task
  * 
  * @param pvParameters Task parameters (unused)
  */
-static void audio_capture_task(void *pvParameters)
+static void audio_capture_encode_task(void *pvParameters)
 {
-    ESP_LOGI(TAG, "Audio capture task started");
+    ESP_LOGI(TAG, "Audio capture and encode task started");
 
     int pcm_frame_size = 0, output_frame_size = 0;
     esp_audio_enc_get_frame_size(recorder_ctx.encoder, &pcm_frame_size, &output_frame_size);
     ESP_LOGI(TAG, "pcm_frame_size: %d, output_frame_size: %d", pcm_frame_size, output_frame_size);
     
-    #define BUFFER_COUNT 3
-    uint8_t *sample_buffers[BUFFER_COUNT];
-    size_t sample_size = pcm_frame_size * VIDEO_BUF_MULTIPLIER;
-    for (int i = 0; i < BUFFER_COUNT; i++) {
-        sample_buffers[i] = heap_caps_aligned_calloc(data_cache_line_size, 1, sample_size, MALLOC_CAP_SPIRAM);
+    // Use a single buffer for audio capture
+    uint8_t *sample_buffer = heap_caps_aligned_calloc(data_cache_line_size, 1, 
+                                                     pcm_frame_size * 10, 
+                                                     MALLOC_CAP_SPIRAM);
+    if (sample_buffer == NULL) {
+        ESP_LOGE(TAG, "Failed to allocate sample buffer");
+        vTaskDelete(NULL);
+        return;
     }
     
-    int current_buffer = 0;
+    // Allocate encode buffer
+    size_t enc_size = output_frame_size * 10;
+    uint8_t *enc_data = heap_caps_aligned_calloc(data_cache_line_size, 1, 
+                                                enc_size, 
+                                                MALLOC_CAP_SPIRAM);
+    if (enc_data == NULL) {
+        ESP_LOGE(TAG, "Failed to allocate encode buffer");
+        free(sample_buffer);
+        vTaskDelete(NULL);
+        return;
+    }
     
     while (recorder_ctx.recording) {
-        uint8_t *current_sample_buffer = sample_buffers[current_buffer];
-        
+        // Capture audio data
         size_t bytes_read = 0;
-        esp_err_t ret = bsp_extra_pdm_i2s_read(current_sample_buffer, sample_size, &bytes_read, portMAX_DELAY);
+        esp_err_t ret = bsp_extra_pdm_i2s_read(sample_buffer, pcm_frame_size * 10, &bytes_read, portMAX_DELAY);
         if (ret != ESP_OK || bytes_read == 0) {
             ESP_LOGE(TAG, "I2S read failed: %d, bytes_read: %d", ret, bytes_read);
             vTaskDelay(pdMS_TO_TICKS(10));
             continue;
         }
-
-        audio_data_t audio_data;
-        audio_data.data = current_sample_buffer;
-        audio_data.len = bytes_read;
         
-        if (xQueueSend(recorder_ctx.audio_data_queue, &audio_data, pdMS_TO_TICKS(20)) != pdTRUE) {
-            ESP_LOGE(TAG, "Failed to send audio data to queue");
-        } else {
-            current_buffer = (current_buffer + 1) % BUFFER_COUNT;
-        }
-    }
-    
-    for (int i = 0; i < BUFFER_COUNT; i++) {
-        free(sample_buffers[i]);
-    }
-    
-    ESP_LOGI(TAG, "Audio capture task ended");
-    vTaskDelete(NULL);
-}
-
-/**
- * @brief Audio encode task
- * 
- * @param pvParameters Task parameters (unused)
- */
-static void audio_encode_task(void *pvParameters)
-{
-    ESP_LOGI(TAG, "Audio encode task started");
-    
-    int pcm_frame_size = 0, output_frame_size = 0;
-    esp_audio_enc_get_frame_size(recorder_ctx.encoder, &pcm_frame_size, &output_frame_size);
-    
-    size_t enc_size = output_frame_size * VIDEO_BUF_MULTIPLIER;
-    uint8_t *enc_data = heap_caps_aligned_calloc(data_cache_line_size, 1, enc_size, MALLOC_CAP_SPIRAM);
-    
-    audio_data_t audio_data;
-    
-    while (recorder_ctx.recording) {
-        if (xQueueReceive(recorder_ctx.audio_data_queue, &audio_data, pdMS_TO_TICKS(20)) != pdTRUE) {
-            continue;
-        }
-        
+        // Encode audio data directly
         esp_audio_enc_in_frame_t in_frame = {
-            .buffer = audio_data.data,
-            .len = audio_data.len,
+            .buffer = sample_buffer,
+            .len = bytes_read,
         };
         esp_audio_enc_out_frame_t out_frame = {
             .buffer = enc_data,
             .len = enc_size,
         };
-        esp_err_t ret = esp_audio_enc_process(recorder_ctx.encoder, &in_frame, &out_frame);
+        ret = esp_audio_enc_process(recorder_ctx.encoder, &in_frame, &out_frame);
         if (ret != ESP_OK) {
             ESP_LOGE(TAG, "Audio encoding failed: %d", ret);
             continue;
         }
         
+        // Add encoded audio packet to muxer
         uint32_t audio_timestamp = esp_timer_get_time() / 1000 - recorder_ctx.start_time;
         ESP_LOGI(TAG, "audio_timestamp: %d", audio_timestamp);
-
+        
         xSemaphoreTake(recorder_ctx.recording_mutex, portMAX_DELAY);
         if (recorder_ctx.recording) {
             esp_muxer_audio_packet_t audio_packet = {
@@ -1043,10 +1010,14 @@ static void audio_encode_task(void *pvParameters)
                 ESP_LOGE(TAG, "Failed to add audio packet, error: %d", ret);
             }
         }
-        xSemaphoreGive(recorder_ctx.recording_mutex);        
+        xSemaphoreGive(recorder_ctx.recording_mutex);
     }
+    
+    // Free resources
     free(enc_data);
-    ESP_LOGI(TAG, "Audio encode task ended");
+    free(sample_buffer);
+    
+    ESP_LOGI(TAG, "Audio capture and encode task ended");
     vTaskDelete(NULL);
 }
 
@@ -1067,13 +1038,6 @@ static esp_err_t app_video_stream_start_recording(void)
         return ESP_FAIL;
     }
 
-    // Create audio data queue
-    recorder_ctx.audio_data_queue = xQueueCreate(30, sizeof(audio_data_t));
-    if (!recorder_ctx.audio_data_queue) {
-        ESP_LOGE(TAG, "Failed to create audio data queue");
-        return ESP_FAIL;
-    }
-
     // Initialize MP4 muxer
     ret = init_mp4_muxer();
     if (ret != ESP_OK) {
@@ -1085,9 +1049,9 @@ static esp_err_t app_video_stream_start_recording(void)
     recorder_ctx.recording = true;
     recorder_ctx.start_time = esp_timer_get_time() / 1000;
 
-    xTaskCreatePinnedToCore(audio_capture_task, "audio_capture_task", 4096, NULL, 5, &recorder_ctx.audio_capture_task_handle, 0);
-    xTaskCreatePinnedToCore(audio_encode_task, "audio_encode_task", 4096, NULL, 5, &recorder_ctx.audio_encode_task_handle, 1);
-    
+    // Create audio capture and encode task
+    xTaskCreatePinnedToCore(audio_capture_encode_task, "audio_cap_enc_task", 4096, NULL, 5, &recorder_ctx.audio_capture_task_handle, 0);
+
     ESP_LOGI(TAG, "Recording started at %lld", recorder_ctx.start_time);
 
     return ret;
@@ -1123,33 +1087,12 @@ static esp_err_t app_video_stream_stop_recording(void)
         recorder_ctx.audio_capture_task_handle = NULL;
     }
 
-    if (recorder_ctx.audio_encode_task_handle != NULL) {
-        vTaskDelay(pdMS_TO_TICKS(100));
-        if (eTaskGetState(recorder_ctx.audio_encode_task_handle) != eDeleted) {
-            ESP_LOGI(TAG, "Waiting for audio encode task to end");
-            for (int i = 0; i < 30 && eTaskGetState(recorder_ctx.audio_encode_task_handle) != eDeleted; i++) {
-                vTaskDelay(pdMS_TO_TICKS(100));
-            }
-            if (eTaskGetState(recorder_ctx.audio_encode_task_handle) != eDeleted) {
-                ESP_LOGW(TAG, "Force deleting audio encode task");
-                vTaskDelete(recorder_ctx.audio_encode_task_handle);
-            }
-        }
-        recorder_ctx.audio_encode_task_handle = NULL;
-    }
-
     recorder_ctx.video_frame_count = 0;
     
     // Deinitialize MP4 muxer
     ret = deinit_mp4_muxer();
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "Failed to deinitialize MP4 muxer: 0x%x", ret);
-    }
-
-    // Delete audio data queue
-    if (recorder_ctx.audio_data_queue) {
-        vQueueDelete(recorder_ctx.audio_data_queue);
-        recorder_ctx.audio_data_queue = NULL;
     }
 
     if (recorder_ctx.recording_mutex) {
@@ -1284,20 +1227,19 @@ esp_err_t app_video_stream_init(i2c_master_bus_handle_t i2c_handle)
         goto cleanup;
     }
 
-    // Register AAC encoder
-    ESP_ERROR_CHECK(esp_aac_enc_register());
+    // Register PCM encoder
+    ESP_ERROR_CHECK(esp_pcm_enc_register());
 
-    esp_aac_enc_config_t aac_cfg = {
+    esp_pcm_enc_config_t pcm_cfg = {
         .sample_rate = REC_AUDIO_SAMPLE_RATE,
         .channel = REC_AUDIO_CHANNEL,
         .bits_per_sample = REC_AUDIO_BITS_PER_SAMPLE,
-        .bitrate = 96000,
-        .adts_used = true,
     };
+
     esp_audio_enc_config_t enc_cfg = {
-        .type = ESP_AUDIO_TYPE_AAC,
-        .cfg = &aac_cfg,
-        .cfg_sz = sizeof(aac_cfg)
+        .type = ESP_AUDIO_TYPE_PCM,
+        .cfg = &pcm_cfg,
+        .cfg_sz = sizeof(pcm_cfg)
     };
 
     ESP_ERROR_CHECK(esp_audio_enc_open(&enc_cfg, &recorder_ctx.encoder));
