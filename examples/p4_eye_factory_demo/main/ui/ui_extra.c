@@ -1334,15 +1334,20 @@ void ui_extra_btn_menu(void)
             }
             break;
         case UI_PAGE_VIDEO_MODE:
-            lv_obj_add_flag(ui_ImageRedDot, LV_OBJ_FLAG_HIDDEN);
-            lv_obj_add_flag(ui_LabelRedDotTime, LV_OBJ_FLAG_HIDDEN);
-            
-            // Stop the video recording and pause the timer
-            is_video_recording = false;
-            if (lv_video_timer) {
-                lv_timer_pause(lv_video_timer);
-            }   
-            ui_extra_goto_page(UI_PAGE_MAIN); 
+            if(lv_obj_has_flag(ui_ImageRedDot, LV_OBJ_FLAG_HIDDEN)) {
+                ui_extra_goto_page(UI_PAGE_MAIN); 
+            } else {
+                app_video_stream_stop_take_video();
+
+                lv_obj_add_flag(ui_ImageRedDot, LV_OBJ_FLAG_HIDDEN);
+                lv_obj_add_flag(ui_LabelRedDotTime, LV_OBJ_FLAG_HIDDEN);
+                
+                // Stop the video recording and pause the timer
+                is_video_recording = false;
+                if (lv_video_timer) {
+                    lv_timer_pause(lv_video_timer);
+                }
+            }
             break;    
         
         default:

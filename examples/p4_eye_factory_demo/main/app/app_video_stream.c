@@ -40,7 +40,7 @@
 #define JPEG_COMPRESSION_RATIO  5             // Assuming 5:1 compression ratio
 #define CAMERA_INIT_FRAMES      50            // Number of frames needed for camera initialization
 #define JPEG_PHOTO_QUALITY      90            // JPEG quality setting
-#define JPEG_VIDEO_QUALITY      60            // JPEG quality setting
+#define JPEG_VIDEO_QUALITY      75            // JPEG quality setting
 
 #define REC_AUDIO_SAMPLE_RATE     16000
 #define REC_AUDIO_CHANNEL         2
