@@ -535,7 +535,7 @@ esp_err_t app_storage_init(void) {
         ui_extra_set_sd_card_mounted(false);
         bsp_display_unlock();
 
-        xTaskCreate(app_storage_check_sd_card_task, "app_storage_check_sd_card_task", 1024 * 4, NULL, 5, NULL);
+        xTaskCreate(app_storage_check_sd_card_task, "app_storage_check_sd_card_task", 1024 * 6, NULL, 5, NULL);
     } else {
         bsp_sdcard_mount();
         ESP_LOGI(TAG, "SD card mounted successfully");

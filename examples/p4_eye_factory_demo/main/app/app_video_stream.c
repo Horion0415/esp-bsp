@@ -46,7 +46,8 @@
 #define REC_AUDIO_CHANNEL         2
 #define REC_AUDIO_BITS_PER_SAMPLE 16
 
-#define FILE_SLICE_DURATION       60000    
+#define FILE_SLICE_DURATION       60000 * 10    
+#define VIDEO_BUF_MULTIPLIER      50
 #define VIDEO_FRAME_RATE          30
 
 /* Type definitions */
@@ -953,7 +954,7 @@ static void audio_capture_task(void *pvParameters)
     
     #define BUFFER_COUNT 3
     uint8_t *sample_buffers[BUFFER_COUNT];
-    size_t sample_size = pcm_frame_size * 20;
+    size_t sample_size = pcm_frame_size * VIDEO_BUF_MULTIPLIER;
     for (int i = 0; i < BUFFER_COUNT; i++) {
         sample_buffers[i] = heap_caps_aligned_calloc(data_cache_line_size, 1, sample_size, MALLOC_CAP_SPIRAM);
     }
@@ -1002,7 +1003,7 @@ static void audio_encode_task(void *pvParameters)
     int pcm_frame_size = 0, output_frame_size = 0;
     esp_audio_enc_get_frame_size(recorder_ctx.encoder, &pcm_frame_size, &output_frame_size);
     
-    size_t enc_size = output_frame_size * 20;
+    size_t enc_size = output_frame_size * VIDEO_BUF_MULTIPLIER;
     uint8_t *enc_data = heap_caps_aligned_calloc(data_cache_line_size, 1, enc_size, MALLOC_CAP_SPIRAM);
     
     audio_data_t audio_data;
