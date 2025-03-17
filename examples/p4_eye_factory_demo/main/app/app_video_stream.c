@@ -46,7 +46,8 @@
 #define REC_AUDIO_CHANNEL         2
 #define REC_AUDIO_BITS_PER_SAMPLE 16
 
-#define FILE_SLICE_DURATION       600000    
+#define FILE_SLICE_DURATION       600000
+#define VIDEO_BUF_MULTIPLIER      10
 #define VIDEO_FRAME_RATE          30
 
 /* Type definitions */
@@ -503,7 +504,7 @@ static esp_err_t take_and_save_video(uint8_t *camera_buf, uint32_t width, uint32
     }
 
     uint32_t frame_time = esp_timer_get_time() / 1000 - recorder_ctx.start_time;
-    ESP_LOGI(TAG, "frame_time: %d", frame_time);
+    ESP_LOGD(TAG, "frame_time: %d", frame_time);
 
     xSemaphoreTake(recorder_ctx.recording_mutex, portMAX_DELAY);
     if (recorder_ctx.recording) {
@@ -948,7 +949,7 @@ static void audio_capture_encode_task(void *pvParameters)
     
     // Use a single buffer for audio capture
     uint8_t *sample_buffer = heap_caps_aligned_calloc(data_cache_line_size, 1, 
-                                                     pcm_frame_size * 10, 
+                                                     pcm_frame_size * VIDEO_BUF_MULTIPLIER, 
                                                      MALLOC_CAP_SPIRAM);
     if (sample_buffer == NULL) {
         ESP_LOGE(TAG, "Failed to allocate sample buffer");
@@ -957,7 +958,7 @@ static void audio_capture_encode_task(void *pvParameters)
     }
     
     // Allocate encode buffer
-    size_t enc_size = output_frame_size * 10;
+    size_t enc_size = output_frame_size * VIDEO_BUF_MULTIPLIER;
     uint8_t *enc_data = heap_caps_aligned_calloc(data_cache_line_size, 1, 
                                                 enc_size, 
                                                 MALLOC_CAP_SPIRAM);
@@ -995,7 +996,7 @@ static void audio_capture_encode_task(void *pvParameters)
         
         // Add encoded audio packet to muxer
         uint32_t audio_timestamp = esp_timer_get_time() / 1000 - recorder_ctx.start_time;
-        ESP_LOGI(TAG, "audio_timestamp: %d", audio_timestamp);
+        ESP_LOGD(TAG, "audio_timestamp: %d", audio_timestamp);
         
         xSemaphoreTake(recorder_ctx.recording_mutex, portMAX_DELAY);
         if (recorder_ctx.recording) {
