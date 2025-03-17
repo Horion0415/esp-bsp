@@ -871,7 +871,7 @@ static esp_err_t init_mp4_muxer(void)
     base_cfg->slice_duration = FILE_SLICE_DURATION;
     base_cfg->ram_cache_size = 32 * 1024;  // 32KB cache
     mp4_cfg.display_in_order = true;
-    mp4_cfg.moov_before_mdat = true;
+    // mp4_cfg.moov_before_mdat = true;
     
     // Open muxer
     recorder_ctx.muxer = esp_muxer_open(base_cfg, sizeof(mp4_muxer_config_t));
