@@ -102,15 +102,6 @@ typedef struct {
     uint32_t video_frame_count;          // Video frame count
 } recorder_ctx_t;
 
-/**
- * @brief Photo task parameters structure
- */
-typedef struct {
-    uint8_t *camera_buf;
-    uint32_t width;
-    uint32_t height;
-} photo_task_params_t;
-
 /* Static variables */
 static const char *TAG = "app_video_stream";
 
@@ -132,10 +123,6 @@ static camera_state_t camera_state = {
 
 static camera_buffer_t camera_buffer = {0};
 
-static TaskHandle_t photo_task_handle = NULL;
-static QueueHandle_t photo_queue = NULL;
-static SemaphoreHandle_t photo_take_sem = NULL;
-
 // Global recorder context
 static recorder_ctx_t recorder_ctx = {
     .muxer = NULL,
@@ -156,7 +143,6 @@ static const uint32_t adj_resolution_width[SCALE_LEVELS] = {1920, 1200, 960, 480
 static const uint32_t adj_resolution_height[SCALE_LEVELS] = {1080, 675, 540, 270, 135};
 
 /* Forward declarations */
-static void photo_task(void *pvParameters);
 static void camera_video_frame_operation(uint8_t *camera_buf, uint8_t camera_buf_index, 
                                         uint32_t camera_buf_hes, uint32_t camera_buf_ves, 
                                         size_t camera_buf_len);
@@ -703,8 +689,6 @@ cleanup:
         camera_buffer.photo_buf = NULL;
     }
 
-    xSemaphoreGive(photo_take_sem);
-
     bsp_led_set(BSP_LED_WHITE, false);
     bsp_display_backlight_on();
 
@@ -715,45 +699,6 @@ cleanup:
     }
 
     return ret;
-}
-
-/**
- * @brief Photo processing task
- * 
- * @param pvParameters Task parameters (unused)
- */
-static void photo_task(void *pvParameters)
-{
-    photo_task_params_t params;
-    uint8_t *photo_buffer = NULL;
-    size_t buffer_size = app_video_get_buf_size();
-    
-    // Allocate photo buffer
-    photo_buffer = heap_caps_aligned_calloc(data_cache_line_size, 1, buffer_size, MALLOC_CAP_SPIRAM);
-    if (photo_buffer == NULL) {
-        ESP_LOGE(TAG, "Failed to allocate photo buffer");
-        vTaskDelete(NULL);
-        return;
-    }
-    
-    while (1) {
-        if (xQueueReceive(photo_queue, &params, portMAX_DELAY) == pdTRUE) {
-            // Copy image data to local buffer
-            memcpy(photo_buffer, params.camera_buf, buffer_size);
-
-            // Process and save the photo
-            esp_err_t photo_ret = take_and_save_photo(photo_buffer, params.width, params.height);
-            if (photo_ret == ESP_OK) {
-                ESP_LOGI(TAG, "Take and save photo success");
-            } else {
-                ESP_LOGE(TAG, "Take and save photo failed: 0x%x", photo_ret);
-            }
-        }
-    }
-    
-    // Free photo buffer (this will never execute, but included for code completeness)
-    heap_caps_free(photo_buffer);
-    vTaskDelete(NULL);
 }
 
 /**
@@ -825,28 +770,18 @@ static void camera_video_frame_operation(uint8_t *camera_buf, uint8_t camera_buf
     bsp_display_unlock();
 
     // Handle photo request
-    if(camera_state.is_take_photo && 
-       (ui_extra_get_current_page() == UI_PAGE_CAMERA || ui_extra_get_current_page() == UI_PAGE_INTERVAL_CAM) && 
-       camera_state.is_initialized) {
-        // Reset photo flag
-        camera_state.is_take_photo = false;
-
-        photo_task_params_t params = {
-            .camera_buf = camera_buf,
-            .width = camera_buf_hes,
-            .height = camera_buf_ves
-        };
-        
-        // Send photo task parameters to the photo task
-        if (xQueueSend(photo_queue, &params, 0) != pdTRUE) {
-            ESP_LOGW(TAG, "Photo queue is full, skip this photo");
-        } else {
-            xSemaphoreTake(photo_take_sem, portMAX_DELAY);
+    if (camera_state.is_initialized) {
+        // Handle photo request
+        if (camera_state.is_take_photo && 
+            (ui_extra_get_current_page() == UI_PAGE_CAMERA || ui_extra_get_current_page() == UI_PAGE_INTERVAL_CAM)) {
+            // Reset photo flag and take a photo
+            camera_state.is_take_photo = false;
+            take_and_save_photo(camera_buf, camera_buf_hes, camera_buf_ves);
+        } 
+        // Handle video request
+        else if (camera_state.is_take_video && ui_extra_get_current_page() == UI_PAGE_VIDEO_MODE) {
+            take_and_save_video(camera_buf, camera_buf_hes, camera_buf_ves);
         }
-    } else if(camera_state.is_take_video && 
-       (ui_extra_get_current_page() == UI_PAGE_VIDEO_MODE) && 
-       camera_state.is_initialized) {
-        take_and_save_video(camera_buf, camera_buf_hes, camera_buf_ves);
     }
 }
 
@@ -1328,41 +1263,13 @@ esp_err_t app_video_stream_init(i2c_master_bus_handle_t i2c_handle)
         goto cleanup;
     }
 
-    // Create photo processing queue and task
-    photo_queue = xQueueCreate(2, sizeof(photo_task_params_t));
-    if (photo_queue == NULL) {
-        ESP_LOGE(TAG, "Failed to create photo queue");
-        ret = ESP_FAIL;
-        goto cleanup;
-    }
-    
-    BaseType_t task_created = xTaskCreate(
-        photo_task,
-        "photo_task",
-        4096,
-        NULL,
-        5,
-        &photo_task_handle);
-    
-    if (task_created != pdPASS) {
-        ESP_LOGE(TAG, "Failed to create photo task");
-        ret = ESP_FAIL;
-        goto cleanup;
-    }
-
-    photo_take_sem = xSemaphoreCreateBinary();
-    if (photo_take_sem == NULL) {
-        ESP_LOGE(TAG, "Failed to create photo take semaphore");
-        ret = ESP_FAIL;
-        goto cleanup;
-    }
-
     // Load saved photo count
     uint16_t saved_count = 0;
     if (app_storage_get_photo_count(&saved_count) == ESP_OK) {
         app_extra_set_saved_photo_count(saved_count);
     }
 
+    // Initialize PDM codec
     ret = bsp_extra_pdm_codec_init();
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "Failed to initialize PDM codec: 0x%x", ret);
@@ -1405,22 +1312,6 @@ esp_err_t app_video_stream_init(i2c_master_bus_handle_t i2c_handle)
 
 cleanup:
     if (!resources_initialized) {
-        // Clean up resources on failure
-        if (photo_take_sem != NULL) {
-            vSemaphoreDelete(photo_take_sem);
-            photo_take_sem = NULL;
-        }
-        
-        if (photo_task_handle != NULL) {
-            vTaskDelete(photo_task_handle);
-            photo_task_handle = NULL;
-        }
-        
-        if (photo_queue != NULL) {
-            vQueueDelete(photo_queue);
-            photo_queue = NULL;
-        }
-        
         if (jpeg_handle != NULL) {
             jpeg_del_encoder_engine(jpeg_handle);
             jpeg_handle = NULL;
