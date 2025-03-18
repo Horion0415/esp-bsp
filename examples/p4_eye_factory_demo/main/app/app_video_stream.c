@@ -183,9 +183,6 @@ static void enter_deep_sleep(uint16_t sleep_minutes)
     // Calculate next wake-up time
     camera_state.next_wake_time = esp_timer_get_time() / 1000000 + sleep_minutes * 60;
     
-    // Save interval photo state
-    //app_storage_save_interval_state(camera_state.is_interval_photo_active, camera_state.next_wake_time);
-
     // Initialize sleep IO
     bsp_sleep_io_init();
 
