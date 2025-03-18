@@ -2,6 +2,8 @@
 #include <dirent.h>
 #include <string.h>
 #include <unistd.h>
+#include "esp_vfs.h"
+#include "esp_vfs_fat.h"
 #include "esp_log.h"
 #include "esp_heap_caps.h"
 #include "bsp/esp-bsp.h"
@@ -69,8 +71,69 @@ static int compare_filenames_desc(const void *a, const void *b) {
     return strcmp(*(const char **)b, *(const char **)a);
 }
 
+// get sd card free space
+float app_album_get_sd_free_space(void)
+{
+    FATFS *fs;
+    DWORD free_clusters;  
+    DWORD sector_size;    
+    
+    // get file system information
+    if (f_getfree(BSP_SD_MOUNT_POINT, &free_clusters, &fs) != FR_OK) {
+        ESP_LOGE(TAG, "Failed to get SD card free space");
+        return -1.0f;
+    }
+    
+    // calculate total clusters and sector size
+    sector_size = fs->ssize;
+    
+    // calculate free space (bytes)
+    uint64_t free_bytes = (uint64_t)free_clusters * fs->csize * sector_size;
+    
+    // convert to MB
+    float free_mb = (float)free_bytes / (1024 * 1024);
+    
+    ESP_LOGI(TAG, "SD card free space: %.2f MB", free_mb);
+    
+    return free_mb;
+}
+
+// get SD card total space (in MB)
+float app_album_get_sd_total_space(void)
+{
+    FATFS *fs;
+    DWORD free_clusters;  
+    DWORD total_clusters; 
+    DWORD sector_size;    
+    
+    // get file system information
+    if (f_getfree(BSP_SD_MOUNT_POINT, &free_clusters, &fs) != FR_OK) {
+        ESP_LOGE(TAG, "Failed to get SD card information");
+        return -1.0f;
+    }
+    
+    // calculate total clusters and sector size
+    total_clusters = fs->n_fatent - 2;
+    sector_size = fs->ssize;
+    
+    // calculate total space (bytes)
+    uint64_t total_bytes = (uint64_t)total_clusters * fs->csize * sector_size;
+    
+    // convert to MB
+    float total_mb = (float)total_bytes / (1024 * 1024);
+    
+    ESP_LOGI(TAG, "SD card total space: %.2f MB", total_mb);
+    
+    return total_mb;
+}
+
 // Scan images from SD card
 static esp_err_t app_album_scan_images(void) {
+    // get free space
+    app_album_get_sd_free_space();
+    // get total space
+    app_album_get_sd_total_space();
+
     DIR *dir = opendir(BSP_SD_MOUNT_POINT"/"PIC_FOLDER_NAME);
     if (!dir) {
         ESP_LOGE(TAG, "Failed to open directory %s/%s", BSP_SD_MOUNT_POINT, PIC_FOLDER_NAME);
