@@ -79,6 +79,21 @@ int app_album_get_current_index(void);
  */
 esp_err_t app_album_delete_current_image(void);
 
+/**
+ * @brief Check if the SD card has enough space to store a new image
+ * 
+ * @return true if there is enough space, false otherwise
+ */
+bool app_album_can_store_new_image(void);
+
+/**
+ * @brief Check if the SD card has enough space to store a new MP4 video
+ * 
+ * @param estimated_size_mb Estimated video size in MB, uses default estimate if 0
+ * @return true if enough space is available, false otherwise
+ */
+bool app_video_stream_can_store_new_mp4(float estimated_size_mb);
+
 #ifdef __cplusplus
 }
 #endif

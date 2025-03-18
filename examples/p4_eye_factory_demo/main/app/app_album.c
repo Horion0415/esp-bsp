@@ -22,12 +22,11 @@ static const char *TAG = "app_album";
 
 #define ALIGN_UP(num, align)    (((num) + ((align) - 1)) & ~((align) - 1))
 
-#define MAX_IMAGES   500
 #define MAX_PATH_LEN 300
 #define PIC_FOLDER_NAME "esp32_p4_pic_save"
 
 typedef struct {
-    char filenames[MAX_IMAGES][MAX_PATH_LEN];
+    char **filenames; 
     int count;
     int current_index;
     lv_obj_t *canvas;
@@ -39,6 +38,7 @@ typedef struct {
     int canvas_height;
     jpeg_decoder_handle_t jpeg_handle;
     ppa_client_handle_t ppa_handle;
+    int max_images;         // Dynamically adjusted maximum image count
 } album_context_t;
 
 static album_context_t album_ctx;
@@ -72,7 +72,7 @@ static int compare_filenames_desc(const void *a, const void *b) {
 }
 
 // get sd card free space
-float app_album_get_sd_free_space(void)
+static float app_album_get_sd_free_space(void)
 {
     FATFS *fs;
     DWORD free_clusters;  
@@ -99,7 +99,7 @@ float app_album_get_sd_free_space(void)
 }
 
 // get SD card total space (in MB)
-float app_album_get_sd_total_space(void)
+static float app_album_get_sd_total_space(void)
 {
     FATFS *fs;
     DWORD free_clusters;  
@@ -127,13 +127,155 @@ float app_album_get_sd_total_space(void)
     return total_mb;
 }
 
+// Calculate and set the maximum number of images based on SD card capacity
+static void app_album_calculate_max_images(void)
+{
+    // Local constants for this function only
+    const int DEFAULT_MAX_IMAGES = 20000;    // Default maximum number of images
+    const int AVG_IMAGE_SIZE_KB = 100;       // Assume average image size is 100KB
+    const int SD_STORAGE_PERCENT = 50;       // Percentage of SD card capacity used for storing images
+    
+    float total_mb = app_album_get_sd_total_space();
+    if (total_mb <= 0) {
+        // If failed to get total capacity, use default value
+        album_ctx.max_images = DEFAULT_MAX_IMAGES;
+        ESP_LOGW(TAG, "Failed to get SD card total space, using default MAX_IMAGES: %d", DEFAULT_MAX_IMAGES);
+        return;
+    }
+    
+    // Calculate space available for storing images (MB)
+    float storage_mb = total_mb * SD_STORAGE_PERCENT / 100.0f;
+    
+    // Calculate number of images that can be stored (assuming 100KB per image)
+    int max_images = (int)(storage_mb * 1024 / AVG_IMAGE_SIZE_KB);
+    
+    // Limit maximum value to DEFAULT_MAX_IMAGES
+    if (max_images > DEFAULT_MAX_IMAGES) {
+        max_images = DEFAULT_MAX_IMAGES;
+    }
+    
+    album_ctx.max_images = max_images;
+    ESP_LOGI(TAG, "Calculated MAX_IMAGES: %d (based on %.2f MB total, %.2f MB allocated for storage)", 
+             max_images, total_mb, storage_mb);
+}
+
+// Check if SD card has enough space to store a new image
+bool app_album_can_store_new_image(void)
+{
+    // Local constant for this function only
+    const float SD_LOW_SPACE_PERCENT = 10;  // SD card low space warning threshold
+    
+    // Check if image count has reached the limit
+    if (album_ctx.count >= album_ctx.max_images) {
+        ESP_LOGW(TAG, "Cannot store more images: reached maximum count (%d/%d)", 
+                 album_ctx.count, album_ctx.max_images);
+        return false;
+    }
+    
+    // Check remaining space
+    float free_mb = app_album_get_sd_free_space();
+    float total_mb = app_album_get_sd_total_space();
+    
+    if (free_mb <= 0 || total_mb <= 0) {
+        ESP_LOGE(TAG, "Failed to get SD card space information");
+        return false;
+    }
+    
+    // Calculate remaining space percentage
+    float free_percent = (free_mb / total_mb) * 100.0f;
+    
+    // Check if remaining space is below threshold
+    if (free_percent < SD_LOW_SPACE_PERCENT) {
+        ESP_LOGW(TAG, "Cannot store more images: SD card low on space (%.2f%% free, %.2f MB)", 
+                 free_percent, free_mb);
+        return false;
+    }
+    
+    return true;
+}
+
+/**
+ * @brief Check if SD card has enough space to store a new MP4 video
+ * 
+ * This function checks if the SD card has sufficient space to store a new MP4 video file.
+ * It checks both the remaining space percentage and the maximum video file count limit.
+ * 
+ * @param estimated_size_mb Estimated video size in MB, uses default estimate if 0
+ * @return true if enough space is available, false otherwise
+ */
+bool app_video_stream_can_store_new_mp4(float estimated_size_mb)
+{
+    // Default video size estimate (MB/minute)
+    const float DEFAULT_VIDEO_SIZE_PER_MIN = 15.0f;
+    // Default video length (minutes)
+    const float DEFAULT_VIDEO_LENGTH = 5.0f;
+    // Video storage space threshold percentage
+    const float MP4_LOW_SPACE_PERCENT = 15.0f;
+    // Maximum number of video files
+    const int MAX_MP4_FILES = 500;
+    
+    // Get video folder path
+    char dir_path[64];
+    snprintf(dir_path, sizeof(dir_path), "%s/esp32_p4_mp4_save", BSP_SD_MOUNT_POINT);
+    
+    // Check video file count
+    DIR *dir = opendir(dir_path);
+    if (dir != NULL) {
+        int file_count = 0;
+        struct dirent *entry;
+        
+        // Count existing MP4 files
+        while ((entry = readdir(dir)) != NULL) {
+            if (entry->d_type == DT_REG && strstr(entry->d_name, ".mp4") != NULL) {
+                file_count++;
+            }
+        }
+        closedir(dir);
+        
+        // Check if maximum file count limit is reached
+        if (file_count >= MAX_MP4_FILES) {
+            ESP_LOGW(TAG, "Cannot store more videos: reached maximum file count (%d/%d)", 
+                     file_count, MAX_MP4_FILES);
+            return false;
+        }
+    }
+    
+    // Check remaining space
+    float free_mb = app_album_get_sd_free_space();
+    float total_mb = app_album_get_sd_total_space();
+    
+    if (free_mb <= 0 || total_mb <= 0) {
+        ESP_LOGE(TAG, "Failed to get SD card space information");
+        return false;
+    }
+    
+    // Calculate remaining space percentage
+    float free_percent = (free_mb / total_mb) * 100.0f;
+    
+    // If estimated size not specified, use default estimate
+    if (estimated_size_mb <= 0) {
+        estimated_size_mb = DEFAULT_VIDEO_SIZE_PER_MIN * DEFAULT_VIDEO_LENGTH;
+    }
+    
+    // Check if remaining space is below threshold
+    if (free_percent < MP4_LOW_SPACE_PERCENT) {
+        ESP_LOGW(TAG, "Cannot store more videos: SD card low on space (%.2f%% free, %.2f MB)", 
+                 free_percent, free_mb);
+        return false;
+    }
+    
+    // Check if there's enough space for the estimated video size
+    if (free_mb < estimated_size_mb) {
+        ESP_LOGW(TAG, "Cannot store more videos: Not enough space (%.2f MB available, %.2f MB needed)", 
+                 free_mb, estimated_size_mb);
+        return false;
+    }
+    
+    return true;
+}
+
 // Scan images from SD card
 static esp_err_t app_album_scan_images(void) {
-    // get free space
-    app_album_get_sd_free_space();
-    // get total space
-    app_album_get_sd_total_space();
-
     DIR *dir = opendir(BSP_SD_MOUNT_POINT"/"PIC_FOLDER_NAME);
     if (!dir) {
         ESP_LOGE(TAG, "Failed to open directory %s/%s", BSP_SD_MOUNT_POINT, PIC_FOLDER_NAME);
@@ -141,48 +283,85 @@ static esp_err_t app_album_scan_images(void) {
     }
 
     struct dirent *entry;
-    char *filenames_temp[MAX_IMAGES];
+    char **filenames_temp = NULL;
+    int count = 0;
+    int capacity = 32;  
+
+    // Free previous filenames array
+    if (album_ctx.filenames) {
+        for (int i = 0; i < album_ctx.count; i++) {
+            if (album_ctx.filenames[i]) {
+                free(album_ctx.filenames[i]);
+            }
+        }
+        free(album_ctx.filenames);
+        album_ctx.filenames = NULL;
+    }
     album_ctx.count = 0;
 
-    // Clear filename array
-    memset(album_ctx.filenames, 0, sizeof(album_ctx.filenames));
+    // Allocate initial capacity for filenames array
+    filenames_temp = heap_caps_malloc(capacity * sizeof(char*), MALLOC_CAP_SPIRAM);
+    if (!filenames_temp) {
+        ESP_LOGE(TAG, "Failed to allocate memory for filenames array");
+        closedir(dir);
+        return ESP_FAIL;
+    }
 
     // Scan all jpg files in the directory
-    while ((entry = readdir(dir)) != NULL && album_ctx.count < MAX_IMAGES) {
-        if (is_valid_image_file(entry->d_name)) {  
-            // Allocate temporary memory for full path
-            filenames_temp[album_ctx.count] = malloc(MAX_PATH_LEN);
-            if (filenames_temp[album_ctx.count] == NULL) {
-                ESP_LOGE(TAG, "Failed to allocate memory for filename");
-                continue;
+    while ((entry = readdir(dir)) != NULL && count < album_ctx.max_images) {
+        if (is_valid_image_file(entry->d_name)) {
+            // If we need to expand the array capacity
+            if (count >= capacity) {
+                capacity *= 2;
+                char **new_array = heap_caps_realloc(filenames_temp, capacity * sizeof(char*), MALLOC_CAP_SPIRAM);
+                if (!new_array) {
+                    ESP_LOGE(TAG, "Failed to reallocate memory for filenames array");
+                    for (int i = 0; i < count; i++) {
+                        free(filenames_temp[i]);
+                    }
+                    free(filenames_temp);
+                    closedir(dir);
+                    return ESP_FAIL;
+                }
+                filenames_temp = new_array;
             }
             
-            snprintf(filenames_temp[album_ctx.count], MAX_PATH_LEN, 
+            // Allocate memory for filename
+            filenames_temp[count] = heap_caps_malloc(MAX_PATH_LEN, MALLOC_CAP_SPIRAM);
+            if (filenames_temp[count] == NULL) {
+                ESP_LOGE(TAG, "Failed to allocate memory for filename");
+                for (int i = 0; i < count; i++) {
+                    free(filenames_temp[i]);
+                }
+                free(filenames_temp);
+                closedir(dir);
+                return ESP_FAIL;
+            }
+            
+            snprintf(filenames_temp[count], MAX_PATH_LEN, 
                     "%s/%s/%s", BSP_SD_MOUNT_POINT, PIC_FOLDER_NAME, entry->d_name);
-            album_ctx.count++;
+            count++;
         }
     }
 
     closedir(dir);
     
-    if (album_ctx.count == 0) {
+    if (count == 0) {
         ESP_LOGW(TAG, "No images found in %s/%s", BSP_SD_MOUNT_POINT, PIC_FOLDER_NAME);
+        free(filenames_temp);
         return ESP_FAIL;
     }
     
     // Sort filenames in descending order (newest first, assuming sequential numbering)
-    qsort(filenames_temp, album_ctx.count, sizeof(char *), compare_filenames_desc);
+    qsort(filenames_temp, count, sizeof(char *), compare_filenames_desc);
     
-    // Copy sorted filenames to album context
-    for (int i = 0; i < album_ctx.count; i++) {
-        strncpy(album_ctx.filenames[i], filenames_temp[i], MAX_PATH_LEN - 1);
-        free(filenames_temp[i]);  // Free temporary memory
-        ESP_LOGD(TAG, "image %d: %s", i, album_ctx.filenames[i]);
-    }
+    // Save sorted filenames array
+    album_ctx.filenames = filenames_temp;
+    album_ctx.count = count;
+    album_ctx.current_index = 0;
     
     ESP_LOGI(TAG, "Found %d images in %s/%s (sorted by filename in descending order)", 
-             album_ctx.count, BSP_SD_MOUNT_POINT, PIC_FOLDER_NAME);
-    album_ctx.current_index = 0;
+             count, BSP_SD_MOUNT_POINT, PIC_FOLDER_NAME);
     
     return ESP_OK;
 }
@@ -405,9 +584,12 @@ esp_err_t app_album_delete_current_image(void) {
         return ESP_FAIL;
     }
     
+    // free the memory of the filename
+    free(album_ctx.filenames[album_ctx.current_index]);
+    
     // Update filenames array by shifting elements
     for (int i = album_ctx.current_index; i < album_ctx.count - 1; i++) {
-        strncpy(album_ctx.filenames[i], album_ctx.filenames[i + 1], MAX_PATH_LEN - 1);
+        album_ctx.filenames[i] = album_ctx.filenames[i + 1];
     }
     
     // Decrease count
@@ -463,6 +645,9 @@ esp_err_t app_album_init(lv_obj_t *parent) {
     // Initialize context
     memset(&album_ctx, 0, sizeof(album_ctx));
     
+    // Calculate and set maximum image count
+    app_album_calculate_max_images();
+
     // Set canvas dimensions
     album_ctx.canvas_width = BSP_LCD_H_RES;
     album_ctx.canvas_height = BSP_LCD_V_RES;
@@ -568,6 +753,18 @@ void app_album_deinit(void) {
         album_ctx.img_buffer = NULL;
     }
     
+    // free the memory of the filenames array
+    if (album_ctx.filenames) {
+        for (int i = 0; i < album_ctx.count; i++) {
+            if (album_ctx.filenames[i]) {
+                free(album_ctx.filenames[i]);
+            }
+        }
+        free(album_ctx.filenames);
+        album_ctx.filenames = NULL;
+    }
+    album_ctx.count = 0;
+
     if (album_ctx.canvas_buffer) {
         free(album_ctx.canvas_buffer);
         album_ctx.canvas_buffer = NULL;

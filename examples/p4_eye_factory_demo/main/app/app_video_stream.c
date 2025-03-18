@@ -180,12 +180,6 @@ void swap_rgb565_bytes(uint16_t *buffer, int pixel_count)
  */
 static void enter_deep_sleep(uint16_t sleep_minutes)
 {
-    // Calculate next wake-up time
-    camera_state.next_wake_time = esp_timer_get_time() / 1000000 + sleep_minutes * 60;
-    
-    // Initialize sleep IO
-    bsp_sleep_io_init();
-
     // Set wake-up time (microseconds)
 #if DEBUG_MODE
     uint64_t sleep_time_us = sleep_minutes * 1000000ULL;
@@ -198,6 +192,9 @@ static void enter_deep_sleep(uint16_t sleep_minutes)
     // Configure RTC wake-up timer
     esp_sleep_enable_timer_wakeup(sleep_time_us);
     
+    // Initialize sleep IO
+    bsp_sleep_io_init();
+
     // Enter deep sleep
     esp_deep_sleep_start();
 }
@@ -317,9 +314,7 @@ esp_err_t app_video_stream_stop_take_video(void)
  * @brief Callback when interval photo is completed
  */
 static void interval_photo_complete_callback(void)
-{
-    ESP_LOGI(TAG, "Interval photo completed, saved photo count: %d", app_extra_get_saved_photo_count());
-    
+{   
     // If interval photo is still active, enter deep sleep
     if (camera_state.is_interval_photo_active) {
         // Enter deep sleep until next photo time
@@ -383,6 +378,13 @@ static esp_err_t take_and_save_video(uint8_t *camera_buf, uint32_t width, uint32
 
     uint32_t photo_width = photo_resolution_width[camera_state.current_resolution];
     uint32_t photo_height = photo_resolution_height[camera_state.current_resolution];
+
+    // Check if we can store a new image
+    if (!app_video_stream_can_store_new_mp4()) {
+        // Show warning to user that storage is full or low
+        ESP_LOGE(TAG, "Cannot store more images");
+        return false;
+    }
 
     // Adjust resolution to match camera capabilities
     if (photo_width > width) {
@@ -544,7 +546,14 @@ static esp_err_t take_and_save_photo(uint8_t *camera_buf, uint32_t width, uint32
 {
     esp_err_t ret = ESP_OK;
     uint8_t *pic_buf = NULL;
-    
+
+    // Check if we can store a new image
+    if (!app_album_can_store_new_image()) {
+        // Show warning to user that storage is full or low
+        ESP_LOGE(TAG, "Cannot store more images");
+        return false;
+    }
+
     bsp_display_backlight_off();
     
     camera_state.is_flash_light_on ? bsp_led_set(BSP_LED_WHITE, true) : bsp_led_set(BSP_LED_WHITE, false);
