@@ -76,6 +76,10 @@ lv_obj_t * ui_LabelPanelSettingsMenu;
 lv_obj_t * ui_PanelInrervalTimePrompt;
 lv_obj_t * ui_LabelPanelInrervalTimePrompt;
 lv_obj_t * ui_LabelPanelInrervalTimePromptMin;
+lv_obj_t * ui_PanelCanvasPopupSDSpaceWarning;
+lv_obj_t * ui_LabelPanelCanvasPopupSDSpaceWarning;
+lv_obj_t * ui_PanelCanvasPopupCameraSDSpaceWarning;
+lv_obj_t * ui_LabelPanelCanvasPopupCameraSDSpaceWarning;
 
 
 // SCREEN: ui_ScreenAlbum

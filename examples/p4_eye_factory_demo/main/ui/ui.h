@@ -82,6 +82,11 @@ extern lv_obj_t * ui_LabelPanelSettingsMenu;
 extern lv_obj_t * ui_PanelInrervalTimePrompt;
 extern lv_obj_t * ui_LabelPanelInrervalTimePrompt;
 extern lv_obj_t * ui_LabelPanelInrervalTimePromptMin;
+extern lv_obj_t * ui_PanelCanvasPopupSDSpaceWarning;
+extern lv_obj_t * ui_LabelPanelCanvasPopupSDSpaceWarning;
+extern lv_obj_t * ui_PanelCanvasPopupCameraSDSpaceWarning;
+extern lv_obj_t * ui_LabelPanelCanvasPopupCameraSDSpaceWarning;
+
 // SCREEN: ui_ScreenAlbum
 void ui_ScreenAlbum_screen_init(void);
 extern lv_obj_t * ui_ScreenAlbum;

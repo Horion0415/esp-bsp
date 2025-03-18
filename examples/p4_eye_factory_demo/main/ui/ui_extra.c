@@ -1115,6 +1115,19 @@ void ui_extra_popup_interval_timer_warning(void)
     }
 }
 
+void ui_extra_popup_camera_sd_space_warning(void)
+{
+    ui_extra_clear_page();
+    lv_obj_clear_flag(ui_PanelCanvasPopupSDSpaceWarning, LV_OBJ_FLAG_HIDDEN);
+}
+
+void ui_extra_popup_camera_sd_space_warning_end(void)
+{
+    if(!lv_obj_has_flag(ui_PanelCanvasPopupSDSpaceWarning, LV_OBJ_FLAG_HIDDEN)) {
+        lv_obj_add_flag(ui_PanelCanvasPopupSDSpaceWarning, LV_OBJ_FLAG_HIDDEN);
+    }
+}
+
 /**
  * @brief Handle USB disk page
  * @return Whether USB disk page is handled
@@ -1361,6 +1374,7 @@ void ui_extra_btn_menu(void)
         default:
             // For other pages, return to main page
             ui_extra_goto_page(UI_PAGE_MAIN);
+            ui_extra_popup_camera_sd_space_warning_end();
             if(lv_interval_timer) {
                 lv_timer_ready(lv_interval_timer);
             }

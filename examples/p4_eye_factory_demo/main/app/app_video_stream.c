@@ -382,8 +382,11 @@ static esp_err_t take_and_save_video(uint8_t *camera_buf, uint32_t width, uint32
     // Check if we can store a new image
     if (!app_video_stream_can_store_new_mp4(100)) {
         // Show warning to user that storage is full or low
+        ui_extra_popup_camera_sd_space_warning();
         ESP_LOGE(TAG, "Cannot store more mp4 videos");
         return false;
+    } else {
+        ui_extra_popup_camera_sd_space_warning_end();
     }
 
     // Adjust resolution to match camera capabilities
@@ -551,7 +554,10 @@ static esp_err_t take_and_save_photo(uint8_t *camera_buf, uint32_t width, uint32
     if (!app_album_can_store_new_image()) {
         // Show warning to user that storage is full or low
         ESP_LOGE(TAG, "Cannot store more images");
+        ui_extra_popup_camera_sd_space_warning();
         return false;
+    } else {
+        ui_extra_popup_camera_sd_space_warning_end();
     }
 
     bsp_display_backlight_off();

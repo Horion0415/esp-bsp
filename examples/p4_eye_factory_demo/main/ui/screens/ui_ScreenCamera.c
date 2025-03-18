@@ -799,4 +799,53 @@ void ui_ScreenCamera_screen_init(void)
                                LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_border_color(ui_LabelPanelInrervalTimePromptMin, lv_color_hex(0x000000), LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_border_opa(ui_LabelPanelInrervalTimePromptMin, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+
+    ui_PanelCanvasPopupSDSpaceWarning = lv_obj_create(ui_PanelCanvas);
+    lv_obj_set_width(ui_PanelCanvasPopupSDSpaceWarning, 212);
+    lv_obj_set_height(ui_PanelCanvasPopupSDSpaceWarning, 212);
+    lv_obj_set_x(ui_PanelCanvasPopupSDSpaceWarning, -2);
+    lv_obj_set_y(ui_PanelCanvasPopupSDSpaceWarning, -4);
+    lv_obj_set_align(ui_PanelCanvasPopupSDSpaceWarning, LV_ALIGN_CENTER);
+    lv_obj_add_flag(ui_PanelCanvasPopupSDSpaceWarning, LV_OBJ_FLAG_HIDDEN);     /// Flags
+    lv_obj_clear_flag(ui_PanelCanvasPopupSDSpaceWarning, LV_OBJ_FLAG_SCROLLABLE);      /// Flags
+    lv_obj_set_style_radius(ui_PanelCanvasPopupSDSpaceWarning, 30, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_bg_color(ui_PanelCanvasPopupSDSpaceWarning, lv_color_hex(0xC9C9C9), LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_bg_opa(ui_PanelCanvasPopupSDSpaceWarning, 50, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_border_color(ui_PanelCanvasPopupSDSpaceWarning, lv_color_hex(0x000000), LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_border_opa(ui_PanelCanvasPopupSDSpaceWarning, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+
+    ui_LabelPanelCanvasPopupSDSpaceWarning = lv_label_create(ui_PanelCanvasPopupSDSpaceWarning);
+    lv_obj_set_width(ui_LabelPanelCanvasPopupSDSpaceWarning, LV_SIZE_CONTENT);   /// 1
+    lv_obj_set_height(ui_LabelPanelCanvasPopupSDSpaceWarning, LV_SIZE_CONTENT);    /// 1
+    lv_obj_set_x(ui_LabelPanelCanvasPopupSDSpaceWarning, -4);
+    lv_obj_set_y(ui_LabelPanelCanvasPopupSDSpaceWarning, -70);
+    lv_obj_set_align(ui_LabelPanelCanvasPopupSDSpaceWarning, LV_ALIGN_CENTER);
+    lv_label_set_text(ui_LabelPanelCanvasPopupSDSpaceWarning, "Warning");
+    lv_obj_set_style_text_color(ui_LabelPanelCanvasPopupSDSpaceWarning, lv_color_hex(0xFF0000), LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_opa(ui_LabelPanelCanvasPopupSDSpaceWarning, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_font(ui_LabelPanelCanvasPopupSDSpaceWarning, &ui_font_FontKoHoBold28, LV_PART_MAIN | LV_STATE_DEFAULT);
+
+    ui_PanelCanvasPopupCameraSDSpaceWarning = lv_obj_create(ui_PanelCanvasPopupSDSpaceWarning);
+    lv_obj_set_width(ui_PanelCanvasPopupCameraSDSpaceWarning, 197);
+    lv_obj_set_height(ui_PanelCanvasPopupCameraSDSpaceWarning, 6);
+    lv_obj_set_x(ui_PanelCanvasPopupCameraSDSpaceWarning, -1);
+    lv_obj_set_y(ui_PanelCanvasPopupCameraSDSpaceWarning, -36);
+    lv_obj_set_align(ui_PanelCanvasPopupCameraSDSpaceWarning, LV_ALIGN_CENTER);
+    lv_obj_clear_flag(ui_PanelCanvasPopupCameraSDSpaceWarning, LV_OBJ_FLAG_SCROLLABLE);      /// Flags
+    lv_obj_set_style_bg_color(ui_PanelCanvasPopupCameraSDSpaceWarning, lv_color_hex(0x000000), LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_bg_opa(ui_PanelCanvasPopupCameraSDSpaceWarning, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
+
+    ui_LabelPanelCanvasPopupCameraSDSpaceWarning = lv_label_create(ui_PanelCanvasPopupSDSpaceWarning);
+    lv_obj_set_width(ui_LabelPanelCanvasPopupCameraSDSpaceWarning, LV_SIZE_CONTENT);   /// 1
+    lv_obj_set_height(ui_LabelPanelCanvasPopupCameraSDSpaceWarning, LV_SIZE_CONTENT);    /// 1
+    lv_obj_set_x(ui_LabelPanelCanvasPopupCameraSDSpaceWarning, 3);
+    lv_obj_set_y(ui_LabelPanelCanvasPopupCameraSDSpaceWarning, 39);
+    lv_obj_set_align(ui_LabelPanelCanvasPopupCameraSDSpaceWarning, LV_ALIGN_CENTER);
+    lv_label_set_text(ui_LabelPanelCanvasPopupCameraSDSpaceWarning,
+                      "   Insufficient \n\n SD card space!");
+    lv_obj_set_style_text_color(ui_LabelPanelCanvasPopupCameraSDSpaceWarning, lv_color_hex(0x000000),
+                                LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_opa(ui_LabelPanelCanvasPopupCameraSDSpaceWarning, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_font(ui_LabelPanelCanvasPopupCameraSDSpaceWarning, &ui_font_FontKoHoMiniBold22,
+                               LV_PART_MAIN | LV_STATE_DEFAULT);
 }

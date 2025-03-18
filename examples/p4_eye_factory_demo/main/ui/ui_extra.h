@@ -179,4 +179,14 @@ void ui_extra_popup_picture_delete_warning(void);
  */
 void ui_extra_popup_picture_delete_success(void);
 
+/**
+ * @brief Hide camera SD space warning popup
+ */
+void ui_extra_popup_camera_sd_space_warning_end(void);
+
+/**
+ * @brief Show camera SD space warning popup
+ */
+void ui_extra_popup_camera_sd_space_warning(void);
+
 #endif /* UI_EXTRA_H */
