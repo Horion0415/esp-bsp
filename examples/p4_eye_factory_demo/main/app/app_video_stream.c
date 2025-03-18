@@ -380,9 +380,9 @@ static esp_err_t take_and_save_video(uint8_t *camera_buf, uint32_t width, uint32
     uint32_t photo_height = photo_resolution_height[camera_state.current_resolution];
 
     // Check if we can store a new image
-    if (!app_video_stream_can_store_new_mp4()) {
+    if (!app_video_stream_can_store_new_mp4(100)) {
         // Show warning to user that storage is full or low
-        ESP_LOGE(TAG, "Cannot store more images");
+        ESP_LOGE(TAG, "Cannot store more mp4 videos");
         return false;
     }
 
