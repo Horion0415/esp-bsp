@@ -1430,6 +1430,9 @@ void ui_extra_btn_encoder(void)
             ui_extra_btn_menu();
             break;
         case UI_PAGE_INTERVAL_CAM:
+            if(lv_interval_timer) {
+                lv_timer_ready(lv_interval_timer);
+            }
             ui_extra_start_interval_timer();
             
             if(!lv_additional_photo_timer){
