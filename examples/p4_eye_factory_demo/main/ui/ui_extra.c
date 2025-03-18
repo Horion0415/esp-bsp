@@ -1197,9 +1197,11 @@ void ui_extra_btn_up(void)
                 lv_obj_clear_flag(ui_PanelInrervalTimePrompt, LV_OBJ_FLAG_HIDDEN);
                 if(!lv_interval_timer) {
                     lv_interval_timer = lv_timer_create(interval_timer_callback, 3000, NULL);
-                } else {
-                    lv_timer_reset(lv_interval_timer);
                 }
+            }
+
+            if (lv_interval_timer) {
+                lv_timer_reset(lv_interval_timer);
             }
             break;
 
@@ -1255,9 +1257,11 @@ void ui_extra_btn_down(void)
                 lv_obj_clear_flag(ui_PanelInrervalTimePrompt, LV_OBJ_FLAG_HIDDEN);
                 if(!lv_interval_timer) {
                     lv_interval_timer = lv_timer_create(interval_timer_callback, 3000, NULL);
-                } else {
-                    lv_timer_reset(lv_interval_timer);
                 }
+            }
+
+            if(lv_interval_timer) {
+                lv_timer_reset(lv_interval_timer);
             }
             break;
 
