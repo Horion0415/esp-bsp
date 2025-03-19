@@ -1455,6 +1455,8 @@ void ui_extra_btn_encoder(void)
             if(lv_interval_timer) {
                 lv_timer_ready(lv_interval_timer);
             }
+            vTaskDelay(500 / portTICK_PERIOD_MS);
+            
             ui_extra_start_interval_timer();
             
             if(!lv_additional_photo_timer){
