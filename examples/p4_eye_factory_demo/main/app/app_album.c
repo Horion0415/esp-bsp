@@ -525,6 +525,11 @@ esp_err_t app_album_prev_image(void) {
 }
 
 static void app_album_show_no_data_message(void) {
+    if (!ui_extra_get_sd_card_mounted()) {
+        ESP_LOGW(TAG, "SD card not mounted, not showing any message");
+        return;  // If SD card is not mounted, return immediately, do not display any message
+    }    
+    
     if (!album_ctx.canvas_buffer || !album_ctx.canvas) {
         ESP_LOGE(TAG, "Canvas buffer or canvas object not initialized");
         return;

@@ -449,15 +449,15 @@ static void app_storage_check_sd_card_task(void *pvParameters)
                 ui_extra_set_sd_card_mounted(true);
                 bsp_display_unlock();
 
-                if (!s_album_initialized) {
+                if (!album_initialized) {
                     app_album_init(ui_ImageScreenAlbum);
-                    s_album_initialized = true;
+                    album_initialized = true;
                     ESP_LOGI(TAG, "Album initialized");
                 } else {
                     ESP_LOGI(TAG, "Album already initialized");
                 }
 
-                if (!s_directory_checked) {
+                if (!directory_checked) {
                     // Create directory for saving pictures if it doesn't exist
                     char folder_path[64];
                     sprintf(folder_path, "%s/%s", BSP_SD_MOUNT_POINT, PIC_FOLDER_NAME);
@@ -479,19 +479,19 @@ static void app_storage_check_sd_card_task(void *pvParameters)
                             pic_num = 1;  // Start with 1 for a new directory
                         }
                     }
-                    s_directory_checked = true;
+                    directory_checked = true;
                     ESP_LOGI(TAG, "Directory check completed");
                 } else {
                     ESP_LOGI(TAG, "Directory already checked");
                 }
 
-                if (!s_usb_msc_initialized) {
+                if (!usb_msc_initialized) {
                     ESP_LOGI(TAG, "USB MSC initialization");
                     
                     const tinyusb_config_t tusb_cfg = {0};
                     ESP_ERROR_CHECK(tinyusb_driver_install(&tusb_cfg));
                     
-                    s_usb_msc_initialized = true;
+                    usb_msc_initialized = true;
                     ESP_LOGI(TAG, "USB MSC initialization DONE");
                 } else {
                     ESP_LOGI(TAG, "USB MSC already initialized");
