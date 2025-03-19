@@ -64,6 +64,7 @@ typedef struct {
     uint16_t current_interval_minutes;
     uint32_t next_wake_time;
     photo_resolution_t current_resolution;
+    TaskHandle_t interval_sleep_task_handle;  
 } camera_state_t;
 
 /**
@@ -76,6 +77,7 @@ typedef struct {
     uint32_t jpg_size;
     size_t rx_buffer_size;
     uint8_t *scaled_camera_buf;
+    int video_cam_fd;
 } camera_buffer_t;
 
 /**
@@ -117,10 +119,13 @@ static camera_state_t camera_state = {
     .init_count = 0,
     .current_interval_minutes = 0,
     .next_wake_time = 0,
-    .current_resolution = PHOTO_RESOLUTION_1080P
+    .current_resolution = PHOTO_RESOLUTION_1080P,
+    .interval_sleep_task_handle = NULL,
 };
 
-static camera_buffer_t camera_buffer = {0};
+static camera_buffer_t camera_buffer = {
+    .video_cam_fd = -1
+};
 
 // Global recorder context
 static recorder_ctx_t recorder_ctx = {
@@ -182,7 +187,7 @@ static void enter_deep_sleep(uint16_t sleep_minutes)
 {
     // Set wake-up time (microseconds)
 #if DEBUG_MODE
-    uint64_t sleep_time_us = sleep_minutes * 1000000ULL / 5;
+    uint64_t sleep_time_us = sleep_minutes * 1000000ULL;
 #else
     uint64_t sleep_time_us = sleep_minutes * 60 * 1000000ULL;
 #endif
@@ -309,16 +314,47 @@ esp_err_t app_video_stream_stop_take_video(void)
     return ESP_OK;
 }
 
+/**
+ * @brief Interval photo sleep task, responsible for cleaning up resources and entering deep sleep
+ * 
+ * @param pvParameters 
+ */
+static void interval_sleep_task(void *pvParameters)
+{
+    uint16_t sleep_minutes = camera_state.current_interval_minutes;
+    
+    ESP_LOGI(TAG, "Preparing to enter deep sleep, cleaning up resources...");
+    
+    // Stop video stream task
+    app_video_stream_task_stop(camera_buffer.video_cam_fd);
+    app_video_wait_video_stop();
+    app_video_close(camera_buffer.video_cam_fd);
+
+    lvgl_port_deinit();
+    bsp_display_del();
+    
+    // Enter deep sleep
+    enter_deep_sleep(sleep_minutes);
+    
+    // The task should not reach here
+    vTaskDelete(NULL);
+}
+
 /* Interval photo functions */
 /**
  * @brief Callback when interval photo is completed
  */
 static void interval_photo_complete_callback(void)
 {   
-    // If interval photo is still active, enter deep sleep
+    // If interval photo is still active, create a new task to handle resource release before sleep
     if (camera_state.is_interval_photo_active) {
-        // Enter deep sleep until next photo time
-        enter_deep_sleep(camera_state.current_interval_minutes);
+        // Create a new task to handle resource release before sleep
+        if (camera_state.interval_sleep_task_handle != NULL) {
+            vTaskDelete(camera_state.interval_sleep_task_handle);
+            camera_state.interval_sleep_task_handle = NULL;
+        }
+        
+        xTaskCreate(interval_sleep_task, "interval_sleep", 4096, NULL, 5, &camera_state.interval_sleep_task_handle);
     }
 }
 
@@ -1126,7 +1162,6 @@ static esp_err_t app_video_stream_stop_recording(void)
 esp_err_t app_video_stream_init(i2c_master_bus_handle_t i2c_handle)
 {
     esp_err_t ret = ESP_OK;
-    int video_cam_fd0 = -1;
     bool resources_initialized = false;
 
     // Initialize PPA
@@ -1153,8 +1188,8 @@ esp_err_t app_video_stream_init(i2c_master_bus_handle_t i2c_handle)
     }
 
     // Open video device
-    video_cam_fd0 = app_video_open(EXAMPLE_CAM_DEV_PATH, APP_VIDEO_FMT);
-    if (video_cam_fd0 < 0) {
+    camera_buffer.video_cam_fd = app_video_open(EXAMPLE_CAM_DEV_PATH, APP_VIDEO_FMT);
+    if (camera_buffer.video_cam_fd < 0) {
         ESP_LOGE(TAG, "Video cam open failed");
         ret = ESP_FAIL;
         goto cleanup;
@@ -1206,7 +1241,7 @@ esp_err_t app_video_stream_init(i2c_master_bus_handle_t i2c_handle)
     }
 
     // Initialize video capture device
-    ret = app_video_set_bufs(video_cam_fd0, EXAMPLE_CAM_BUF_NUM, NULL);
+    ret = app_video_set_bufs(camera_buffer.video_cam_fd, EXAMPLE_CAM_BUF_NUM, NULL);
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "Failed to set video buffers: 0x%x", ret);
         goto cleanup;
@@ -1257,7 +1292,7 @@ esp_err_t app_video_stream_init(i2c_master_bus_handle_t i2c_handle)
     ESP_ERROR_CHECK(esp_audio_enc_open(&enc_cfg, &recorder_ctx.encoder));
 
     // Start camera stream task
-    ret = app_video_stream_task_start(video_cam_fd0, 0);
+    ret = app_video_stream_task_start(camera_buffer.video_cam_fd, 0);
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "Failed to start video stream task: 0x%x", ret);
         goto cleanup;
@@ -1284,8 +1319,8 @@ cleanup:
             }
         }
         
-        if (video_cam_fd0 >= 0) {
-            app_video_close(video_cam_fd0);
+        if (camera_buffer.video_cam_fd >= 0) {
+            app_video_close(camera_buffer.video_cam_fd);
         }
         
         if (ppa_srm_handle != NULL) {

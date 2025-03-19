@@ -513,6 +513,16 @@ err:
     return ret;
 }
 
+esp_err_t bsp_display_del(void)
+{
+    
+
+    esp_lcd_panel_del(panel_handle);
+    esp_lcd_panel_io_del(io_handle);
+    spi_bus_free(BSP_LCD_SPI_NUM);
+    return ESP_OK;
+}
+
 #if (BSP_CONFIG_NO_GRAPHIC_LIB == 0)
 static lv_disp_t *bsp_display_lcd_init(const bsp_display_cfg_t *cfg)
 {
