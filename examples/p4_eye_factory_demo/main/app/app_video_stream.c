@@ -182,7 +182,7 @@ static void enter_deep_sleep(uint16_t sleep_minutes)
 {
     // Set wake-up time (microseconds)
 #if DEBUG_MODE
-    uint64_t sleep_time_us = sleep_minutes * 1000000ULL;
+    uint64_t sleep_time_us = sleep_minutes * 1000000ULL / 5;
 #else
     uint64_t sleep_time_us = sleep_minutes * 60 * 1000000ULL;
 #endif
