@@ -1,3 +1,5 @@
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
 #include <stdio.h>
 #include "esp_log.h"
 #include "lvgl.h"
@@ -1454,8 +1456,8 @@ void ui_extra_btn_encoder(void)
         case UI_PAGE_INTERVAL_CAM:
             if(lv_interval_timer) {
                 lv_timer_ready(lv_interval_timer);
+                vTaskDelay(300 / portTICK_PERIOD_MS);
             }
-            vTaskDelay(500 / portTICK_PERIOD_MS);
             
             ui_extra_start_interval_timer();
             
