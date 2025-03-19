@@ -429,57 +429,86 @@ esp_err_t app_storage_save_picture(const uint8_t *data, size_t len)
     return ESP_OK;
 }
 
-/**
- * @brief Task to check for SD card insertion
- */
 static void app_storage_check_sd_card_task(void *pvParameters)
 {
+    bsp_sdcard_detect_init();
+    bool is_sd_card_mounted = false;
+    bool usb_msc_initialized = false;
+    bool album_initialized = false;
+    bool directory_checked = false;
+
     while(1) {
-        if(bsp_sdcard_is_present()) {
-            ESP_LOGI(TAG, "SD card present");
-            bsp_sdcard_mount();
+        bool current_is_sd_card_mounted = bsp_sdcard_is_present();
+        if(current_is_sd_card_mounted != is_sd_card_mounted) {
+            is_sd_card_mounted = current_is_sd_card_mounted;
+            if(is_sd_card_mounted) {
+                ESP_LOGI(TAG, "SD card mounted");
+                bsp_sdcard_mount();
 
-            bsp_display_lock(0);
-            ui_extra_set_sd_card_mounted(true);
-            bsp_display_unlock();
+                bsp_display_lock(0);
+                ui_extra_set_sd_card_mounted(true);
+                bsp_display_unlock();
 
-            app_album_init(ui_ImageScreenAlbum);
-
-            // Create directory for saving pictures if it doesn't exist
-            char folder_path[64];
-            sprintf(folder_path, "%s/%s", BSP_SD_MOUNT_POINT, PIC_FOLDER_NAME);
-            
-            DIR *dir = opendir(folder_path);
-            if (dir) {
-                // Directory exists
-                closedir(dir);
-                ESP_LOGI(TAG, "Directory %s already exists", folder_path);
-                
-                // Find the highest picture number to continue incrementing
-                app_storage_find_max_pic_num();
-            } else {
-                // Directory doesn't exist, create it
-                if (mkdir(folder_path, 0755) != 0) {
-                    ESP_LOGE(TAG, "Failed to create directory %s", folder_path);
+                if (!s_album_initialized) {
+                    app_album_init(ui_ImageScreenAlbum);
+                    s_album_initialized = true;
+                    ESP_LOGI(TAG, "Album initialized");
                 } else {
-                    ESP_LOGI(TAG, "Created directory: %s", folder_path);
-                    pic_num = 1;  // Start with 1 for a new directory
+                    ESP_LOGI(TAG, "Album already initialized");
                 }
+
+                if (!s_directory_checked) {
+                    // Create directory for saving pictures if it doesn't exist
+                    char folder_path[64];
+                    sprintf(folder_path, "%s/%s", BSP_SD_MOUNT_POINT, PIC_FOLDER_NAME);
+                    
+                    DIR *dir = opendir(folder_path);
+                    if (dir) {
+                        // Directory exists
+                        closedir(dir);
+                        ESP_LOGI(TAG, "Directory %s already exists", folder_path);
+                        
+                        // Find the highest picture number to continue incrementing
+                        app_storage_find_max_pic_num();
+                    } else {
+                        // Directory doesn't exist, create it
+                        if (mkdir(folder_path, 0755) != 0) {
+                            ESP_LOGE(TAG, "Failed to create directory %s", folder_path);
+                        } else {
+                            ESP_LOGI(TAG, "Created directory: %s", folder_path);
+                            pic_num = 1;  // Start with 1 for a new directory
+                        }
+                    }
+                    s_directory_checked = true;
+                    ESP_LOGI(TAG, "Directory check completed");
+                } else {
+                    ESP_LOGI(TAG, "Directory already checked");
+                }
+
+                if (!s_usb_msc_initialized) {
+                    ESP_LOGI(TAG, "USB MSC initialization");
+                    
+                    const tinyusb_config_t tusb_cfg = {0};
+                    ESP_ERROR_CHECK(tinyusb_driver_install(&tusb_cfg));
+                    
+                    s_usb_msc_initialized = true;
+                    ESP_LOGI(TAG, "USB MSC initialization DONE");
+                } else {
+                    ESP_LOGI(TAG, "USB MSC already initialized");
+                }
+            } else {
+                ESP_LOGI(TAG, "SD card unmounted");
+                bsp_sdcard_unmount();
+
+                bsp_display_lock(0);
+                ui_extra_set_sd_card_mounted(false);
+                bsp_display_unlock();
             }
-
-            ESP_LOGI(TAG, "USB MSC initialization");
-            
-            const tinyusb_config_t tusb_cfg = {0};
-            ESP_ERROR_CHECK(tinyusb_driver_install(&tusb_cfg));
-            
-            ESP_LOGI(TAG, "USB MSC initialization DONE");
-
-            vTaskDelete(NULL);
-        } else {
-            ESP_LOGI(TAG, "SD card not present");
-            vTaskDelay(pdMS_TO_TICKS(500));
         }
+
+        vTaskDelay(pdMS_TO_TICKS(500));
     }
+
     vTaskDelete(NULL);
 }
 
@@ -526,55 +555,7 @@ esp_err_t app_storage_init(void) {
         }
     }
 
-    bsp_sdcard_detect_init();
-    bool is_sd_card_mounted = bsp_sdcard_is_present();
-
-    if(!is_sd_card_mounted){
-        ESP_LOGW(TAG, "Failed to mount the SD card");
-        bsp_display_lock(0);
-        ui_extra_set_sd_card_mounted(false);
-        bsp_display_unlock();
-
-        xTaskCreate(app_storage_check_sd_card_task, "app_storage_check_sd_card_task", 1024 * 6, NULL, 5, NULL);
-    } else {
-        bsp_sdcard_mount();
-        ESP_LOGI(TAG, "SD card mounted successfully");
-
-        bsp_display_lock(0);
-        ui_extra_set_sd_card_mounted(true);
-        bsp_display_unlock();
-
-        app_album_init(ui_ImageScreenAlbum);
-
-        // Create directory for saving pictures if it doesn't exist
-        char folder_path[64];
-        sprintf(folder_path, "%s/%s", BSP_SD_MOUNT_POINT, PIC_FOLDER_NAME);
-        
-        DIR *dir = opendir(folder_path);
-        if (dir) {
-            // Directory exists
-            closedir(dir);
-            ESP_LOGI(TAG, "Directory %s already exists", folder_path);
-            
-            // Find the highest picture number to continue incrementing
-            app_storage_find_max_pic_num();
-        } else {
-            // Directory doesn't exist, create it
-            if (mkdir(folder_path, 0755) != 0) {
-                ESP_LOGE(TAG, "Failed to create directory %s", folder_path);
-            } else {
-                ESP_LOGI(TAG, "Created directory: %s", folder_path);
-                pic_num = 1;  // Start with 1 for a new directory
-            }
-        }
-
-        ESP_LOGI(TAG, "USB MSC initialization");
-        
-        const tinyusb_config_t tusb_cfg = {0};
-        ESP_ERROR_CHECK(tinyusb_driver_install(&tusb_cfg));
-        
-        ESP_LOGI(TAG, "USB MSC initialization DONE");
-    }
+    xTaskCreate(app_storage_check_sd_card_task, "app_storage_check_sd_card_task", 1024 * 6, NULL, 5, NULL);
 
     return ESP_OK;
 }

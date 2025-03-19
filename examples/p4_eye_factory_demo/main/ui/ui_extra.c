@@ -1034,9 +1034,17 @@ uint16_t app_extra_get_interval_time(void)
 void ui_extra_set_sd_card_mounted(bool mounted)
 {
     is_sd_card_mounted = mounted;
-    if(is_sd_card_mounted && (current_page == UI_PAGE_CAMERA || current_page == UI_PAGE_INTERVAL_CAM || current_page == UI_PAGE_VIDEO_MODE)) {
+    
+    if(current_page != UI_PAGE_CAMERA && current_page != UI_PAGE_INTERVAL_CAM && current_page != UI_PAGE_VIDEO_MODE && current_page != UI_PAGE_ALBUM) {
+        return;
+    }
+
+    if(is_sd_card_mounted) {
         lv_obj_add_flag(ui_ImageCanvasNOSDcard, LV_OBJ_FLAG_HIDDEN);
         lv_obj_clear_flag(ui_ImageCanvasSDcard, LV_OBJ_FLAG_HIDDEN);
+    } else {
+        lv_obj_add_flag(ui_ImageCanvasSDcard, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_clear_flag(ui_ImageCanvasNOSDcard, LV_OBJ_FLAG_HIDDEN);
     }
 }
 
