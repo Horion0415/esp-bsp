@@ -330,7 +330,21 @@ static void interval_sleep_task(void *pvParameters)
     app_video_wait_video_stop();
     app_video_close(camera_buffer.video_cam_fd);
 
-    lvgl_port_deinit();
+    // Stop LVGL timer first to prevent triggering more LVGL events
+    lvgl_port_stop();
+    
+    // Wait for a short time to ensure all LVGL tasks are completed
+    vTaskDelay(pdMS_TO_TICKS(100));
+    
+    // Acquire LVGL lock to ensure no other tasks are using LVGL
+    if (lvgl_port_lock(1000)) {
+        // Call deinit while holding the lock
+        lvgl_port_deinit();
+        // No need to unlock, because lvgl_port_deinit() has released the lock
+    } else {
+        ESP_LOGW(TAG, "Failed to acquire LVGL lock before deinit, proceeding anyway");
+        lvgl_port_deinit();
+    }
     bsp_display_del();
     
     // Enter deep sleep
