@@ -1474,6 +1474,16 @@ void ui_extra_btn_encoder(void)
             }
             break;
         case UI_PAGE_CAMERA:
+            // Check if we can store a new image
+            if (!app_album_can_store_new_image()) {
+                // Show warning to user that storage is full or low
+                ESP_LOGE(TAG, "Cannot store more images");
+                ui_extra_popup_camera_sd_space_warning();
+                return;
+            } else {
+                ui_extra_popup_camera_sd_space_warning_end();
+            }
+
             app_video_stream_take_photo();
             break;
         case UI_PAGE_ALBUM:
@@ -1491,6 +1501,17 @@ void ui_extra_btn_encoder(void)
             break;
         case UI_PAGE_VIDEO_MODE:
             if(lv_obj_has_flag(ui_ImageRedDot, LV_OBJ_FLAG_HIDDEN)) {
+
+                // Check if we can store a new image
+                if (!app_video_stream_can_store_new_mp4(100)) {
+                    // Show warning to user that storage is full or low
+                    ui_extra_popup_camera_sd_space_warning();
+                    ESP_LOGE(TAG, "Cannot store more mp4 videos");
+                    return;
+                } else {
+                    ui_extra_popup_camera_sd_space_warning_end();
+                }
+
                 app_video_stream_take_video();
 
                 lv_obj_clear_flag(ui_ImageRedDot, LV_OBJ_FLAG_HIDDEN);
