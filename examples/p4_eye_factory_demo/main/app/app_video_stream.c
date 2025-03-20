@@ -29,10 +29,11 @@
 #include "app_storage.h"
 #include "app_video_stream.h"
 #include "app_album.h"
+#include "app_video_utils.h"
 
 /* Constants */
 #define ALIGN_UP(num, align)    (((num) + ((align) - 1)) & ~((align) - 1))
-#define SCALE_LEVELS            5                         // Resolution scale levels
+// #define SCALE_LEVELS            5                         // Resolution scale levels
 #define DEBUG_MODE              1
 #define CROP_PHOTO_WIDTH        1280
 #define CROP_PHOTO_HEIGHT       960
@@ -107,7 +108,6 @@ typedef struct {
 static const char *TAG = "app_video_stream";
 
 static size_t data_cache_line_size = 0;
-static ppa_client_handle_t ppa_srm_handle = NULL;
 static jpeg_encoder_handle_t jpeg_handle;
 
 static camera_state_t camera_state = {
@@ -142,10 +142,6 @@ static recorder_ctx_t recorder_ctx = {
 static const uint32_t photo_resolution_width[PHOTO_RESOLUTION_MAX] = {640, 1280, 1920};
 static const uint32_t photo_resolution_height[PHOTO_RESOLUTION_MAX] = {480, 720, 1080};
 
-static int scale_level_res[SCALE_LEVELS] = {960, 480, 240, 120, 80};
-static const uint32_t adj_resolution_width[SCALE_LEVELS] = {1920, 1200, 960, 480, 240};
-static const uint32_t adj_resolution_height[SCALE_LEVELS] = {1080, 675, 540, 270, 135};
-
 /* Forward declarations */
 static void camera_video_frame_operation(uint8_t *camera_buf, uint8_t camera_buf_index, 
                                         uint32_t camera_buf_hes, uint32_t camera_buf_ves, 
@@ -161,22 +157,6 @@ static esp_err_t init_mp4_muxer(void);
 static esp_err_t deinit_mp4_muxer(void);
 static int get_next_file_number(const char *dir_path);
 static int file_pattern_cb(char *file_name, int len, int slice_idx);
-
-/* Utility functions */
-/**
- * @brief Swap RGB565 bytes for correct display format
- * 
- * @param buffer RGB565 buffer to process
- * @param pixel_count Number of pixels in the buffer
- */
-void swap_rgb565_bytes(uint16_t *buffer, int pixel_count)
-{
-    for (int i = 0; i < pixel_count; i++) {
-        uint16_t swap16 = *(buffer + i);
-        swap16 = (swap16 >> 8) | (swap16 << 8);
-        *(buffer + i) = swap16;
-    }
-}
 
 /**
  * @brief Enter deep sleep mode for interval photography
@@ -444,35 +424,18 @@ static esp_err_t take_and_save_video(uint8_t *camera_buf, uint32_t width, uint32
 
     // Apply magnification if needed
     if(magnification_factor > 1) {
-        ppa_srm_oper_config_t adj_srm_config = {
-            .in.buffer = camera_buf,
-            .in.pic_w = width,
-            .in.pic_h = height,
-            .in.block_w = adj_resolution_width[magnification_factor - 1],
-            .in.block_h = adj_resolution_height[magnification_factor - 1],
-            .in.block_offset_x = (width - adj_resolution_width[magnification_factor - 1]) / 2,
-            .in.block_offset_y = (height - adj_resolution_height[magnification_factor - 1]) / 2,
-            .in.srm_cm = PPA_SRM_COLOR_MODE_RGB565,
-            .out.buffer = camera_buffer.scaled_camera_buf,
-            .out.buffer_size = ALIGN_UP(width * height * 2, data_cache_line_size),
-            .out.pic_w = width,
-            .out.pic_h = height,
-            .out.block_offset_x = 0,
-            .out.block_offset_y = 0,
-            .out.srm_cm = PPA_SRM_COLOR_MODE_RGB565,
-            .rotation_angle = PPA_SRM_ROTATION_ANGLE_0,
-            .scale_x = (float)width / adj_resolution_width[magnification_factor - 1],
-            .scale_y = (float)height / adj_resolution_height[magnification_factor - 1],
-            .rgb_swap = 0,
-            .byte_swap = 0,
-            .mode = PPA_TRANS_MODE_BLOCKING,
-        };
-
-        ret = ppa_do_scale_rotate_mirror(ppa_srm_handle, &adj_srm_config);
+        ret = app_image_process_magnify(
+            camera_buf, width, height,
+            magnification_factor,
+            camera_buffer.scaled_camera_buf, 
+            ALIGN_UP(width * height * 2, data_cache_line_size)
+        );
+        
         if (ret != ESP_OK) {
-            ESP_LOGE(TAG, "Failed to scale image: 0x%x", ret);
+            ESP_LOGE(TAG, "Failed to magnify image: 0x%x", ret);
             goto cleanup;
         }
+
         pre_handle_buf = camera_buffer.scaled_camera_buf;
     } else {
         pre_handle_buf = camera_buf;
@@ -489,36 +452,17 @@ static esp_err_t take_and_save_video(uint8_t *camera_buf, uint32_t width, uint32
             goto cleanup;
         }
 
-        ppa_srm_oper_config_t srm_config = {
-            .in.buffer = pre_handle_buf,
-            .in.pic_w = width,
-            .in.pic_h = height,
-            .in.block_w = CROP_PHOTO_WIDTH,
-            .in.block_h = CROP_PHOTO_HEIGHT,
-            .in.block_offset_x = (width - CROP_PHOTO_WIDTH) / 2,
-            .in.block_offset_y = (height - CROP_PHOTO_HEIGHT) / 2,
-            .in.srm_cm = PPA_SRM_COLOR_MODE_RGB565,
-            .out.buffer = camera_buffer.photo_buf,
-            .out.buffer_size = ALIGN_UP(photo_width * photo_height * 2, data_cache_line_size),
-            .out.pic_w = photo_width,
-            .out.pic_h = photo_height,
-            .out.block_offset_x = 0,
-            .out.block_offset_y = 0,
-            .out.srm_cm = PPA_SRM_COLOR_MODE_RGB565,
-            .rotation_angle = PPA_SRM_ROTATION_ANGLE_0,
-            .scale_x = (float)photo_width / CROP_PHOTO_WIDTH,
-            .scale_y = (float)photo_height / CROP_PHOTO_HEIGHT,
-            .rgb_swap = 0,
-            .byte_swap = 0,
-            .mode = PPA_TRANS_MODE_BLOCKING,
-        };
-
-        ret = ppa_do_scale_rotate_mirror(ppa_srm_handle, &srm_config);
+        ret = app_image_process_scale_crop(
+            pre_handle_buf, width, height,
+            CROP_PHOTO_WIDTH, CROP_PHOTO_HEIGHT,
+            camera_buffer.photo_buf, photo_width, photo_height,
+            ALIGN_UP(photo_width * photo_height * 2, data_cache_line_size),
+            PPA_SRM_ROTATION_ANGLE_0
+        );
         if (ret != ESP_OK) {
             ESP_LOGE(TAG, "Failed to scale image: 0x%x", ret);
             goto cleanup;
         }
-
         pic_buf = camera_buffer.photo_buf;
     } else {
         if(magnification_factor > 1) {
@@ -612,35 +556,18 @@ static esp_err_t take_and_save_photo(uint8_t *camera_buf, uint32_t width, uint32
 
     // Apply magnification if needed
     if(magnification_factor > 1) {
-        ppa_srm_oper_config_t adj_srm_config = {
-            .in.buffer = camera_buf,
-            .in.pic_w = width,
-            .in.pic_h = height,
-            .in.block_w = adj_resolution_width[magnification_factor - 1],
-            .in.block_h = adj_resolution_height[magnification_factor - 1],
-            .in.block_offset_x = (width - adj_resolution_width[magnification_factor - 1]) / 2,
-            .in.block_offset_y = (height - adj_resolution_height[magnification_factor - 1]) / 2,
-            .in.srm_cm = PPA_SRM_COLOR_MODE_RGB565,
-            .out.buffer = camera_buffer.scaled_camera_buf,
-            .out.buffer_size = ALIGN_UP(width * height * 2, data_cache_line_size),
-            .out.pic_w = width,
-            .out.pic_h = height,
-            .out.block_offset_x = 0,
-            .out.block_offset_y = 0,
-            .out.srm_cm = PPA_SRM_COLOR_MODE_RGB565,
-            .rotation_angle = PPA_SRM_ROTATION_ANGLE_0,
-            .scale_x = (float)width / adj_resolution_width[magnification_factor - 1],
-            .scale_y = (float)height / adj_resolution_height[magnification_factor - 1],
-            .rgb_swap = 0,
-            .byte_swap = 0,
-            .mode = PPA_TRANS_MODE_BLOCKING,
-        };
-
-        ret = ppa_do_scale_rotate_mirror(ppa_srm_handle, &adj_srm_config);
+        ret = app_image_process_magnify(
+            camera_buf, width, height,
+            magnification_factor,
+            camera_buffer.scaled_camera_buf, 
+            ALIGN_UP(width * height * 2, data_cache_line_size)
+        );
+        
         if (ret != ESP_OK) {
-            ESP_LOGE(TAG, "Failed to scale image: 0x%x", ret);
+            ESP_LOGE(TAG, "Failed to magnify image: 0x%x", ret);
             goto cleanup;
         }
+
         pre_handle_buf = camera_buffer.scaled_camera_buf;
     } else {
         pre_handle_buf = camera_buf;
@@ -657,35 +584,14 @@ static esp_err_t take_and_save_photo(uint8_t *camera_buf, uint32_t width, uint32
             goto cleanup;
         }
 
-        ppa_srm_oper_config_t srm_config = {
-            .in.buffer = pre_handle_buf,
-            .in.pic_w = width,
-            .in.pic_h = height,
-            .in.block_w = CROP_PHOTO_WIDTH,
-            .in.block_h = CROP_PHOTO_HEIGHT,
-            .in.block_offset_x = (width - CROP_PHOTO_WIDTH) / 2,
-            .in.block_offset_y = (height - CROP_PHOTO_HEIGHT) / 2,
-            .in.srm_cm = PPA_SRM_COLOR_MODE_RGB565,
-            .out.buffer = camera_buffer.photo_buf,
-            .out.buffer_size = ALIGN_UP(photo_width * photo_height * 2, data_cache_line_size),
-            .out.pic_w = photo_width,
-            .out.pic_h = photo_height,
-            .out.block_offset_x = 0,
-            .out.block_offset_y = 0,
-            .out.srm_cm = PPA_SRM_COLOR_MODE_RGB565,
-            .rotation_angle = PPA_SRM_ROTATION_ANGLE_0,
-            .scale_x = (float)photo_width / CROP_PHOTO_WIDTH,
-            .scale_y = (float)photo_height / CROP_PHOTO_HEIGHT,
-            .rgb_swap = 0,
-            .byte_swap = 0,
-            .mode = PPA_TRANS_MODE_BLOCKING,
-        };
-
-        ret = ppa_do_scale_rotate_mirror(ppa_srm_handle, &srm_config);
-        if (ret != ESP_OK) {
-            ESP_LOGE(TAG, "Failed to scale image: 0x%x", ret);
-            goto cleanup;
-        }
+        // Use encapsulated interface for image scaling and cropping
+        ret = app_image_process_scale_crop(
+            pre_handle_buf, width, height,
+            CROP_PHOTO_WIDTH, CROP_PHOTO_HEIGHT,
+            camera_buffer.photo_buf, photo_width, photo_height,
+            ALIGN_UP(photo_width * photo_height * 2, data_cache_line_size),
+            PPA_SRM_ROTATION_ANGLE_0
+        );
 
         pic_buf = camera_buffer.photo_buf;
     } else {
@@ -754,8 +660,6 @@ static void camera_video_frame_operation(uint8_t *camera_buf, uint8_t camera_buf
                                         size_t camera_buf_len)
 {
     int scale_level = app_extra_get_magnification_factor();
-    int res_width = scale_level_res[scale_level - 1];
-    int res_height = scale_level_res[scale_level - 1];
 
     // Camera initialization check
     if(!camera_state.is_initialized) {
@@ -767,33 +671,12 @@ static void camera_video_frame_operation(uint8_t *camera_buf, uint8_t camera_buf
         }
     }
 
-    // Configure scale-rotate-mirror operation
-    ppa_srm_oper_config_t srm_config = {
-        .in.buffer = camera_buf,
-        .in.pic_w = camera_buf_hes,
-        .in.pic_h = camera_buf_ves,
-        .in.block_w = res_width,
-        .in.block_h = res_height,
-        .in.block_offset_x = (camera_buf_hes - res_width) / 2,
-        .in.block_offset_y = (camera_buf_ves - res_height) / 2,
-        .in.srm_cm = PPA_SRM_COLOR_MODE_RGB565,
-        .out.buffer = camera_buffer.canvas_buf[camera_buf_index],
-        .out.buffer_size = ALIGN_UP(BSP_LCD_H_RES * BSP_LCD_V_RES * 2, data_cache_line_size),
-        .out.pic_w = BSP_LCD_H_RES,
-        .out.pic_h = BSP_LCD_V_RES,
-        .out.block_offset_x = 0,
-        .out.block_offset_y = 0,
-        .out.srm_cm = PPA_SRM_COLOR_MODE_RGB565,
-        .rotation_angle = PPA_SRM_ROTATION_ANGLE_0,
-        .scale_x = (float)BSP_LCD_H_RES / res_width,
-        .scale_y = (float)BSP_LCD_V_RES / res_height,
-        .rgb_swap = 0,
-        .byte_swap = 0,
-        .mode = PPA_TRANS_MODE_BLOCKING,
-    };
-
-    // Execute scale-rotate-mirror operation
-    esp_err_t ret = ppa_do_scale_rotate_mirror(ppa_srm_handle, &srm_config);
+    esp_err_t ret = app_image_process_video_frame(
+        camera_buf, camera_buf_hes, camera_buf_ves,
+        scale_level,
+        camera_buffer.canvas_buf[camera_buf_index], 
+        ALIGN_UP(BSP_LCD_H_RES * BSP_LCD_V_RES * 2, data_cache_line_size)
+    );
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "Failed to process frame: 0x%x", ret);
         return;
@@ -1158,14 +1041,9 @@ esp_err_t app_video_stream_init(i2c_master_bus_handle_t i2c_handle)
     esp_err_t ret = ESP_OK;
     bool resources_initialized = false;
 
-    // Initialize PPA
-    ppa_client_config_t ppa_srm_config = {
-        .oper_type = PPA_OPERATION_SRM,
-    };
-    
-    ret = ppa_register_client(&ppa_srm_config, &ppa_srm_handle);
+    ret = app_video_utils_init();
     if (ret != ESP_OK) {
-        ESP_LOGE(TAG, "Failed to register PPA client: 0x%x", ret);
+        ESP_LOGE(TAG, "Failed to initialize PPA client: 0x%x", ret);
         goto cleanup;
     }
     
@@ -1317,10 +1195,7 @@ cleanup:
             app_video_close(camera_buffer.video_cam_fd);
         }
         
-        if (ppa_srm_handle != NULL) {
-            ppa_unregister_client(ppa_srm_handle);
-            ppa_srm_handle = NULL;
-        }
+        app_video_utils_deinit();
     }
 
     return ret;
