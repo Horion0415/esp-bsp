@@ -195,6 +195,10 @@ esp_err_t take_and_save_photo(uint8_t *camera_buf, uint32_t width, uint32_t heig
         ESP_LOGI(TAG, "Picture saved successfully");
     }
 
+    if (ret == ESP_OK) {
+        app_album_photo_saved();
+    }
+
 cleanup:
     // Free resources
     if (photo_buf != NULL && pic_buf == photo_buf) {

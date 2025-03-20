@@ -46,6 +46,13 @@ static album_context_t album_ctx;
 static size_t data_cache_line_size = 0;
 static size_t tx_buffer_size = 0;
 
+static uint64_t last_free_space_check_time = 0;
+static uint64_t last_known_free_space = 0;
+static uint32_t photos_taken_since_check = 0;
+static const uint32_t CHECK_INTERVAL_MS = 10000; // 10 seconds
+static const uint32_t ESTIMATED_PHOTO_SIZE = 500 * 1024; // 500KB
+static const uint32_t MIN_FREE_SPACE = 5 * 1024 * 1024; // 5MB
+
 static const uint32_t album_res[PHOTO_RESOLUTION_MAX] = {480, 640, 960};
 static photo_resolution_t current_album_resolution = PHOTO_RESOLUTION_1080P; // default 1080P
 
@@ -161,38 +168,61 @@ static void app_album_calculate_max_images(void)
 }
 
 // Check if SD card has enough space to store a new image
-bool app_album_can_store_new_image(void)
+bool app_album_can_store_new_image(void) 
 {
-    // Local constant for this function only
-    const float SD_LOW_SPACE_PERCENT = 10;  // SD card low space warning threshold
+    uint64_t current_time = esp_timer_get_time() / 1000; // 转换为毫秒
     
-    // Check if image count has reached the limit
-    if (album_ctx.count >= album_ctx.max_images) {
-        ESP_LOGW(TAG, "Cannot store more images: reached maximum count (%d/%d)", 
-                 album_ctx.count, album_ctx.max_images);
+    // Check if SD card is mounted
+    if (!ui_extra_get_sd_card_mounted()) {
         return false;
     }
     
-    // Check remaining space
-    float free_mb = app_album_get_sd_free_space();
-    float total_mb = app_album_get_sd_total_space();
-    
-    if (free_mb <= 0 || total_mb <= 0) {
-        ESP_LOGE(TAG, "Failed to get SD card space information");
-        return false;
+    // If it's the first check or the time since the last check has passed, or a certain number of photos have been taken
+    if (last_free_space_check_time == 0 || 
+        (current_time - last_free_space_check_time) > CHECK_INTERVAL_MS ||
+        photos_taken_since_check >= 5) {
+        
+        // Get SD card information
+        FATFS *fs;
+        DWORD free_clusters;
+        FATFS **fsptr = &fs;
+        
+        f_getfree(BSP_SD_MOUNT_POINT, &free_clusters, fsptr);
+        
+        uint32_t sector_size = (*fsptr)->ssize;
+        uint32_t cluster_size = (*fsptr)->csize;
+        uint64_t free_space = (uint64_t)free_clusters * cluster_size * sector_size;
+        
+        // Update cache information
+        last_free_space_check_time = current_time;
+        last_known_free_space = free_space;
+        photos_taken_since_check = 0;
+        
+        ESP_LOGI(TAG, "SD card free space: %llu bytes", free_space);
+        
+        // Check if there is enough space
+        return (free_space > MIN_FREE_SPACE);
+    } else {
+        // Use estimated value: last known free space minus estimated photo size
+        uint64_t estimated_free_space = last_known_free_space - 
+                                       (photos_taken_since_check * ESTIMATED_PHOTO_SIZE);
+        
+        // If estimated space is enough, increase count and return true
+        if (estimated_free_space > MIN_FREE_SPACE) {
+            photos_taken_since_check++;
+            return true;
+        }
+        
+        // If estimated space is not enough, force a re-check
+        last_free_space_check_time = 0;
+        return app_album_can_store_new_image(); // Recursively call to perform actual check
     }
-    
-    // Calculate remaining space percentage
-    float free_percent = (free_mb / total_mb) * 100.0f;
-    
-    // Check if remaining space is below threshold
-    if (free_percent < SD_LOW_SPACE_PERCENT) {
-        ESP_LOGW(TAG, "Cannot store more images: SD card low on space (%.2f%% free, %.2f MB)", 
-                 free_percent, free_mb);
-        return false;
-    }
-    
-    return true;
+}
+
+
+void app_album_photo_saved(void)
+{
+    photos_taken_since_check++;
 }
 
 /**

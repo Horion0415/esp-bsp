@@ -87,6 +87,11 @@ esp_err_t app_album_delete_current_image(void);
 bool app_album_can_store_new_image(void);
 
 /**
+ * @brief Notify the album module that a new photo has been saved
+ */
+void app_album_photo_saved(void);
+
+/**
  * @brief Check if the SD card has enough space to store a new MP4 video
  * 
  * @param estimated_size_mb Estimated video size in MB, uses default estimate if 0
