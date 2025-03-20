@@ -451,10 +451,73 @@ static esp_err_t app_album_load_current_image(void) {
         .output_format = JPEG_DECODE_OUT_FORMAT_RGB565,
         .rgb_order = JPEG_DEC_RGB_ELEMENT_ORDER_BGR,
     };
-    ESP_ERROR_CHECK(jpeg_decoder_get_info(album_ctx.img_buffer, album_ctx.buffer_size, &header_info));
+    esp_err_t ret = jpeg_decoder_get_info(album_ctx.img_buffer, album_ctx.buffer_size, &header_info);
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to parse JPEG header: %s (error %d)", album_ctx.filenames[album_ctx.current_index], ret);
+        free(album_ctx.img_buffer);
+        album_ctx.img_buffer = NULL;
+        
+        // Delete corrupted image
+        char current_file[MAX_PATH_LEN];
+        strncpy(current_file, album_ctx.filenames[album_ctx.current_index], MAX_PATH_LEN - 1);
+        ESP_LOGW(TAG, "Deleting corrupted image: %s", current_file);
+        unlink(current_file);
+        
+        // Update album data
+        free(album_ctx.filenames[album_ctx.current_index]);
+        for (int i = album_ctx.current_index; i < album_ctx.count - 1; i++) {
+            album_ctx.filenames[i] = album_ctx.filenames[i + 1];
+        }
+        album_ctx.count--;
+        
+        // Return failure if no images left
+        if (album_ctx.count == 0) {
+            return ESP_FAIL;
+        }
+        
+        // Adjust index if out of range
+        if (album_ctx.current_index >= album_ctx.count) {
+            album_ctx.current_index = 0;
+        }
+        
+        // Recursively try to load next image
+        return app_album_load_current_image();
+    }
+    
     ESP_LOGD(TAG, "header parsed, width is %" PRId32 ", height is %" PRId32, header_info.width, header_info.height);
         
-        ESP_ERROR_CHECK(jpeg_decoder_process(album_ctx.jpeg_handle, &decode_cfg_rgb, album_ctx.img_buffer, album_ctx.buffer_size, album_ctx.ppa_buffer, tx_buffer_size, &out_size));
+    ret = jpeg_decoder_process(album_ctx.jpeg_handle, &decode_cfg_rgb, album_ctx.img_buffer, album_ctx.buffer_size, album_ctx.ppa_buffer, tx_buffer_size, &out_size);
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to decode JPEG: %s (error %d)", album_ctx.filenames[album_ctx.current_index], ret);
+        free(album_ctx.img_buffer);
+        album_ctx.img_buffer = NULL;
+        
+        // Delete corrupted image
+        char current_file[MAX_PATH_LEN];
+        strncpy(current_file, album_ctx.filenames[album_ctx.current_index], MAX_PATH_LEN - 1);
+        ESP_LOGW(TAG, "Deleting corrupted image: %s", current_file);
+        unlink(current_file);
+        
+        // Update album data
+        free(album_ctx.filenames[album_ctx.current_index]);
+        for (int i = album_ctx.current_index; i < album_ctx.count - 1; i++) {
+            album_ctx.filenames[i] = album_ctx.filenames[i + 1];
+        }
+        album_ctx.count--;
+        
+        // Return failure if no images left
+        if (album_ctx.count == 0) {
+            return ESP_FAIL;
+        }
+        
+        // Adjust index if out of range
+        if (album_ctx.current_index >= album_ctx.count) {
+            album_ctx.current_index = 0;
+        }
+        
+        // Recursively try to load next image
+        return app_album_load_current_image();
+    }
     
     if(header_info.width == 1920 && header_info.height == 1080) {
         current_album_resolution = PHOTO_RESOLUTION_1080P;
