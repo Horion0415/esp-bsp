@@ -316,7 +316,7 @@ esp_err_t app_video_stream_init(i2c_master_bus_handle_t i2c_handle)
 
     ret = app_video_utils_init();
     if (ret != ESP_OK) {
-        ESP_LOGE(TAG, "Failed to initialize PPA client: 0x%x", ret);
+        ESP_LOGE(TAG, "Failed to initialize video utils: 0x%x", ret);
         goto cleanup;
     }
     
