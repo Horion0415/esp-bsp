@@ -7,6 +7,7 @@
 #include "esp_timer.h"
 #include "esp_system.h"
 #include "driver/gpio.h"
+#include "driver/jpeg_decode.h"
 #include "bsp/esp-bsp.h"
 #include "nvs_flash.h"
 #include "nvs.h"
@@ -402,6 +403,16 @@ esp_err_t app_storage_save_picture(const uint8_t *data, size_t len)
     if (data == NULL || len == 0) {
         return ESP_ERR_INVALID_ARG;
     }
+    
+    // Verify JPEG integrity before saving
+    jpeg_decode_picture_info_t header_info;
+    esp_err_t ret = jpeg_decoder_get_info(data, len, &header_info);
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to verify JPEG integrity: error %d", ret);
+        return ESP_ERR_INVALID_STATE;
+    }
+    
+    ESP_LOGI(TAG, "JPEG verified: %"PRId32"x%"PRId32, header_info.width, header_info.height);
     
     char filename[64];
     sprintf(filename, "%s/%s/pic_%04lu.jpg", BSP_SD_MOUNT_POINT, PIC_FOLDER_NAME, pic_num);
