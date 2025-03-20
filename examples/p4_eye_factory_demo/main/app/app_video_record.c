@@ -10,6 +10,7 @@
 #include "esp_private/esp_cache_private.h"
 #include "driver/ppa.h"
 #include "driver/jpeg_encode.h"
+#include "driver/jpeg_decode.h"
 #include "bsp/esp-bsp.h"
 
 #include "esp_audio_enc_default.h"
@@ -200,6 +201,13 @@ esp_err_t take_and_save_video(uint8_t *camera_buf, uint32_t width, uint32_t heig
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "JPEG encoding failed: 0x%x", ret);
         goto cleanup;
+    }
+
+    jpeg_decode_picture_info_t header_info;
+    ret = jpeg_decoder_get_info(jpg_buf, jpg_size, &header_info);
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "Invalid JPEG data: failed to parse header (error %d)", ret);
+        return ret;
     }
 
     uint32_t frame_time = esp_timer_get_time() / 1000 - recorder_ctx.start_time;
