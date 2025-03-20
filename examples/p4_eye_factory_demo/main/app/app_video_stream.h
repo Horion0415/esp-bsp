@@ -118,15 +118,16 @@ esp_err_t app_video_stream_set_photo_resolution_by_string(const char *resolution
 /**
  * @brief Get scaled camera buffer
  *
- * @return Pointer to the scaled camera buffer
+ * @param buf Pointer to store buffer address
+ * @param size Pointer to store buffer size
  */
 void app_video_stream_get_scaled_camera_buf(uint8_t **buf, uint32_t *size);
 
 /**
  * @brief Get JPEG buffer
  *
- * @param buf Pointer to the JPEG buffer
- * @param size Pointer to the size of the JPEG buffer
+ * @param buf Pointer to store buffer address
+ * @param size Pointer to store buffer size
  */
 void app_video_stream_get_jpg_buf(uint8_t **buf, uint32_t *size);
 

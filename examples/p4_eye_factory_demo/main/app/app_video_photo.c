@@ -14,19 +14,19 @@
 #include "app_storage.h"
 #include "app_video_stream.h"
 #include "app_album.h"
-#include "app_video.h"
 #include "app_video_utils.h"
 #include "app_video_photo.h"
 
 static const char *TAG = "app_video_photo";
 
+/* Constants */
 #define ALIGN_UP(num, align)    (((num) + ((align) - 1)) & ~((align) - 1))
-
 #define DEBUG_MODE              1
 #define CROP_PHOTO_WIDTH        1280
 #define CROP_PHOTO_HEIGHT       960
 #define JPEG_PHOTO_QUALITY      90            // JPEG quality setting
 
+/* Static variables */
 static size_t data_cache_line_size = 0;
 static photo_resolution_t current_resolution = PHOTO_RESOLUTION_1080P;
 static const uint32_t photo_resolution_width[PHOTO_RESOLUTION_MAX] = {640, 1280, 1920};
@@ -42,7 +42,34 @@ static uint32_t jpg_size = 0;
 static int video_fd = -1;
 static TaskHandle_t interval_sleep_task_handle = NULL;
 
-/* Photo resolution management */
+/* Forward declarations */
+static void enter_deep_sleep(uint16_t sleep_minutes);
+static void interval_sleep_task(void *pvParameters);
+static void interval_photo_complete_callback(void);
+
+/* Public function implementations */
+
+/**
+ * @brief Initialize the photo module
+ * 
+ * @return ESP_OK on success, error code otherwise
+ */
+esp_err_t app_video_photo_init(void)
+{
+    video_fd = app_video_stream_get_video_fd();
+
+    esp_err_t ret = esp_cache_get_alignment(MALLOC_CAP_SPIRAM, &data_cache_line_size);
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to get data cache line size: 0x%x", ret);
+        return ret;
+    }
+
+    app_video_stream_get_scaled_camera_buf(&scaled_camera_buf, &scaled_camera_buf_size);
+    app_video_stream_get_jpg_buf(&jpg_buf, &rx_buffer_size);
+
+    return ESP_OK;
+}
+
 /**
  * @brief Set photo resolution
  * 
@@ -61,90 +88,6 @@ esp_err_t app_video_stream_set_photo_resolution(photo_resolution_t resolution)
              photo_resolution_height[current_resolution]);
     
     return ESP_OK;
-}
-
-/**
- * @brief Enter deep sleep mode for interval photography
- * 
- * @param sleep_minutes Minutes to sleep before waking up
- */
-static void enter_deep_sleep(uint16_t sleep_minutes)
-{
-    // Set wake-up time (microseconds)
-#if DEBUG_MODE
-    uint64_t sleep_time_us = sleep_minutes * 1000000ULL;
-#else
-    uint64_t sleep_time_us = sleep_minutes * 60 * 1000000ULL;
-#endif
-    
-    ESP_LOGI(TAG, "Entering deep sleep for %d minutes", sleep_minutes);
-    
-    // Configure RTC wake-up timer
-    esp_sleep_enable_timer_wakeup(sleep_time_us);
-    
-    // Initialize sleep IO
-    bsp_sleep_io_init();
-
-    // Enter deep sleep
-    esp_deep_sleep_start();
-}
-
-/**
- * @brief Interval photo sleep task, responsible for cleaning up resources and entering deep sleep
- * 
- * @param pvParameters 
- */
-static void interval_sleep_task(void *pvParameters)
-{
-    uint16_t sleep_minutes = app_video_stream_get_current_interval_minutes();
-    
-    ESP_LOGI(TAG, "Preparing to enter deep sleep, cleaning up resources...");
-    
-    // Stop video stream task
-    app_video_stream_task_stop(video_fd);
-    app_video_wait_video_stop();
-    app_video_close(video_fd);
-
-    // Stop LVGL timer first to prevent triggering more LVGL events
-    lvgl_port_stop();
-    
-    // Wait for a short time to ensure all LVGL tasks are completed
-    vTaskDelay(pdMS_TO_TICKS(100));
-    
-    // Acquire LVGL lock to ensure no other tasks are using LVGL
-    if (lvgl_port_lock(1000)) {
-        // Call deinit while holding the lock
-        lvgl_port_deinit();
-        // No need to unlock, because lvgl_port_deinit() has released the lock
-    } else {
-        ESP_LOGW(TAG, "Failed to acquire LVGL lock before deinit, proceeding anyway");
-        lvgl_port_deinit();
-    }
-    bsp_display_del();
-    
-    // Enter deep sleep
-    enter_deep_sleep(sleep_minutes);
-    
-    // The task should not reach here
-    vTaskDelete(NULL);
-}
-
-/* Interval photo functions */
-/**
- * @brief Callback when interval photo is completed
- */
-static void interval_photo_complete_callback(void)
-{   
-    // If interval photo is still active, create a new task to handle resource release before sleep
-    if (app_video_stream_get_interval_photo_state()) {
-        // Create a new task to handle resource release before sleep
-        if (interval_sleep_task_handle != NULL) {
-            vTaskDelete(interval_sleep_task_handle);
-            interval_sleep_task_handle = NULL;
-        }
-        
-        xTaskCreate(interval_sleep_task, "interval_sleep", 4096, NULL, 5, &interval_sleep_task_handle);
-    }
 }
 
 /**
@@ -202,8 +145,8 @@ esp_err_t take_and_save_photo(uint8_t *camera_buf, uint32_t width, uint32_t heig
     // Process image based on resolution
     if(current_resolution != PHOTO_RESOLUTION_1080P) {
         photo_buf = (uint8_t*)heap_caps_aligned_calloc(data_cache_line_size, 1, 
-                                                                   photo_width * photo_height * 2, 
-                                                                   MALLOC_CAP_SPIRAM);
+                                                       photo_width * photo_height * 2, 
+                                                       MALLOC_CAP_SPIRAM);
         if (photo_buf == NULL) {
             ESP_LOGE(TAG, "Failed to allocate photo buffer");
             ret = ESP_FAIL;
@@ -271,21 +214,87 @@ cleanup:
     return ret;
 }
 
-esp_err_t app_video_photo_init(void)
+/* Private function implementations */
+
+/**
+ * @brief Enter deep sleep mode for interval photography
+ * 
+ * @param sleep_minutes Minutes to sleep before waking up
+ */
+static void enter_deep_sleep(uint16_t sleep_minutes)
 {
-    video_fd = app_video_stream_get_video_fd();
+    // Set wake-up time (microseconds)
+#if DEBUG_MODE
+    uint64_t sleep_time_us = sleep_minutes * 1000000ULL;
+#else
+    uint64_t sleep_time_us = sleep_minutes * 60 * 1000000ULL;
+#endif
+    
+    ESP_LOGI(TAG, "Entering deep sleep for %d minutes", sleep_minutes);
+    
+    // Configure RTC wake-up timer
+    esp_sleep_enable_timer_wakeup(sleep_time_us);
+    
+    // Initialize sleep IO
+    bsp_sleep_io_init();
 
-    esp_err_t ret = esp_cache_get_alignment(MALLOC_CAP_SPIRAM, &data_cache_line_size);
-    if (ret != ESP_OK) {
-        ESP_LOGE(TAG, "Failed to get data cache line size: 0x%x", ret);
-        return ret;
-    }
-
-    app_video_stream_get_scaled_camera_buf(&scaled_camera_buf, &scaled_camera_buf_size);
-    app_video_stream_get_jpg_buf(&jpg_buf, &rx_buffer_size);
-
-
-    return ESP_OK;
+    // Enter deep sleep
+    esp_deep_sleep_start();
 }
 
+/**
+ * @brief Interval photo sleep task, responsible for cleaning up resources and entering deep sleep
+ * 
+ * @param pvParameters Task parameters (unused)
+ */
+static void interval_sleep_task(void *pvParameters)
+{
+    uint16_t sleep_minutes = app_video_stream_get_current_interval_minutes();
+    
+    ESP_LOGI(TAG, "Preparing to enter deep sleep, cleaning up resources...");
+    
+    // Stop video stream task
+    app_video_stream_task_stop(video_fd);
+    app_video_wait_video_stop();
+    app_video_close(video_fd);
 
+    // Stop LVGL timer first to prevent triggering more LVGL events
+    lvgl_port_stop();
+    
+    // Wait for a short time to ensure all LVGL tasks are completed
+    vTaskDelay(pdMS_TO_TICKS(100));
+    
+    // Acquire LVGL lock to ensure no other tasks are using LVGL
+    if (lvgl_port_lock(1000)) {
+        // Call deinit while holding the lock
+        lvgl_port_deinit();
+        // No need to unlock, because lvgl_port_deinit() has released the lock
+    } else {
+        ESP_LOGW(TAG, "Failed to acquire LVGL lock before deinit, proceeding anyway");
+        lvgl_port_deinit();
+    }
+    bsp_display_del();
+    
+    // Enter deep sleep
+    enter_deep_sleep(sleep_minutes);
+    
+    // The task should not reach here
+    vTaskDelete(NULL);
+}
+
+/**
+ * @brief Callback when interval photo is completed
+ */
+static void interval_photo_complete_callback(void)
+{   
+    // If interval photo is still active, create a new task to handle resource release before sleep
+    if (app_video_stream_get_interval_photo_state()) {
+        // Create a new task to handle resource release before sleep
+        if (interval_sleep_task_handle != NULL) {
+            vTaskDelete(interval_sleep_task_handle);
+            interval_sleep_task_handle = NULL;
+        }
+        
+        xTaskCreate(interval_sleep_task, "interval_sleep", 4096, NULL, 5, &interval_sleep_task_handle);
+    }
+}

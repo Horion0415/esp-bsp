@@ -1,3 +1,7 @@
+/**
+ * @file app_video_record.c
+ * @brief Video recording functionality implementation
+ */
 #include <sys/stat.h> 
 #include <dirent.h>
 #include <stdio.h>
@@ -22,20 +26,17 @@
 #include "app_video_utils.h"
 #include "app_video_record.h"
 
-#define ALIGN_UP(num, align)    (((num) + ((align) - 1)) & ~((align) - 1))
-
-#define JPEG_VIDEO_QUALITY      65            // JPEG quality setting
-
-#define CROP_PHOTO_WIDTH        1280
-#define CROP_PHOTO_HEIGHT       960
-
-#define FILE_SLICE_DURATION       600000
-#define VIDEO_BUF_MULTIPLIER      10
-#define VIDEO_FRAME_RATE          30
-
-#define REC_AUDIO_SAMPLE_RATE     16000
-#define REC_AUDIO_CHANNEL         2
-#define REC_AUDIO_BITS_PER_SAMPLE 16
+/* Constants */
+#define ALIGN_UP(num, align)       (((num) + ((align) - 1)) & ~((align) - 1))
+#define JPEG_VIDEO_QUALITY         65            // JPEG quality setting
+#define CROP_PHOTO_WIDTH           1280
+#define CROP_PHOTO_HEIGHT          960
+#define FILE_SLICE_DURATION        600000
+#define VIDEO_BUF_MULTIPLIER       10
+#define VIDEO_FRAME_RATE           30
+#define REC_AUDIO_SAMPLE_RATE      16000
+#define REC_AUDIO_CHANNEL          2
+#define REC_AUDIO_BITS_PER_SAMPLE  16
 
 static const char *TAG = "app_video_record";
 
@@ -51,10 +52,10 @@ typedef struct {
     esp_audio_enc_handle_t encoder;     // Audio encoder handle
     uint32_t start_time;                // Recording start time
     TaskHandle_t audio_capture_task_handle; // Audio capture task handle
-    uint32_t video_frame_count;          // Video frame count
+    uint32_t video_frame_count;         // Video frame count
 } recorder_ctx_t;
 
-// Global recorder context
+/* Static variables */
 static recorder_ctx_t recorder_ctx = {
     .muxer = NULL,
     .video_stream_idx = -1,
@@ -78,14 +79,17 @@ static uint8_t *jpg_buf = NULL;
 static uint32_t rx_buffer_size = 0;
 static uint32_t jpg_size = 0;
 
+/* Forward declarations */
 static esp_err_t init_mp4_muxer(void);
 static esp_err_t deinit_mp4_muxer(void);
 static int get_next_file_number(const char *dir_path);
 static int file_pattern_cb(char *file_name, int len, int slice_idx);
+static void audio_capture_encode_task(void *pvParameters);
 
-/* Photo resolution management */
+/* Public function implementations */
+
 /**
- * @brief Set photo resolution
+ * @brief Set video resolution
  * 
  * @param resolution Resolution enum value
  * @return ESP_OK on success, error code otherwise
@@ -155,8 +159,8 @@ esp_err_t take_and_save_video(uint8_t *camera_buf, uint32_t width, uint32_t heig
     // Process image based on resolution
     if(current_resolution != PHOTO_RESOLUTION_1080P) {
         photo_buf = (uint8_t*)heap_caps_aligned_calloc(data_cache_line_size, 1, 
-                                                                   photo_width * photo_height * 2, 
-                                                                   MALLOC_CAP_SPIRAM);
+                                                       photo_width * photo_height * 2, 
+                                                       MALLOC_CAP_SPIRAM);
         if (photo_buf == NULL) {
             ESP_LOGE(TAG, "Failed to allocate photo buffer");
             ret = ESP_FAIL;
@@ -229,6 +233,134 @@ cleanup:
 
     return ret;
 }
+
+/**
+ * @brief Start video recording
+ * 
+ * @return ESP_OK on success, error code otherwise
+ */
+esp_err_t app_video_stream_start_recording(void)
+{
+    esp_err_t ret = ESP_OK;
+    ESP_LOGI(TAG, "Starting recording");
+
+    // Create mutex
+    recorder_ctx.recording_mutex = xSemaphoreCreateMutex();
+    if (!recorder_ctx.recording_mutex) {
+        ESP_LOGE(TAG, "Failed to create mutex");
+        return ESP_FAIL;
+    }
+
+    // Initialize MP4 muxer
+    ret = init_mp4_muxer();
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to initialize MP4 muxer: 0x%x", ret);
+        return ret;
+    }
+
+    // Set recording flag
+    recorder_ctx.recording = true;
+    recorder_ctx.start_time = esp_timer_get_time() / 1000;
+
+    // Create audio capture and encode task
+    xTaskCreatePinnedToCore(audio_capture_encode_task, "audio_cap_enc_task", 4096, NULL, 5, &recorder_ctx.audio_capture_task_handle, 0);
+
+    ESP_LOGI(TAG, "Recording started at %u", recorder_ctx.start_time);
+
+    return ret;
+}
+
+/**
+ * @brief Stop video recording
+ * 
+ * @return ESP_OK on success, error code otherwise
+ */
+esp_err_t app_video_stream_stop_recording(void)
+{
+    esp_err_t ret = ESP_OK;
+    ESP_LOGI(TAG, "Stopping recording");
+
+    // Set stop flag
+    xSemaphoreTake(recorder_ctx.recording_mutex, portMAX_DELAY);
+    recorder_ctx.recording = false;
+    xSemaphoreGive(recorder_ctx.recording_mutex);
+
+    if (recorder_ctx.audio_capture_task_handle != NULL) {
+        vTaskDelay(pdMS_TO_TICKS(100));
+        if (eTaskGetState(recorder_ctx.audio_capture_task_handle) != eDeleted) {
+            ESP_LOGI(TAG, "Waiting for audio capture task to end");
+            for (int i = 0; i < 30 && eTaskGetState(recorder_ctx.audio_capture_task_handle) != eDeleted; i++) {
+                vTaskDelay(pdMS_TO_TICKS(100));
+            }
+            if (eTaskGetState(recorder_ctx.audio_capture_task_handle) != eDeleted) {
+                ESP_LOGW(TAG, "Force deleting audio capture task");
+                vTaskDelete(recorder_ctx.audio_capture_task_handle);
+            }
+        }
+        recorder_ctx.audio_capture_task_handle = NULL;
+    }
+
+    recorder_ctx.video_frame_count = 0;
+    
+    // Deinitialize MP4 muxer
+    ret = deinit_mp4_muxer();
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to deinitialize MP4 muxer: 0x%x", ret);
+    }
+
+    if (recorder_ctx.recording_mutex) {
+        vSemaphoreDelete(recorder_ctx.recording_mutex);
+        recorder_ctx.recording_mutex = NULL;
+    }
+    
+    ESP_LOGI(TAG, "Recording stopped");
+
+    return ret;
+}
+
+/**
+ * @brief Initialize video recording module
+ * 
+ * @return ESP_OK on success, error code otherwise
+ */
+esp_err_t app_video_record_init(void)
+{
+    esp_err_t ret = esp_cache_get_alignment(MALLOC_CAP_SPIRAM, &data_cache_line_size);
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to get data cache line size: 0x%x", ret);
+        return ret;
+    }
+
+    app_video_stream_get_scaled_camera_buf(&scaled_camera_buf, &scaled_camera_buf_size);
+    app_video_stream_get_jpg_buf(&jpg_buf, &rx_buffer_size);
+
+    // Initialize PDM codec
+    ret = bsp_extra_pdm_codec_init();
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to initialize PDM codec: 0x%x", ret);
+    }
+
+    // Register PCM encoder
+    ESP_ERROR_CHECK(esp_pcm_enc_register());
+
+    esp_pcm_enc_config_t pcm_cfg = {
+        .sample_rate = REC_AUDIO_SAMPLE_RATE,
+        .channel = REC_AUDIO_CHANNEL,
+        .bits_per_sample = REC_AUDIO_BITS_PER_SAMPLE,
+    };
+
+    esp_audio_enc_config_t enc_cfg = {
+        .type = ESP_AUDIO_TYPE_PCM,
+        .cfg = &pcm_cfg,
+        .cfg_sz = sizeof(pcm_cfg)
+    };
+
+    ESP_ERROR_CHECK(esp_audio_enc_open(&enc_cfg, &recorder_ctx.encoder));
+
+    return ret;
+}
+
+/* Private function implementations */
 
 /**
  * @brief Get the next available file number by scanning the directory
@@ -468,133 +600,3 @@ static void audio_capture_encode_task(void *pvParameters)
     ESP_LOGI(TAG, "Audio capture and encode task ended");
     vTaskDelete(NULL);
 }
-
-/**
- * @brief Start video recording
- * 
- * @return ESP_OK on success, error code otherwise
- */
-esp_err_t app_video_stream_start_recording(void)
-{
-    esp_err_t ret = ESP_OK;
-    ESP_LOGI(TAG, "Starting recording");
-
-    // Create mutex
-    recorder_ctx.recording_mutex = xSemaphoreCreateMutex();
-    if (!recorder_ctx.recording_mutex) {
-        ESP_LOGE(TAG, "Failed to create mutex");
-        return ESP_FAIL;
-    }
-
-    // Initialize MP4 muxer
-    ret = init_mp4_muxer();
-    if (ret != ESP_OK) {
-        ESP_LOGE(TAG, "Failed to initialize MP4 muxer: 0x%x", ret);
-        return ret;
-    }
-
-    // Set recording flag
-    recorder_ctx.recording = true;
-    recorder_ctx.start_time = esp_timer_get_time() / 1000;
-
-    // Create audio capture and encode task
-    xTaskCreatePinnedToCore(audio_capture_encode_task, "audio_cap_enc_task", 4096, NULL, 5, &recorder_ctx.audio_capture_task_handle, 0);
-
-    ESP_LOGI(TAG, "Recording started at %lld", recorder_ctx.start_time);
-
-    return ret;
-}
-
-/**
- * @brief Stop video recording
- * 
- * @return ESP_OK on success, error code otherwise
- */
-esp_err_t app_video_stream_stop_recording(void)
-{
-    esp_err_t ret = ESP_OK;
-    ESP_LOGI(TAG, "Stopping recording");
-
-    // Set stop flag
-    xSemaphoreTake(recorder_ctx.recording_mutex, portMAX_DELAY);
-    recorder_ctx.recording = false;
-    xSemaphoreGive(recorder_ctx.recording_mutex);
-
-    if (recorder_ctx.audio_capture_task_handle != NULL) {
-        vTaskDelay(pdMS_TO_TICKS(100));
-        if (eTaskGetState(recorder_ctx.audio_capture_task_handle) != eDeleted) {
-            ESP_LOGI(TAG, "Waiting for audio capture task to end");
-            for (int i = 0; i < 30 && eTaskGetState(recorder_ctx.audio_capture_task_handle) != eDeleted; i++) {
-                vTaskDelay(pdMS_TO_TICKS(100));
-            }
-            if (eTaskGetState(recorder_ctx.audio_capture_task_handle) != eDeleted) {
-                ESP_LOGW(TAG, "Force deleting audio capture task");
-                vTaskDelete(recorder_ctx.audio_capture_task_handle);
-            }
-        }
-        recorder_ctx.audio_capture_task_handle = NULL;
-    }
-
-    recorder_ctx.video_frame_count = 0;
-    
-    // Deinitialize MP4 muxer
-    ret = deinit_mp4_muxer();
-    if (ret != ESP_OK) {
-        ESP_LOGE(TAG, "Failed to deinitialize MP4 muxer: 0x%x", ret);
-    }
-
-    if (recorder_ctx.recording_mutex) {
-        vSemaphoreDelete(recorder_ctx.recording_mutex);
-        recorder_ctx.recording_mutex = NULL;
-    }
-    
-    ESP_LOGI(TAG, "Recording stopped");
-
-    return ret;
-}
-
-
-esp_err_t app_video_record_init(void)
-{
-    esp_err_t ret = esp_cache_get_alignment(MALLOC_CAP_SPIRAM, &data_cache_line_size);
-    if (ret != ESP_OK) {
-        ESP_LOGE(TAG, "Failed to get data cache line size: 0x%x", ret);
-        return ret;
-    }
-
-    app_video_stream_get_scaled_camera_buf(&scaled_camera_buf, &scaled_camera_buf_size);
-    app_video_stream_get_jpg_buf(&jpg_buf, &rx_buffer_size);
-
-    // Initialize PDM codec
-    ret = bsp_extra_pdm_codec_init();
-    if (ret != ESP_OK) {
-        ESP_LOGE(TAG, "Failed to initialize PDM codec: 0x%x", ret);
-    }
-
-    // Initialize MP4 muxer
-    ret = init_mp4_muxer();
-    if (ret != ESP_OK) {
-        ESP_LOGE(TAG, "MP4 muxer initialization failed");
-    }
-
-    // Register PCM encoder
-    ESP_ERROR_CHECK(esp_pcm_enc_register());
-
-    esp_pcm_enc_config_t pcm_cfg = {
-        .sample_rate = REC_AUDIO_SAMPLE_RATE,
-        .channel = REC_AUDIO_CHANNEL,
-        .bits_per_sample = REC_AUDIO_BITS_PER_SAMPLE,
-    };
-
-    esp_audio_enc_config_t enc_cfg = {
-        .type = ESP_AUDIO_TYPE_PCM,
-        .cfg = &pcm_cfg,
-        .cfg_sz = sizeof(pcm_cfg)
-    };
-
-    ESP_ERROR_CHECK(esp_audio_enc_open(&enc_cfg, &recorder_ctx.encoder));
-
-    return ret;
-}
-
-
