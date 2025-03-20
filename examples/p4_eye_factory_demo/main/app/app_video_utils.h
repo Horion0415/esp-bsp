@@ -21,6 +21,15 @@ esp_err_t app_image_process_video_frame(
     int scale_level,
     uint8_t *out_buf, size_t out_buf_size);
 
+esp_err_t app_image_encode_jpeg(
+    uint8_t *src_buf, 
+    uint32_t width, 
+    uint32_t height, 
+    uint8_t quality,
+    uint8_t *out_buf, 
+    size_t out_buf_size, 
+    uint32_t *out_size);
+
 void swap_rgb565_bytes(uint16_t *buffer, int pixel_count);
 
 #endif

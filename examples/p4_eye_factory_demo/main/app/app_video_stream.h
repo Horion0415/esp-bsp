@@ -115,14 +115,48 @@ photo_resolution_t app_video_stream_get_photo_resolution(void);
  */
 esp_err_t app_video_stream_set_photo_resolution_by_string(const char *resolution_str);
 
-/* Utility functions */
 /**
- * @brief Swap RGB565 bytes for correct display format
+ * @brief Get scaled camera buffer
  *
- * @param buffer RGB565 buffer to process
- * @param pixel_count Number of pixels in the buffer
+ * @return Pointer to the scaled camera buffer
  */
-void swap_rgb565_bytes(uint16_t *buffer, int pixel_count);
+void app_video_stream_get_scaled_camera_buf(uint8_t **buf, uint32_t *size);
+
+/**
+ * @brief Get JPEG buffer
+ *
+ * @param buf Pointer to the JPEG buffer
+ * @param size Pointer to the size of the JPEG buffer
+ */
+void app_video_stream_get_jpg_buf(uint8_t **buf, uint32_t *size);
+
+/**
+ * @brief Get flash light state
+ *
+ * @return True if flash light is on, false otherwise
+ */
+bool app_video_stream_get_flash_light_state(void);
+
+/**
+ * @brief Get interval photo state
+ *
+ * @return True if interval photo is active, false otherwise
+ */
+bool app_video_stream_get_interval_photo_state(void);
+
+/**
+ * @brief Get current interval minutes
+ *
+ * @return Current interval minutes
+ */
+uint16_t app_video_stream_get_current_interval_minutes(void);
+
+/**
+ * @brief Get video file descriptor
+ *
+ * @return Video file descriptor
+ */
+int app_video_stream_get_video_fd(void);
 
 #ifdef __cplusplus
 }

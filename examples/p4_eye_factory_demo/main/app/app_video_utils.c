@@ -14,6 +14,7 @@
 static const char *TAG = "app_video_utils";
 
 static ppa_client_handle_t ppa_srm_handle = NULL;
+static jpeg_encoder_handle_t jpeg_handle;
 
 static int scale_level_res[SCALE_LEVELS] = {960, 480, 240, 120, 80};
 static const uint32_t adj_resolution_width[SCALE_LEVELS] = {1920, 1200, 960, 480, 240};
@@ -31,6 +32,16 @@ esp_err_t app_video_utils_init(void)
         ESP_LOGE(TAG, "Failed to register PPA client: 0x%x", ret);
     }
 
+    // Initialize JPEG encoder
+    jpeg_encode_engine_cfg_t encode_eng_cfg = {
+        .timeout_ms = 70,
+    };
+
+    ret = jpeg_new_encoder_engine(&encode_eng_cfg, &jpeg_handle);
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to create JPEG encoder: 0x%x", ret);
+    }
+
     return ret;
 }
 
@@ -38,6 +49,13 @@ esp_err_t app_video_utils_deinit(void)
 {
     ppa_unregister_client(ppa_srm_handle);
     ppa_srm_handle = NULL;
+    
+
+    if (jpeg_handle != NULL) {
+        jpeg_del_encoder_engine(jpeg_handle);
+        jpeg_handle = NULL;
+    }
+
     return ESP_OK;
 }
 
@@ -151,6 +169,58 @@ esp_err_t app_image_process_video_frame(
     );
 }
 
+/**
+ * @brief Encode RGB565 image to JPEG format
+ * 
+ * @param src_buf Source image buffer in RGB565 format
+ * @param width Image width
+ * @param height Image height
+ * @param quality JPEG quality (0-100)
+ * @param out_buf Output JPEG buffer
+ * @param out_buf_size Size of output buffer
+ * @param out_size Pointer to store the actual JPEG size
+ * @return esp_err_t ESP_OK on success, error code otherwise
+ */
+esp_err_t app_image_encode_jpeg(
+    uint8_t *src_buf, 
+    uint32_t width, 
+    uint32_t height, 
+    uint8_t quality,
+    uint8_t *out_buf, 
+    size_t out_buf_size, 
+    uint32_t *out_size)
+{
+    if (!src_buf || !out_buf || !out_size || width == 0 || height == 0) {
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    // Configure JPEG encoding
+    jpeg_encode_cfg_t enc_config = {
+        .src_type = JPEG_ENCODE_IN_FORMAT_RGB565,
+        .sub_sample = JPEG_DOWN_SAMPLING_YUV420,
+        .image_quality = quality,
+        .width = width,
+        .height = height,
+    };
+
+    // Perform JPEG encoding
+    esp_err_t ret = jpeg_encoder_process(
+        jpeg_handle, 
+        &enc_config, 
+        src_buf, 
+        width * height * 2, 
+        out_buf, 
+        out_buf_size, 
+        out_size
+    );
+
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "JPEG encoding failed: 0x%x", ret);
+    }
+
+    return ret;
+}
+
 /* Utility functions */
 /**
  * @brief Swap RGB565 bytes for correct display format
@@ -166,3 +236,4 @@ void swap_rgb565_bytes(uint16_t *buffer, int pixel_count)
         *(buffer + i) = swap16;
     }
 }
+

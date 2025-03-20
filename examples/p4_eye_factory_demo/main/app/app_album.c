@@ -17,6 +17,7 @@
 #include "app_storage.h"
 #include "app_video.h"
 #include "app_video_stream.h"
+#include "app_video_utils.h"
 
 static const char *TAG = "app_album";
 
