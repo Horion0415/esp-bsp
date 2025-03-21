@@ -577,6 +577,50 @@ static esp_err_t app_album_display_current_image(void) {
                          album_ctx.canvas_width, album_ctx.canvas_height, 
                          LV_IMG_CF_TRUE_COLOR);
     
+    // Add photo index indicator
+    if (album_ctx.count > 0) {
+        // Create index text with larger buffer to avoid truncation warnings
+        char index_text[32];  // Increased buffer size from 20 to 32
+        snprintf(index_text, sizeof(index_text), "%d/%d", album_ctx.current_index + 1, album_ctx.count);
+        
+        // Setup text style
+        lv_draw_label_dsc_t label_dsc;
+        lv_draw_label_dsc_init(&label_dsc);
+        label_dsc.color = lv_color_white();
+        label_dsc.font = &ui_font_FontKoHoMiniBold24;
+        
+        // Create background rectangle
+        lv_draw_rect_dsc_t rect_dsc;
+        lv_draw_rect_dsc_init(&rect_dsc);
+        rect_dsc.bg_color = lv_color_black();
+        rect_dsc.bg_opa = LV_OPA_50;  // Semi-transparent background
+        rect_dsc.radius = 5;
+        
+        // Calculate text width
+        lv_point_t text_size;
+        lv_txt_get_size(&text_size, index_text, label_dsc.font, 0, 0, LV_COORD_MAX, 0);
+        
+        // Calculate rectangle position and size (top-right corner with padding)
+        int padding = 5;
+        lv_area_t rect_area;
+        rect_area.x1 = album_ctx.canvas_width - text_size.x - padding * 2 - 10;
+        rect_area.y1 = 10;
+        rect_area.x2 = album_ctx.canvas_width - 10;
+        rect_area.y2 = text_size.y + padding * 2 + 10;
+        
+        // Draw background rectangle
+        lv_canvas_draw_rect(album_ctx.canvas, rect_area.x1, rect_area.y1, 
+                           rect_area.x2 - rect_area.x1, rect_area.y2 - rect_area.y1, 
+                           &rect_dsc);
+        
+        // Draw text
+        lv_point_t label_pos;
+        label_pos.x = rect_area.x1 + padding;
+        label_pos.y = rect_area.y1 + padding;
+        lv_canvas_draw_text(album_ctx.canvas, label_pos.x, label_pos.y, 
+                           text_size.x + 5, &label_dsc, index_text);
+    }
+
     // Force refresh
     lv_obj_invalidate(album_ctx.canvas);
     bsp_display_unlock();

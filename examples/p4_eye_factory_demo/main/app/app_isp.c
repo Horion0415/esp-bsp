@@ -394,7 +394,7 @@ esp_err_t init_isp_dev(int cam_fd)
 
 #if COLOR_PARA_EN
 #if 1
-    uint32_t contrast_val = 0x90;
+    uint32_t contrast_val = 0x86;
 
     controls.ctrl_class = V4L2_CID_USER_CLASS;
     controls.count      = 1;
@@ -406,7 +406,7 @@ esp_err_t init_isp_dev(int cam_fd)
 #endif
 
 #if 1
-    uint32_t sat_val = 0xB0;
+    uint32_t sat_val = 0xA0;
 
     controls.ctrl_class = V4L2_CID_USER_CLASS;
     controls.count      = 1;
@@ -418,7 +418,7 @@ esp_err_t init_isp_dev(int cam_fd)
 #endif
 
 #if 1
-    uint32_t bright_val = 0x10;
+    uint32_t bright_val = 0x0A;
     controls.ctrl_class = V4L2_CID_USER_CLASS;
     controls.count      = 1;
     controls.controls   = control;
@@ -429,7 +429,7 @@ esp_err_t init_isp_dev(int cam_fd)
 #endif
 
 #if 1
-    uint32_t hue_val = 0x0B;
+    uint32_t hue_val = 0x09;
     controls.ctrl_class = V4L2_CID_USER_CLASS;
     controls.count      = 1;
     controls.controls   = control;
