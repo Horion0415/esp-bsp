@@ -19,6 +19,7 @@
 #include "ui_extra.h"
 #include "app_video.h"
 #include "app_storage.h"
+#include "app_isp.h"
 #include "app_video_stream.h"
 #include "app_video_utils.h"
 #include "app_video_photo.h"
@@ -308,6 +309,12 @@ esp_err_t app_video_stream_init(i2c_master_bus_handle_t i2c_handle)
     if (camera_buffer.video_cam_fd < 0) {
         ESP_LOGE(TAG, "Video cam open failed");
         ret = ESP_FAIL;
+        goto cleanup;
+    }
+
+    ret = init_isp_dev(camera_buffer.video_cam_fd);
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to initialize ISP: 0x%x", ret);
         goto cleanup;
     }
 
