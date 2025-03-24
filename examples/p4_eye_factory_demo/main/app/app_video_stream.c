@@ -312,10 +312,25 @@ esp_err_t app_video_stream_init(i2c_master_bus_handle_t i2c_handle)
         goto cleanup;
     }
 
-    ret = init_isp_dev(camera_buffer.video_cam_fd);
+    ret = app_isp_init(camera_buffer.video_cam_fd);
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "Failed to initialize ISP: 0x%x", ret);
         goto cleanup;
+    }
+
+    // Load camera settings
+    uint32_t loaded_contrast = DEFAULT_CONTRAST_PERCENT;
+    uint32_t loaded_saturation = DEFAULT_SATURATION_PERCENT;
+    uint32_t loaded_brightness = DEFAULT_BRIGHTNESS_PERCENT;
+    uint32_t loaded_hue = DEFAULT_HUE_PERCENT;
+    ret = app_storage_load_camera_settings(&loaded_contrast, &loaded_saturation, 
+                                          &loaded_brightness, &loaded_hue);
+    if (ret == ESP_OK) {
+        // Apply camera settings
+        app_isp_set_contrast(loaded_contrast);
+        app_isp_set_saturation(loaded_saturation);
+        app_isp_set_brightness(loaded_brightness);
+        app_isp_set_hue(loaded_hue);
     }
 
     // Allocate canvas buffers

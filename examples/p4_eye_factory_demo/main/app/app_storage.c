@@ -32,6 +32,10 @@
 #define NVS_KEY_INTERVAL_ACTIVE "int_active"  // timed shooting flag
 #define NVS_KEY_NEXT_WAKE_TIME "wake_time"    // next wake time
 #define NVS_KEY_PHOTO_COUNT "photo_count"     // photo count
+#define NVS_KEY_CONTRAST "contrast"
+#define NVS_KEY_SATURATION "saturation"
+#define NVS_KEY_BRIGHTNESS "brightness"
+#define NVS_KEY_HUE "hue"
 #define LOGICAL_DISK_NUM 1
 
 /* Static variables */
@@ -359,6 +363,116 @@ esp_err_t app_storage_load_settings(settings_info_t *settings, uint16_t *interva
     // Close NVS handle
     nvs_close(nvs_handle);
     ESP_LOGI(TAG, "Settings loaded from NVS successfully");
+    
+    return ESP_OK;
+}
+
+/**
+ * @brief save camera settings to nvs
+ */
+esp_err_t app_storage_save_camera_settings(uint32_t contrast, uint32_t saturation, 
+                                          uint32_t brightness, uint32_t hue)
+{
+    nvs_handle_t nvs_handle;
+    esp_err_t err;
+    
+    // open nvs namespace
+    err = nvs_open(NVS_NAMESPACE, NVS_READWRITE, &nvs_handle);
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "Error opening NVS handle: %s", esp_err_to_name(err));
+        return err;
+    }
+    
+    // save contrast
+    err = nvs_set_u32(nvs_handle, NVS_KEY_CONTRAST, contrast);
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "Error saving contrast: %s", esp_err_to_name(err));
+        nvs_close(nvs_handle);
+        return err;
+    }
+    
+    // save saturation
+    err = nvs_set_u32(nvs_handle, NVS_KEY_SATURATION, saturation);
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "Error saving saturation: %s", esp_err_to_name(err));
+        nvs_close(nvs_handle);
+        return err;
+    }
+    
+    // save brightness
+    err = nvs_set_u32(nvs_handle, NVS_KEY_BRIGHTNESS, brightness);
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "Error saving brightness: %s", esp_err_to_name(err));
+        nvs_close(nvs_handle);
+        return err;
+    }
+    
+    // save hue
+    err = nvs_set_u32(nvs_handle, NVS_KEY_HUE, hue);
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "Error saving hue: %s", esp_err_to_name(err));
+        nvs_close(nvs_handle);
+        return err;
+    }
+    
+    // commit changes
+    err = nvs_commit(nvs_handle);
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "Error committing NVS: %s", esp_err_to_name(err));
+        nvs_close(nvs_handle);
+        return err;
+    }
+    
+    // close nvs handle
+    nvs_close(nvs_handle);
+    ESP_LOGI(TAG, "Camera settings saved to NVS successfully");
+    
+    return ESP_OK;
+}
+
+/**
+ * @brief load camera settings from nvs
+ */
+esp_err_t app_storage_load_camera_settings(uint32_t *contrast, uint32_t *saturation, 
+                                          uint32_t *brightness, uint32_t *hue)
+{
+    nvs_handle_t nvs_handle;
+    esp_err_t err;
+    
+    // open nvs namespace
+    err = nvs_open(NVS_NAMESPACE, NVS_READONLY, &nvs_handle);
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "Error opening NVS handle: %s", esp_err_to_name(err));
+        return err;
+    }
+    
+    // load contrast
+    err = nvs_get_u32(nvs_handle, NVS_KEY_CONTRAST, contrast);
+    if (err != ESP_OK && err != ESP_ERR_NVS_NOT_FOUND) {
+        ESP_LOGE(TAG, "Error loading contrast: %s", esp_err_to_name(err));
+    }
+    
+    // load saturation
+    err = nvs_get_u32(nvs_handle, NVS_KEY_SATURATION, saturation);
+    if (err != ESP_OK && err != ESP_ERR_NVS_NOT_FOUND) {
+        ESP_LOGE(TAG, "Error loading saturation: %s", esp_err_to_name(err));
+    }
+    
+    // load brightness
+    err = nvs_get_u32(nvs_handle, NVS_KEY_BRIGHTNESS, brightness);
+    if (err != ESP_OK && err != ESP_ERR_NVS_NOT_FOUND) {
+        ESP_LOGE(TAG, "Error loading brightness: %s", esp_err_to_name(err));
+    }
+    
+    // load hue
+    err = nvs_get_u32(nvs_handle, NVS_KEY_HUE, hue);
+    if (err != ESP_OK && err != ESP_ERR_NVS_NOT_FOUND) {
+        ESP_LOGE(TAG, "Error loading hue: %s", esp_err_to_name(err));
+    }
+    
+    // close nvs handle
+    nvs_close(nvs_handle);
+    ESP_LOGI(TAG, "Camera settings loaded from NVS successfully");
     
     return ESP_OK;
 }

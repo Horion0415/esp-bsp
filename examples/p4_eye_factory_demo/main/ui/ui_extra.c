@@ -9,6 +9,7 @@
 #include "app_storage.h"
 #include "app_album.h"
 #include "app_video_stream.h"
+#include "app_isp.h"
 
 /* Constants */
 #define IMG_BASE_ZOOM       60
@@ -36,11 +37,18 @@ static bool is_sd_card_mounted = false;
 static bool is_usb_disk_mounted = false;
 static bool is_video_recording = false;
 
+static bool is_camera_settings_panel_active = false;
+
 // UI settings
 static uint16_t magnification_factor = DEFAULT_MAGNIFICATION_FACTOR;
 static uint16_t interval_time = DEFAULT_INTERVAL_TIME;
 static uint16_t saved_photo_count = DEFAULT_SAVED_PHOTO_COUNT;
 static uint32_t video_recording_seconds = 0;
+
+static uint32_t contrast_percent = DEFAULT_CONTRAST_PERCENT;
+static uint32_t saturation_percent = DEFAULT_SATURATION_PERCENT;
+static uint32_t brightness_percent = DEFAULT_BRIGHTNESS_PERCENT;
+static uint32_t hue_percent = DEFAULT_HUE_PERCENT;
 
 // UI elements
 static lv_obj_t *scroll_cont = NULL;
@@ -65,6 +73,9 @@ static const char* const flash_options[] = {"Off", "On"};
 static int current_settings_item = 0;
 static lv_obj_t* settings_items[4];
 static settings_info_t current_settings;
+
+static lv_obj_t *camera_settings_items[5]; 
+static int current_camera_settings_item = 0;
 
 typedef struct {
     const char* const* options;
@@ -113,6 +124,86 @@ static void save_current_settings(void)
     uint16_t magnify = magnification_factor;
     
     app_storage_save_settings(settings, interval, magnify);
+}
+
+/**
+ * @brief initialize camera settings display
+ */
+static void init_camera_settings_display(void) {
+    // set initial value of the slider
+    lv_slider_set_value(ui_SliderPanelPanelSettingsContrast, contrast_percent, LV_ANIM_OFF);
+    lv_slider_set_value(ui_SliderPanelPanelSettingsSaturation, saturation_percent, LV_ANIM_OFF);
+    lv_slider_set_value(ui_SliderPanelPanelSettingsBrightness, brightness_percent, LV_ANIM_OFF);
+    lv_slider_set_value(ui_SliderPanelPanelSettingsHue, hue_percent, LV_ANIM_OFF);
+}
+
+/**
+ * @brief Save camera settings
+ */
+static void save_camera_settings(void)
+{
+    app_storage_save_camera_settings(contrast_percent, saturation_percent, 
+                                    brightness_percent, hue_percent);
+    
+    app_isp_set_contrast(contrast_percent);
+    app_isp_set_saturation(saturation_percent);
+    app_isp_set_brightness(brightness_percent);
+    app_isp_set_hue(hue_percent);
+}
+
+/**
+ * @brief update camera settings focus
+ * @param item_index index of the item to focus
+ */
+static void update_camera_settings_focus(int item_index) {
+    // clear focus of all items
+    for (int i = 0; i < 5; i++) {
+        lv_obj_clear_state(camera_settings_items[i], LV_STATE_FOCUSED);
+    }
+    
+    // set focus of the current item
+    lv_obj_add_state(camera_settings_items[item_index], LV_STATE_FOCUSED);
+    current_camera_settings_item = item_index;
+}
+
+/**
+ * @brief switch to camera settings panel
+ */
+static void switch_to_camera_settings_panel(void) {
+    // hide main settings panel
+    lv_obj_add_flag(ui_PanelSettings, LV_OBJ_FLAG_HIDDEN);
+    // show camera settings panel
+    lv_obj_clear_flag(ui_PanelCameraSettings, LV_OBJ_FLAG_HIDDEN);
+    
+    // initialize camera settings items
+    camera_settings_items[0] = ui_PanelPanelSettingsContrast;
+    camera_settings_items[1] = ui_PanelPanelSettingsSaturation;
+    camera_settings_items[2] = ui_PanelPanelSettingsBrightness;
+    camera_settings_items[3] = ui_PanelPanelSettingsHue;
+    camera_settings_items[4] = ui_PanelSettingsMenu; // "back to menu" item
+    
+    // initialize camera settings display
+    init_camera_settings_display();
+    
+    // reset current selected item and focus on the first item
+    current_camera_settings_item = 0;
+    update_camera_settings_focus(current_camera_settings_item);
+    
+    // update flag
+    is_camera_settings_panel_active = true;
+}
+
+/**
+ * @brief switch to main settings panel
+ */
+static void switch_to_main_settings_panel(void) {
+    // hide camera settings panel
+    lv_obj_add_flag(ui_PanelCameraSettings, LV_OBJ_FLAG_HIDDEN);
+    // show main settings panel
+    lv_obj_clear_flag(ui_PanelSettings, LV_OBJ_FLAG_HIDDEN);
+    
+    // update flag
+    is_camera_settings_panel_active = false;
 }
 
 /**
@@ -859,6 +950,8 @@ static void ui_extra_redirect_to_settings_page(void)
     // Reset the current selected item and focus the first item
     current_settings_item = 0;
     update_settings_focus(current_settings_item);
+
+    is_camera_settings_panel_active = false;
 }
 
 /**
@@ -1203,8 +1296,21 @@ void ui_extra_btn_up(void)
             break;
             
         case UI_PAGE_SETTINGS:
-            if(current_settings_item > 0) {
-                update_settings_focus(current_settings_item - 1);
+            if (is_camera_settings_panel_active) {
+                // camera settings panel is active
+                if(current_camera_settings_item == 0) {
+                    // if current is the first camera settings item, switch back to main settings panel when up button is pressed
+                    switch_to_main_settings_panel();
+                    // focus on flash setting item
+                    update_settings_focus(2); // index of flash setting item
+                } else if(current_camera_settings_item > 0) {
+                    update_camera_settings_focus(current_camera_settings_item - 1);
+                }
+            } else {
+                // main settings panel is active
+                if(current_settings_item > 0) {
+                    update_settings_focus(current_settings_item - 1);
+                }
             }
             break;
             
@@ -1263,8 +1369,19 @@ void ui_extra_btn_down(void)
             break;
             
         case UI_PAGE_SETTINGS:
-            if(current_settings_item < 3) {
-                update_settings_focus(current_settings_item + 1);
+            if (is_camera_settings_panel_active) {
+                // camera settings panel is active
+                if(current_camera_settings_item < 4) {
+                    update_camera_settings_focus(current_camera_settings_item + 1);
+                }
+            } else {
+                // main settings panel is active
+                if(current_settings_item == 2 && settings_items[current_settings_item] == ui_PanelPanelSettingsFlash) {
+                    // if current selected item is flash setting item, switch to camera settings panel when down button is pressed
+                    switch_to_camera_settings_panel();
+                } else if(current_settings_item < 3) {
+                    update_settings_focus(current_settings_item + 1);
+                }
             }
             break;
             
@@ -1294,6 +1411,125 @@ void ui_extra_btn_down(void)
             }
             break;
             
+        default:
+            break;
+    }
+}
+
+/**
+ * @brief Left button handler
+ */
+void ui_extra_btn_right(void)
+{
+    switch(current_page) {
+        case UI_PAGE_SETTINGS:
+            if (is_camera_settings_panel_active && current_camera_settings_item < 4) {
+                // camera settings panel is active and current selected item is slider item
+                lv_obj_t *slider = NULL;
+                uint32_t *value_ptr = NULL;
+                
+                // get current slider and value pointer
+                switch(current_camera_settings_item) {
+                    case 0: // contrast
+                        slider = ui_SliderPanelPanelSettingsContrast;
+                        value_ptr = &contrast_percent;
+                        break;
+                    case 1: // saturation
+                        slider = ui_SliderPanelPanelSettingsSaturation;
+                        value_ptr = &saturation_percent;
+                        break;
+                    case 2: // brightness
+                        slider = ui_SliderPanelPanelSettingsBrightness;
+                        value_ptr = &brightness_percent;
+                        break;
+                    case 3: // hue
+                        slider = ui_SliderPanelPanelSettingsHue;
+                        value_ptr = &hue_percent;
+                        break;
+                }
+                
+                if(slider && value_ptr) {
+                    // reduce value (minimum is 0)
+                    if(*value_ptr >= 5) {
+                        *value_ptr -= 5;
+                    } else {
+                        *value_ptr = 0;
+                    }
+                    
+                    // update slider display
+                    lv_slider_set_value(slider, *value_ptr, LV_ANIM_ON);
+                    
+                    // apply settings
+                    switch(current_camera_settings_item) {
+                        case 0: app_isp_set_contrast(*value_ptr); break;
+                        case 1: app_isp_set_saturation(*value_ptr); break;
+                        case 2: app_isp_set_brightness(*value_ptr); break;
+                        case 3: app_isp_set_hue(*value_ptr); break;
+                    }
+                    
+                    // save settings
+                    save_camera_settings();
+                }
+            }
+            break;
+        default:
+            break;
+    }
+}
+
+void ui_extra_btn_left(void)
+{
+    switch(current_page) {
+        case UI_PAGE_SETTINGS:
+            if (is_camera_settings_panel_active && current_camera_settings_item < 4) {
+                // camera settings panel is active and current selected item is slider item
+                lv_obj_t *slider = NULL;
+                uint32_t *value_ptr = NULL;
+                
+                // get current slider and value pointer
+                switch(current_camera_settings_item) {
+                    case 0: // contrast
+                        slider = ui_SliderPanelPanelSettingsContrast;
+                        value_ptr = &contrast_percent;
+                        break;
+                    case 1: // saturation
+                        slider = ui_SliderPanelPanelSettingsSaturation;
+                        value_ptr = &saturation_percent;
+                        break;
+                    case 2: // brightness
+                        slider = ui_SliderPanelPanelSettingsBrightness;
+                        value_ptr = &brightness_percent;
+                        break;
+                    case 3: // hue
+                        slider = ui_SliderPanelPanelSettingsHue;
+                        value_ptr = &hue_percent;
+                        break;
+                }
+                
+                if(slider && value_ptr) {
+                    // increase value (maximum is 100)
+                    if(*value_ptr <= 95) {
+                        *value_ptr += 5;
+                    } else {
+                        *value_ptr = 100;
+                    }
+                    
+                    // update slider display
+                    lv_slider_set_value(slider, *value_ptr, LV_ANIM_ON);
+                    
+                    // apply settings
+                    switch(current_camera_settings_item) {
+                        case 0: app_isp_set_contrast(*value_ptr); break;
+                        case 1: app_isp_set_saturation(*value_ptr); break;
+                        case 2: app_isp_set_brightness(*value_ptr); break;
+                        case 3: app_isp_set_hue(*value_ptr); break;
+                    }
+                    
+                    // save settings
+                    save_camera_settings();
+                }
+            }
+            break;
         default:
             break;
     }
@@ -1333,7 +1569,7 @@ void ui_extra_btn_menu(void)
             break;
             
         case UI_PAGE_SETTINGS:
-            if(current_settings_item == 3 && settings_items[current_settings_item] == ui_PanelSettingsMenu) {
+            if(is_camera_settings_panel_active && current_camera_settings_item == 4 && camera_settings_items[current_camera_settings_item] == ui_PanelSettingsMenu) {
                 // If current setting item is menu item, return to main page
                 ui_extra_goto_page(UI_PAGE_MAIN);
 
@@ -1342,6 +1578,9 @@ void ui_extra_btn_menu(void)
                 } else {
                     app_video_stream_set_flash_light(false);
                 }
+
+                lv_obj_add_flag(ui_PanelCameraSettings, LV_OBJ_FLAG_HIDDEN);
+                lv_obj_add_flag(ui_PanelSettings, LV_OBJ_FLAG_HIDDEN);
 
                 app_video_stream_set_photo_resolution_by_string(current_settings.resolution);
             } else {
@@ -1557,17 +1796,30 @@ void ui_extra_init(void)
 
     lv_scroll_create();
 
-    // Load settings from NVS
+    // reset flag
+    is_camera_settings_panel_active = false;
+
+    // load settings
     settings_info_t settings;
     uint16_t loaded_interval_time;
     uint16_t loaded_magnification;
+    uint32_t loaded_contrast;
+    uint32_t loaded_saturation;
+    uint32_t loaded_brightness;
+    uint32_t loaded_hue;
     
     // Set default values
     settings.language = language_options[0];
     settings.resolution = resolution_options[0];
     settings.flash = flash_options[0];
+
     loaded_interval_time = DEFAULT_INTERVAL_TIME;
     loaded_magnification = DEFAULT_MAGNIFICATION_FACTOR;
+
+    loaded_contrast = DEFAULT_CONTRAST_PERCENT;
+    loaded_saturation = DEFAULT_SATURATION_PERCENT;
+    loaded_brightness = DEFAULT_BRIGHTNESS_PERCENT;
+    loaded_hue = DEFAULT_HUE_PERCENT;
     
     // Load settings from NVS
     esp_err_t err = app_storage_load_settings(&settings, &loaded_interval_time, &loaded_magnification);
@@ -1625,6 +1877,19 @@ void ui_extra_init(void)
         // Update display
         init_settings_display();
     }
+
+    // Load camera settings
+    err = app_storage_load_camera_settings(&loaded_contrast, &loaded_saturation, 
+                                          &loaded_brightness, &loaded_hue);
+    ESP_LOGW(TAG, "loaded_contrast: %d, loaded_saturation: %d, loaded_brightness: %d, loaded_hue: %d", loaded_contrast, loaded_saturation, loaded_brightness, loaded_hue);
+    if (err == ESP_OK) {
+        // Update camera settings
+        contrast_percent = loaded_contrast;
+        saturation_percent = loaded_saturation;
+        brightness_percent = loaded_brightness;
+        hue_percent = loaded_hue;
+    }
+    init_camera_settings_display();
 
     // Redirect to the main page
     ui_extra_goto_page(UI_PAGE_MAIN);

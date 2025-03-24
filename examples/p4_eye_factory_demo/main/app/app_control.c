@@ -81,7 +81,7 @@ static void knob_right_cb(void *arg, void *data)
         ui_extra_get_current_page() == UI_PAGE_USB_DISK) {
         return;
     }
-    
+
     int64_t current_time = esp_timer_get_time() / 1000;  // get current time in milliseconds
     
     // Check for timeout or direction change
@@ -108,6 +108,8 @@ static void knob_right_cb(void *arg, void *data)
             app_extra_set_magnification_factor(app_extra_get_magnification_factor() - 1);
         } else if (ui_extra_get_current_page() == UI_PAGE_MAIN) {
             ui_extra_btn_up();
+        } else if (ui_extra_get_current_page() == UI_PAGE_SETTINGS) {
+            ui_extra_btn_right();
         }
         bsp_display_unlock();
     }
@@ -146,6 +148,8 @@ static void knob_left_cb(void *arg, void *data)
             app_extra_set_magnification_factor(app_extra_get_magnification_factor() + 1);
         } else if (ui_extra_get_current_page() == UI_PAGE_MAIN) {
             ui_extra_btn_down();
+        } else if (ui_extra_get_current_page() == UI_PAGE_SETTINGS) {
+            ui_extra_btn_left();
         }
         bsp_display_unlock();
     }

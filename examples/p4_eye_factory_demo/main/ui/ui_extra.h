@@ -4,6 +4,11 @@
 #include "ui.h"
 #include <stdbool.h>
 
+#define DEFAULT_CONTRAST_PERCENT 53
+#define DEFAULT_SATURATION_PERCENT 63
+#define DEFAULT_BRIGHTNESS_PERCENT 54
+#define DEFAULT_HUE_PERCENT 2
+
 /**
  * @brief UI page enumeration
  */
@@ -48,6 +53,16 @@ void ui_extra_btn_up(void);
  * @brief Down button handler
  */
 void ui_extra_btn_down(void);
+
+/**
+ * @brief Right button handler
+ */
+void ui_extra_btn_right(void);
+
+/**
+ * @brief Left button handler
+ */
+void ui_extra_btn_left(void);
 
 /**
  * @brief Encoder button handler

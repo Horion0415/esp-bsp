@@ -59,6 +59,30 @@ esp_err_t app_storage_save_interval_state(bool is_active, uint32_t next_wake_tim
 esp_err_t app_storage_get_interval_state(bool *is_active, uint32_t *next_wake_time);
 
 /**
+ * @brief save camera settings to nvs
+ * 
+ * @param contrast contrast percent
+ * @param saturation saturation percent
+ * @param brightness brightness percent
+ * @param hue hue percent
+ * @return ESP_OK success, error code otherwise
+ */
+esp_err_t app_storage_save_camera_settings(uint32_t contrast, uint32_t saturation, 
+                                          uint32_t brightness, uint32_t hue);
+
+/**
+ * @brief load camera settings from nvs
+ * 
+ * @param contrast pointer to store contrast percent
+ * @param saturation pointer to store saturation percent
+ * @param brightness pointer to store brightness percent
+ * @param hue pointer to store hue percent
+ * @return ESP_OK success, error code otherwise
+ */
+esp_err_t app_storage_load_camera_settings(uint32_t *contrast, uint32_t *saturation, 
+                                          uint32_t *brightness, uint32_t *hue);
+
+/**
  * @brief Save photo count to NVS
  * 
  * @param count Photo count to save
