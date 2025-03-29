@@ -127,10 +127,10 @@ static void save_current_settings(void)
 }
 
 /**
- * @brief initialize camera settings display
+ * @brief Initialize camera settings display
  */
 static void init_camera_settings_display(void) {
-    // set initial value of the slider
+    // Set initial value of the slider
     lv_slider_set_value(ui_SliderPanelPanelSettingsContrast, contrast_percent, LV_ANIM_OFF);
     lv_slider_set_value(ui_SliderPanelPanelSettingsSaturation, saturation_percent, LV_ANIM_OFF);
     lv_slider_set_value(ui_SliderPanelPanelSettingsBrightness, brightness_percent, LV_ANIM_OFF);
@@ -152,57 +152,57 @@ static void save_camera_settings(void)
 }
 
 /**
- * @brief update camera settings focus
- * @param item_index index of the item to focus
+ * @brief Update camera settings focus
+ * @param item_index Index of the item to focus
  */
 static void update_camera_settings_focus(int item_index) {
-    // clear focus of all items
+    // Clear focus of all items
     for (int i = 0; i < 5; i++) {
         lv_obj_clear_state(camera_settings_items[i], LV_STATE_FOCUSED);
     }
     
-    // set focus of the current item
+    // Set focus of the current item
     lv_obj_add_state(camera_settings_items[item_index], LV_STATE_FOCUSED);
     current_camera_settings_item = item_index;
 }
 
 /**
- * @brief switch to camera settings panel
+ * @brief Switch to camera settings panel
  */
 static void switch_to_camera_settings_panel(void) {
-    // hide main settings panel
+    // Hide main settings panel
     lv_obj_add_flag(ui_PanelSettings, LV_OBJ_FLAG_HIDDEN);
-    // show camera settings panel
+    // Show camera settings panel
     lv_obj_clear_flag(ui_PanelCameraSettings, LV_OBJ_FLAG_HIDDEN);
     
-    // initialize camera settings items
+    // Initialize camera settings items
     camera_settings_items[0] = ui_PanelPanelSettingsContrast;
     camera_settings_items[1] = ui_PanelPanelSettingsSaturation;
     camera_settings_items[2] = ui_PanelPanelSettingsBrightness;
     camera_settings_items[3] = ui_PanelPanelSettingsHue;
     camera_settings_items[4] = ui_PanelSettingsMenu; // "back to menu" item
     
-    // initialize camera settings display
+    // Initialize camera settings display
     init_camera_settings_display();
     
-    // reset current selected item and focus on the first item
+    // Reset current selected item and focus on the first item
     current_camera_settings_item = 0;
     update_camera_settings_focus(current_camera_settings_item);
     
-    // update flag
+    // Update flag
     is_camera_settings_panel_active = true;
 }
 
 /**
- * @brief switch to main settings panel
+ * @brief Switch to main settings panel
  */
 static void switch_to_main_settings_panel(void) {
-    // hide camera settings panel
+    // Hide camera settings panel
     lv_obj_add_flag(ui_PanelCameraSettings, LV_OBJ_FLAG_HIDDEN);
-    // show main settings panel
+    // Show main settings panel
     lv_obj_clear_flag(ui_PanelSettings, LV_OBJ_FLAG_HIDDEN);
     
-    // update flag
+    // Update flag
     is_camera_settings_panel_active = false;
 }
 
@@ -1218,12 +1218,18 @@ void ui_extra_popup_interval_timer_warning(void)
     }
 }
 
+/**
+ * @brief Show SD space warning popup
+ */
 void ui_extra_popup_camera_sd_space_warning(void)
 {
     ui_extra_clear_page();
     lv_obj_clear_flag(ui_PanelCanvasPopupSDSpaceWarning, LV_OBJ_FLAG_HIDDEN);
 }
 
+/**
+ * @brief Hide SD space warning popup
+ */
 void ui_extra_popup_camera_sd_space_warning_end(void)
 {
     if(!lv_obj_has_flag(ui_PanelCanvasPopupSDSpaceWarning, LV_OBJ_FLAG_HIDDEN)) {
@@ -1417,7 +1423,7 @@ void ui_extra_btn_down(void)
 }
 
 /**
- * @brief Left button handler
+ * @brief Right button handler
  */
 void ui_extra_btn_right(void)
 {
@@ -1477,6 +1483,9 @@ void ui_extra_btn_right(void)
     }
 }
 
+/**
+ * @brief Left button handler
+ */
 void ui_extra_btn_left(void)
 {
     switch(current_page) {
