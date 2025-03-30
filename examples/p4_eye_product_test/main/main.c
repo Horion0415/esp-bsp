@@ -9,6 +9,7 @@
 #include "lvgl.h"
 #include "esp_log.h"
 #include "esp_mac.h"
+#include "esp_hosted_api.h"
 #include "driver/ppa.h"
 #include "esp_private/esp_cache_private.h"
 
@@ -126,11 +127,10 @@ static void knob_right_cb(void *arg, void *data)
 
 void app_main(void)
 {
-    ESP_ERROR_CHECK(bsp_p4_eye_init());
-
     // Get base MAC address
     uint8_t base_mac_addr[6] = {0};
     char mac_str[18];
+    uint8_t c6_mac[6];
 
     esp_read_mac(base_mac_addr, ESP_MAC_EFUSE_FACTORY);
     snprintf(mac_str, sizeof(mac_str), "%02X-%02X-%02X-%02X-%02X-%02X",
@@ -180,6 +180,9 @@ void app_main(void)
     if (ap_count > 0) {
         lv_label_set_text(label, "WiFi scan: PASS");
         create_and_write_file(file_path, "WiFi scan: PASS", true);
+
+        esp_wifi_remote_get_mac(WIFI_IF_STA, c6_mac);
+        ESP_LOGI(TAG, "[WiFi MAC address]: %02X-%02X-%02X-%02X-%02X-%02X", c6_mac[0], c6_mac[1], c6_mac[2], c6_mac[3], c6_mac[4], c6_mac[5]);
     } else {
         lv_label_set_text(label, "WiFi scan: FAIL");                 
         create_and_write_file(file_path, "WiFi scan: FAIL", true);
@@ -310,8 +313,6 @@ static void camera_video_frame_operation(uint8_t *camera_buf, uint8_t camera_buf
         .in.buffer = camera_buf,
         .in.pic_w = camera_buf_hes,
         .in.pic_h = camera_buf_ves,
-        // .in.block_w = camera_buf_hes > camera_buf_ves ? camera_buf_ves : camera_buf_hes,
-        // .in.block_h = camera_buf_hes > camera_buf_ves ? camera_buf_ves : camera_buf_hes,
         .in.block_w = 960,
         .in.block_h = 960,
         .in.block_offset_x = (camera_buf_hes - 960) / 2,
@@ -332,8 +333,6 @@ static void camera_video_frame_operation(uint8_t *camera_buf, uint8_t camera_buf
         .mode = PPA_TRANS_MODE_BLOCKING,
     };
 
-    // srm_config.scale_x = (float)BSP_LCD_H_RES / (camera_buf_hes > camera_buf_ves ? camera_buf_ves : camera_buf_hes);
-    // srm_config.scale_y = (float)BSP_LCD_V_RES / (camera_buf_hes > camera_buf_ves ? camera_buf_ves : camera_buf_hes);
     srm_config.scale_x = (float)BSP_LCD_H_RES / 960;
     srm_config.scale_y = (float)BSP_LCD_V_RES / 960;
 

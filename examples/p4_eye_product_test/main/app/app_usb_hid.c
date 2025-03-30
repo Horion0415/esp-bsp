@@ -100,37 +100,37 @@ typedef enum {
 #define DISTANCE_MAX        125
 #define DELTA_SCALAR        5
 
-static void mouse_draw_square_next_delta(int8_t *delta_x_ret, int8_t *delta_y_ret)
-{
-    static mouse_dir_t cur_dir = MOUSE_DIR_RIGHT;
-    static uint32_t distance = 0;
+// static void mouse_draw_square_next_delta(int8_t *delta_x_ret, int8_t *delta_y_ret)
+// {
+//     static mouse_dir_t cur_dir = MOUSE_DIR_RIGHT;
+//     static uint32_t distance = 0;
 
-    // Calculate next delta
-    if (cur_dir == MOUSE_DIR_RIGHT) {
-        *delta_x_ret = DELTA_SCALAR;
-        *delta_y_ret = 0;
-    } else if (cur_dir == MOUSE_DIR_DOWN) {
-        *delta_x_ret = 0;
-        *delta_y_ret = DELTA_SCALAR;
-    } else if (cur_dir == MOUSE_DIR_LEFT) {
-        *delta_x_ret = -DELTA_SCALAR;
-        *delta_y_ret = 0;
-    } else if (cur_dir == MOUSE_DIR_UP) {
-        *delta_x_ret = 0;
-        *delta_y_ret = -DELTA_SCALAR;
-    }
+//     // Calculate next delta
+//     if (cur_dir == MOUSE_DIR_RIGHT) {
+//         *delta_x_ret = DELTA_SCALAR;
+//         *delta_y_ret = 0;
+//     } else if (cur_dir == MOUSE_DIR_DOWN) {
+//         *delta_x_ret = 0;
+//         *delta_y_ret = DELTA_SCALAR;
+//     } else if (cur_dir == MOUSE_DIR_LEFT) {
+//         *delta_x_ret = -DELTA_SCALAR;
+//         *delta_y_ret = 0;
+//     } else if (cur_dir == MOUSE_DIR_UP) {
+//         *delta_x_ret = 0;
+//         *delta_y_ret = -DELTA_SCALAR;
+//     }
 
-    // Update cumulative distance for current direction
-    distance += DELTA_SCALAR;
-    // Check if we need to change direction
-    if (distance >= DISTANCE_MAX) {
-        distance = 0;
-        cur_dir++;
-        if (cur_dir == MOUSE_DIR_MAX) {
-            cur_dir = 0;
-        }
-    }
-}
+//     // Update cumulative distance for current direction
+//     distance += DELTA_SCALAR;
+//     // Check if we need to change direction
+//     if (distance >= DISTANCE_MAX) {
+//         distance = 0;
+//         cur_dir++;
+//         if (cur_dir == MOUSE_DIR_MAX) {
+//             cur_dir = 0;
+//         }
+//     }
+// }
 
 // static void app_send_hid_demo(void)
 // {
