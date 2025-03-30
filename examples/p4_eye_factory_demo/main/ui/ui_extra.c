@@ -1,3 +1,18 @@
+/*
+ * UI Extra Module
+ * 
+ * This file implements additional UI functionality for the Eye Factory Demo.
+ * It handles the UI interactions, page navigation, settings management,
+ * and provides interfaces for controlling the camera features.
+ * 
+ * The main components include:
+ * - Page management (camera, interval camera, video, album, settings)
+ * - UI element creation and events handling
+ * - Settings storage and retrieval
+ * - Button event handlers
+ * - Camera control interfaces
+ */
+
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include <stdio.h>
@@ -113,7 +128,10 @@ static void ui_extra_redirect_to_settings_page(void);
 static void ui_extra_clear_popup_window(void);
 static void ui_extra_focus_on_picture_delete(void);
 
-/* Helper functions */
+/*-------------------------------------------------*/
+/* Settings Management Functions                    */
+/*-------------------------------------------------*/
+
 /**
  * @brief Save current settings to storage
  */
@@ -285,6 +303,10 @@ static void init_settings_display(void) {
     }
 }
 
+/*-------------------------------------------------*/
+/* UI Utility Functions                            */
+/*-------------------------------------------------*/
+
 /**
  * @brief Set zoom level for an image object
  * @param obj Image object
@@ -386,7 +408,10 @@ static void update_settings_focus(int new_item)
     ESP_LOGD(TAG, "Settings: selected item %d", current_settings_item);
 }
 
-/* Event callbacks */
+/*-------------------------------------------------*/
+/* Event Callbacks                                 */
+/*-------------------------------------------------*/
+
 /**
  * @brief Scroll event callback
  * @param e Event data
@@ -547,6 +572,10 @@ static void scroll_end_event_cb(lv_event_t * e)
     is_scrolling = false; 
 }
 
+/*-------------------------------------------------*/
+/* Timer Callbacks                                 */
+/*-------------------------------------------------*/
+
 /**
  * @brief Popup timer callback
  * @param timer Timer object
@@ -671,7 +700,10 @@ static void pop_up_additional_photo_callback(lv_timer_t * timer)
     }
 }
 
-/* UI creation functions */
+/*-------------------------------------------------*/
+/* UI Creation Functions                           */
+/*-------------------------------------------------*/
+
 /**
  * @brief Create scroll container
  */
@@ -746,7 +778,10 @@ static void lv_scroll_create(void)
     }
 }
 
-/* Page management functions */
+/*-------------------------------------------------*/
+/* Page Management Functions                       */
+/*-------------------------------------------------*/
+
 /**
  * @brief Clear all UI elements from the current page
  */
@@ -968,7 +1003,10 @@ static void ui_extra_focus_on_picture_delete(void)
     }
 }
 
-/* Public API functions */
+/*-------------------------------------------------*/
+/* Public API Functions                            */
+/*-------------------------------------------------*/
+
 /**
  * @brief Navigate to specified page
  * @param page Target page enum value
@@ -1277,7 +1315,10 @@ void ui_extra_popup_picture_delete_success(void)
     lv_obj_add_flag(ui_PanelImageScreenAlbumDelete, LV_OBJ_FLAG_HIDDEN);
 }
 
-/* Button event handlers */
+/*-------------------------------------------------*/
+/* Button Event Handlers                           */
+/*-------------------------------------------------*/
+
 /**
  * @brief Up button handler
  */
