@@ -168,7 +168,7 @@ void app_main(void)
 
     // Wait for wakeup
     while (!app_sr_get_wakeup_result()) {
-        lv_label_set_text(label, "Detecting wakeup...");
+        lv_label_set_text(label, "Please say 'Hi ESP'");
         vTaskDelay(100 / portTICK_PERIOD_MS);
     }
     ESP_LOGI(TAG, "[Done] Wakeup detected!");
@@ -303,7 +303,7 @@ void app_main(void)
     ESP_ERROR_CHECK(app_video_stream_task_start(video_cam_fd0, 0));
 
     xEventGroupWaitBits(button_event_group, CAMERA_EXIT_BIT, pdFALSE, pdTRUE, portMAX_DELAY);
-    lv_label_set_text(cam_label, "Camera test \n passed!");
+    lv_label_set_text(cam_label, "Camera test \n passed!  \n  All checks \n are complete!");
     create_and_write_file(file_path, "Camera: PASS", true);
 }
 
