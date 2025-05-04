@@ -226,3 +226,25 @@ uint16_t app_wifi_scan_get_ap_count(void)
 {
     return ap_count;
 }
+
+int8_t app_wifi_scan_get_rssi_by_ssid(const char* target_ssid)
+{
+    uint16_t number = DEFAULT_SCAN_LIST_SIZE;
+    wifi_ap_record_t ap_info[DEFAULT_SCAN_LIST_SIZE];
+    int8_t rssi = -100; // Default return a very weak signal strength
+
+    memset(ap_info, 0, sizeof(ap_info));
+    
+    // Get scan results
+    ESP_ERROR_CHECK(esp_wifi_scan_get_ap_records(&number, ap_info));
+    
+    // Iterate through all APs to find target SSID
+    for (int i = 0; i < number; i++) {
+        if (strcmp((const char*)ap_info[i].ssid, target_ssid) == 0) {
+            rssi = ap_info[i].rssi;
+            break;
+        }
+    }
+    
+    return rssi;
+}

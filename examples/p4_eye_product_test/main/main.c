@@ -21,6 +21,10 @@
 #define TEST_DISK_PATH "/spiflash"
 #define TEST_RESULT_FILE_FORMAT "%s/%s.txt" 
 
+/* WiFi test configuration */
+#define WIFI_TEST_TARGET_SSID    "ESP_AP"    // Target SSID for WiFi test
+#define WIFI_TEST_MIN_RSSI      -70         // Minimum acceptable signal strength in dBm
+
 #define BUTTON_1_BIT BIT0
 #define BUTTON_2_BIT BIT1
 #define BUTTON_3_BIT BIT2
@@ -177,15 +181,26 @@ void app_main(void)
     lv_label_set_text(label, "Scanning WiFi...");
     app_wifi_scan();
     uint16_t ap_count = app_wifi_scan_get_ap_count();
+    
     if (ap_count > 0) {
-        lv_label_set_text(label, "WiFi scan: PASS");
-        create_and_write_file(file_path, "WiFi scan: PASS", true);
-
-        esp_wifi_remote_get_mac(WIFI_IF_STA, c6_mac);
-        ESP_LOGI(TAG, "[WiFi MAC address]: %02X-%02X-%02X-%02X-%02X-%02X", c6_mac[0], c6_mac[1], c6_mac[2], c6_mac[3], c6_mac[4], c6_mac[5]);
+        // Get signal strength for target SSID
+        int8_t rssi = app_wifi_scan_get_rssi_by_ssid(WIFI_TEST_TARGET_SSID);
+        
+        if (rssi > WIFI_TEST_MIN_RSSI) {
+            lv_label_set_text(label, "WiFi scan: PASS\nSignal: Good");
+            create_and_write_file(file_path, "WiFi scan: PASS", true);
+            
+            esp_wifi_remote_get_mac(WIFI_IF_STA, c6_mac);
+            ESP_LOGI(TAG, "[WiFi MAC address]: %02X-%02X-%02X-%02X-%02X-%02X", c6_mac[0], c6_mac[1], c6_mac[2], c6_mac[3], c6_mac[4], c6_mac[5]);
+            ESP_LOGI(TAG, "[Signal strength]: %d dBm", rssi);
+        } else {
+            lv_label_set_text(label, "WiFi scan: FAIL\nSignal too weak");
+            create_and_write_file(file_path, "WiFi scan: FAIL (Weak signal)", true);
+            ESP_LOGE(TAG, "Signal strength (%d dBm) below threshold (%d dBm)", rssi, WIFI_TEST_MIN_RSSI);
+        }
     } else {
-        lv_label_set_text(label, "WiFi scan: FAIL");                 
-        create_and_write_file(file_path, "WiFi scan: FAIL", true);
+        lv_label_set_text(label, "WiFi scan: FAIL\nNo AP found");                 
+        create_and_write_file(file_path, "WiFi scan: FAIL (No AP)", true);
     }
 
     /* Init Buttons */
