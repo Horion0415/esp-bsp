@@ -36,6 +36,7 @@ static const char *TAG = "main";
 static vector<vector<int>> detect_bound;
 static vector<vector<int>> detect_keypoints;
 static std::list<dl::detect::result_t> detect_results;
+static vector<pair<int, float>> detect_categories; // Store category and score for COCO detection
 static PedestrianDetect *ped_detect = NULL;
 static HumanFaceDetect *hum_detect = NULL;
 static COCODetect *g_coco_detect = NULL;
@@ -257,6 +258,7 @@ static void camera_video_frame_operation(uint8_t *camera_buf, uint8_t camera_buf
         // Process detection results
         detect_keypoints.clear();
         detect_bound.clear();
+        detect_categories.clear(); // Clear categories vector
         
         for (const auto& res : *(detect_element->detect_results)) {
             const auto& box = res.box;
@@ -269,6 +271,11 @@ static void camera_video_frame_operation(uint8_t *camera_buf, uint8_t camera_buf
                     res.keypoint.size() >= 10 && 
                     std::any_of(res.keypoint.begin(), res.keypoint.end(), [](int v) { return v != 0; })) {
                     detect_keypoints.push_back(res.keypoint);
+                }
+                
+                // Store category and score for COCO detection
+                if (coco_detected) {
+                    detect_categories.push_back(make_pair(res.category, res.score));
                 }
             }
         }
@@ -295,17 +302,17 @@ static void camera_video_frame_operation(uint8_t *camera_buf, uint8_t camera_buf
             }
             
             // Display COCO detection class name
-            if (coco_detected && i < detect_results.size()) {
-                auto result_iter = detect_results.begin();
-                std::advance(result_iter, i);
+            if (coco_detected && i < detect_categories.size()) {
+                int category = detect_categories[i].first;
+                float score = detect_categories[i].second;
                 
-                const char* class_name = get_coco_class_name(result_iter->category);
+                const char* class_name = get_coco_class_name(category);
                 char label[64];
-                snprintf(label, sizeof(label), "%s (%.1f%%)", class_name, result_iter->score * 100.0f);
+                snprintf(label, sizeof(label), "%s (%.1f%%)", class_name, score * 100.0f);
                 
                 // Ensure text is displayed above the bounding box and within screen boundaries
                 int text_x = bound[0];
-                int text_y = bound[1] - 50;  // Display 30 pixels above the bounding box
+                int text_y = bound[1] - 50;  // Display 50 pixels above the bounding box
                 if (text_y < 0) text_y = bound[1] + 5;  // If not enough space above, display at the top inside the box
                 
                 // Use esp_painter to draw text
