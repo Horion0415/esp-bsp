@@ -19,10 +19,6 @@ extern "C" {
 PedestrianDetect *get_pedestrian_detect();
 void delete_pedestrian_detect();
 
-void draw_rectangle_rgb(uint16_t *buffer, int width, int height, int x1, int y1, int x2, int y2, int x_offset, int y_offset, uint8_t r, uint8_t g, uint8_t b, int thickness);
-
-void draw_green_points(uint16_t *buffer, const std::vector<int> &landmarks);
-
 #ifdef __cplusplus
 }
 #endif
