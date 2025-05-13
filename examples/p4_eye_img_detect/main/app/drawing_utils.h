@@ -13,6 +13,14 @@ extern "C" {
 #endif
 
 /**
+ * @brief Set the global screen dimensions
+ * 
+ * @param width     Width of the screen
+ * @param height    Height of the screen
+ */
+void set_screen_dimensions(int width, int height);
+
+/**
  * @brief Draw a rectangle with specified RGB color on a buffer
  * 
  * @param buffer    Pointer to RGB565 buffer

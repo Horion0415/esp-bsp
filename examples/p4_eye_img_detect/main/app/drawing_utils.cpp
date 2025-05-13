@@ -6,9 +6,16 @@
 
 #include "drawing_utils.h"
 
-// Screen dimensions
-#define WIDTH  1920
-#define HEIGHT 1080
+// Default screen dimensions (can be updated at runtime)
+static int g_screen_width = 1920;
+static int g_screen_height = 1080;
+
+// Function to set screen dimensions
+void set_screen_dimensions(int width, int height)
+{
+    g_screen_width = width;
+    g_screen_height = height;
+}
 
 void draw_rectangle_rgb(uint16_t *buffer, int width, int height, int x1, int y1, int x2, int y2, int x_offset, int y_offset, uint8_t r, uint8_t g, uint8_t b, int thickness)
 {
@@ -68,8 +75,8 @@ static void draw_large_green_point(uint16_t *buffer, int x, int y) {
             int nx = x + dx;
             int ny = y + dy;
 
-            if (nx >= 0 && nx < WIDTH && ny >= 0 && ny < HEIGHT) {
-                buffer[ny * WIDTH + nx] = green;
+            if (nx >= 0 && nx < g_screen_width && ny >= 0 && ny < g_screen_height) {
+                buffer[ny * g_screen_width + nx] = green;
             }
         }
     }

@@ -152,6 +152,8 @@ extern "C" void app_main(void)
     hum_detect = get_humanface_detect();
     assert(hum_detect != NULL);
 
+    set_screen_dimensions(HOR_RES, VER_RES);
+
     xTaskCreatePinnedToCore((TaskFunction_t)camera_dectect_task, "Camera Detect", 1024 * 8, NULL, 5, &detect_task_handle, 1);
 
     // Start the camera stream task
