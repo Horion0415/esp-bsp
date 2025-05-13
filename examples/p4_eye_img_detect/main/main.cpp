@@ -19,6 +19,7 @@
 #include "app_video.h"
 #include "app_pedestrian_detect.h"
 #include "app_humanface_detect.h"
+#include "app_coco_detect.h"
 #include "app_camera_pipeline.hpp"
 #include "app_drawing_utils.h"
 
@@ -35,6 +36,7 @@ static vector<vector<int>> detect_keypoints;
 static std::list<dl::detect::result_t> detect_results;
 static PedestrianDetect *ped_detect = NULL;
 static HumanFaceDetect *hum_detect = NULL;
+static COCODetect *g_coco_detect = NULL;
 static pipeline_handle_t feed_pipeline;
 static pipeline_handle_t detect_pipeline;
 
@@ -49,7 +51,10 @@ static ppa_client_handle_t ppa_srm_handle = NULL;
 static size_t data_cache_line_size = 0;
 static void *canvas_buf[EXAMPLE_CAM_BUF_NUM];
 
-static bool human_detected = false;
+static bool pedestrian_detected = true;
+static bool humanface_detected = false;
+static bool coco_detected = false;
+static uint8_t detect_mode = 0; // 0: Pedestrian detection, 1: Face detection, 2: COCO detection
 
 static void camera_video_frame_operation(uint8_t *camera_buf, uint8_t camera_buf_index, uint32_t camera_buf_hes, uint32_t camera_buf_ves, size_t camera_buf_len);
 void camera_dectect_task(void);
@@ -66,7 +71,17 @@ void swap_rgb565_bytes(uint16_t *buffer, int pixel_count)
 static void btn_handler(void *arg, void *data)
 {
     if((int)data == BSP_BUTTON_1) {
-        human_detected = !human_detected;
+        // Cycle through detection modes: Pedestrian -> Face -> COCO -> Pedestrian
+        detect_mode = (detect_mode + 1) % 3;
+        
+        // Set detection flags based on current mode
+        pedestrian_detected = (detect_mode == 0);
+        humanface_detected = (detect_mode == 1);
+        coco_detected = (detect_mode == 2);
+        
+        ESP_LOGI(TAG, "Switched to mode %d: %s", detect_mode, 
+                detect_mode == 0 ? "Pedestrian Detection" : 
+                detect_mode == 1 ? "Face Detection" : "COCO Detection");
     }
 }
 
@@ -152,6 +167,9 @@ extern "C" void app_main(void)
     hum_detect = get_humanface_detect();
     assert(hum_detect != NULL);
 
+    g_coco_detect = get_coco_detect();
+    assert(g_coco_detect != NULL);
+
     set_screen_dimensions(HOR_RES, VER_RES);
 
     xTaskCreatePinnedToCore((TaskFunction_t)camera_dectect_task, "Camera Detect", 1024 * 8, NULL, 5, &detect_task_handle, 1);
@@ -167,10 +185,12 @@ void camera_dectect_task(void)
     while (1) {        
         camera_pipeline_buffer_element *p = camera_pipeline_recv_element(feed_pipeline, portMAX_DELAY);
         if (p) {
-            if (!human_detected) {
+            if (pedestrian_detected) {
                 detect_results = app_pedestrian_detect((uint16_t *)p->buffer, HOR_RES, VER_RES);
-            }  else {
+            }  else if (humanface_detected) {
                 detect_results = app_humanface_detect((uint16_t *)p->buffer, HOR_RES, VER_RES);
+            } else if (coco_detected) {
+                detect_results = app_coco_detect((uint16_t *)p->buffer, HOR_RES, VER_RES);
             }
 
             camera_pipeline_queue_element_index(feed_pipeline, p->index);
@@ -209,7 +229,7 @@ static void camera_video_frame_operation(uint8_t *camera_buf, uint8_t camera_buf
                 detect_bound.push_back(box);
 
                 // Process keypoints only in face detection mode
-                if ((human_detected) && 
+                if ((humanface_detected) && 
                     res.keypoint.size() >= 10 && 
                     std::any_of(res.keypoint.begin(), res.keypoint.end(), [](int v) { return v != 0; })) {
                     detect_keypoints.push_back(res.keypoint);
@@ -232,7 +252,7 @@ static void camera_video_frame_operation(uint8_t *camera_buf, uint8_t camera_buf
                                 0, 0, 255, 0, 0, 5);
 
             // Draw keypoints in face detection mode
-            if (human_detected && 
+            if (humanface_detected && 
                 i < detect_keypoints.size() && 
                 detect_keypoints[i].size() >= 10) {
                 draw_green_points(rgb_buf, detect_keypoints[i]);
