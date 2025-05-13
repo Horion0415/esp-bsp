@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#include "drawing_utils.h"
+#include "app_drawing_utils.h"
 
 // Default screen dimensions (can be updated at runtime)
 static int g_screen_width = 1920;

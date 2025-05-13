@@ -20,7 +20,7 @@
 #include "app_pedestrian_detect.h"
 #include "app_humanface_detect.h"
 #include "app_camera_pipeline.hpp"
-#include "drawing_utils.h"
+#include "app_drawing_utils.h"
 
 #define ALIGN_UP(num, align)    (((num) + ((align) - 1)) & ~((align) - 1))
 #define HOR_RES 1920
