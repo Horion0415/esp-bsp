@@ -205,8 +205,6 @@ void camera_dectect_task(void)
                 detect_results = app_pedestrian_detect((uint16_t *)p->buffer, HOR_RES, VER_RES);
             }  else if (humanface_detected) {
                 detect_results = app_humanface_detect((uint16_t *)p->buffer, HOR_RES, VER_RES);
-            } else if (coco_detected) {
-                detect_results = app_coco_detect((uint16_t *)p->buffer, BSP_LCD_H_RES, BSP_LCD_V_RES);
             }
 
             camera_pipeline_queue_element_index(feed_pipeline, p->index);
@@ -371,83 +369,41 @@ static void camera_video_frame_operation(uint8_t *camera_buf, uint8_t camera_buf
 
         ESP_ERROR_CHECK(ppa_do_scale_rotate_mirror(ppa_srm_handle, &oper_config_out));
 
-        // Process input frame
-        camera_pipeline_buffer_element *input_element = camera_pipeline_get_queued_element(feed_pipeline);
-        if (input_element) {
-            input_element->buffer = reinterpret_cast<uint16_t*>(canvas_buf[camera_buf_index]);
-            camera_pipeline_done_element(feed_pipeline, input_element);
-        }
-
+        detect_results = app_coco_detect((uint16_t *)canvas_buf[camera_buf_index], BSP_LCD_H_RES, BSP_LCD_V_RES);
         // Get detection results
-        camera_pipeline_buffer_element *detect_element = camera_pipeline_recv_element(detect_pipeline, 0);
-        if (detect_element) {
-            // Process detection results
-            detect_keypoints.clear();
-            detect_bound.clear();
-            detect_categories.clear(); // Clear categories vector
-            
-            for (const auto& res : *(detect_element->detect_results)) {
+        if (detect_results.size() > 0) {
+            uint16_t *rgb_buf = reinterpret_cast<uint16_t*>(canvas_buf[camera_buf_index]);
+            for (const auto& res : detect_results) {
                 const auto& box = res.box;
                 // Check if bounding box is valid
                 if (box.size() >= 4 && std::any_of(box.begin(), box.end(), [](int v) { return v != 0; })) {
-                    detect_bound.push_back(box);
-
-                    // Process keypoints only in face detection mode
-                    if ((humanface_detected) && 
-                        res.keypoint.size() >= 10 && 
-                        std::any_of(res.keypoint.begin(), res.keypoint.end(), [](int v) { return v != 0; })) {
-                        detect_keypoints.push_back(res.keypoint);
-                    }
-                    
-                    // Store category and score for COCO detection
-                    if (coco_detected) {
-                        detect_categories.push_back(make_pair(res.category, res.score));
-                    }
-                }
-            }
-
-            camera_pipeline_queue_element_index(detect_pipeline, detect_element->index);
-        }
-
-        // Draw detection results
-        uint16_t *rgb_buf = reinterpret_cast<uint16_t*>(canvas_buf[camera_buf_index]);
-        for (size_t i = 0; i < detect_bound.size(); i++) {
-            const auto& bound = detect_bound[i];
-            // Check if current bounding box is valid
-            if (bound.size() >= 4 && std::any_of(bound.begin(), bound.end(), [](int v) { return v != 0; })) {
-                // Draw bounding box
-                draw_rectangle_rgb(rgb_buf, BSP_LCD_H_RES, BSP_LCD_V_RES,
-                                    bound[0], bound[1], bound[2], bound[3],
+                    //detect_bound.push_back(box);
+                    draw_rectangle_rgb(rgb_buf, BSP_LCD_H_RES, BSP_LCD_V_RES,
+                                    box[0], box[1], box[2], box[3],
                                     0, 0, 255, 0, 0, 5);
 
-                // Draw keypoints in face detection mode
-                if (humanface_detected && 
-                    i < detect_keypoints.size() && 
-                    detect_keypoints[i].size() >= 10) {
-                    draw_green_points(rgb_buf, detect_keypoints[i]);
-                }
-                
-                // Display COCO detection class name
-                if (coco_detected && i < detect_categories.size()) {
-                    int category = detect_categories[i].first;
-                    float score = detect_categories[i].second;
-                    
-                    const char* class_name = get_coco_class_name(category);
-                    char label[64];
-                    snprintf(label, sizeof(label), "%s (%.1f%%)", class_name, score * 100.0f);
-                    
-                    // Ensure text is displayed above the bounding box and within screen boundaries
-                    int text_x = bound[0];
-                    int text_y = bound[1] - 10;  // Display 50 pixels above the bounding box
-                    if (text_y < 0) text_y = bound[1] + 5;  // If not enough space above, display at the top inside the box
-                    
-                    // Use esp_painter to draw text
-                    if (painter != NULL) {
-                        esp_painter_draw_string(painter, (uint8_t*)rgb_buf, 
-                                            BSP_LCD_H_RES * BSP_LCD_V_RES * 2,
-                                            text_x, text_y, NULL, 
-                                            ESP_PAINTER_COLOR_YELLOW, 
-                                            label);
+                    // Display COCO detection class name
+                    if (coco_detected) {
+                        int category = res.category;
+                        float score = res.score;
+                        
+                        const char* class_name = get_coco_class_name(category);
+                        char label[64];
+                        snprintf(label, sizeof(label), "%s (%.1f%%)", class_name, score * 100.0f);
+                        
+                        // Ensure text is displayed above the bounding box and within screen boundaries
+                        int text_x = box[0];
+                        int text_y = box[1] - 10;  // Display 50 pixels above the bounding box
+                        if (text_y < 0) text_y = box[1] + 5;  // If not enough space above, display at the top inside the box
+                        
+                        // Use esp_painter to draw text
+                        if (painter != NULL) {
+                            esp_painter_draw_string(painter, (uint8_t*)rgb_buf, 
+                                                BSP_LCD_H_RES * BSP_LCD_V_RES * 2,
+                                                text_x, text_y, NULL, 
+                                                ESP_PAINTER_COLOR_YELLOW, 
+                                                label);
+                        }
                     }
                 }
             }
