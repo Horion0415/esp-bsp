@@ -55,7 +55,6 @@ static button_handle_t btns[BSP_BUTTON_NUM];
 static ppa_client_handle_t ppa_srm_handle = NULL;
 static size_t data_cache_line_size = 0;
 static void *canvas_buf[EXAMPLE_CAM_BUF_NUM];
-static void *rgb565_swap_buf = NULL; // Intermediate buffer for RGB565 byte swapping
 
 static bool pedestrian_detected = true;
 static bool humanface_detected = false;
@@ -71,18 +70,6 @@ void swap_rgb565_bytes(uint16_t *buffer, int pixel_count)
         uint16_t swap16 = *(buffer + i);
         swap16 = (swap16 >> 8) | (swap16 << 8);
         *(buffer + i) = swap16;
-    }
-}
-
-void copy_and_swap_rgb565(void* dst, const void* src, int pixel_count)
-{
-    uint16_t *dst_buf = (uint16_t*)dst;
-    const uint16_t *src_buf = (const uint16_t*)src;
-    
-    for (int i = 0; i < pixel_count; i++) {
-        uint16_t swap16 = *(src_buf + i);
-        swap16 = (swap16 >> 8) | (swap16 << 8);
-        *(dst_buf + i) = swap16;
     }
 }
 
@@ -131,13 +118,6 @@ extern "C" void app_main(void)
             ESP_LOGE(TAG, "Failed to allocate canvas buffer");
             return;
         }
-    }
-    
-    // allocate the rgb565 swap buffer
-    rgb565_swap_buf = heap_caps_aligned_calloc(data_cache_line_size, 1, HOR_RES * VER_RES * 2, MALLOC_CAP_SPIRAM);
-    if (rgb565_swap_buf == NULL) {
-        ESP_LOGE(TAG, "Failed to allocate RGB565 swap buffer");
-        return;
     }
 
     // Initialize the I2C
@@ -226,8 +206,7 @@ void camera_dectect_task(void)
             }  else if (humanface_detected) {
                 detect_results = app_humanface_detect((uint16_t *)p->buffer, HOR_RES, VER_RES);
             } else if (coco_detected) {
-                copy_and_swap_rgb565(rgb565_swap_buf, p->buffer, HOR_RES * VER_RES);
-                detect_results = app_coco_detect((uint16_t *)rgb565_swap_buf, HOR_RES, VER_RES);
+                detect_results = app_coco_detect((uint16_t *)p->buffer, HOR_RES, VER_RES);
             }
 
             camera_pipeline_queue_element_index(feed_pipeline, p->index);
