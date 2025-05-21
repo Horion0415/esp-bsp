@@ -405,10 +405,10 @@ esp_err_t esp_painter_draw_string(esp_painter_handle_t handle, uint8_t *buffer, 
         }
     // }
 
-    ret = esp_cache_msync(buffer, buffer_size, ESP_CACHE_MSYNC_FLAG_INVALIDATE);
-    if (ret != ESP_OK) {
-        ESP_LOGE(TAG, "Cache sync failed");
-    }
+    // ret = esp_cache_msync(buffer, buffer_size, ESP_CACHE_MSYNC_FLAG_INVALIDATE);
+    // if (ret != ESP_OK) {
+    //     ESP_LOGE(TAG, "Cache sync failed");
+    // }
 
     return ret;
 }
