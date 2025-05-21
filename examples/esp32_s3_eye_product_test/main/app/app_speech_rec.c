@@ -228,7 +228,7 @@ static void speech_before_init()
 esp_err_t speech_recognition_init(void)
 {
     speech_before_init();
-    xTaskCreatePinnedToCore(feed_handler, "Feed", 4 * 1024, NULL, 5, NULL, 0);
-    xTaskCreatePinnedToCore(detect_hander, "Detect", 5 * 1024, NULL, 5, NULL, 0);
+    xTaskCreatePinnedToCore((void *)feed_handler, "Feed", 4 * 1024, NULL, 5, NULL, 0);
+    xTaskCreatePinnedToCore((void *)detect_hander, "Detect", 5 * 1024, NULL, 5, NULL, 0);
     return ESP_OK;
 }

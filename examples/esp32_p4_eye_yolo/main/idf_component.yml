@@ -1,0 +1,9 @@
+description: BSP Display rotation example
+dependencies:
+  esp32_s3_eye:
+    version: "*"
+    override_path: "../../../bsp/esp32_s3_eye"
+  espressif/esp32-camera:
+    version: "==2.0.5"
+    public: true
+  # espressif/esp-sr: "~1.5.1"
