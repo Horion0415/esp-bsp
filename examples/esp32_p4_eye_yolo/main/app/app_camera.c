@@ -4,8 +4,10 @@
 
 #include "app_camera.h"
 
-#include "lvgl.h"
+// #include "lvgl.h"
 #include "bsp/esp-bsp.h"
+
+#include "app_ai_detect.h"
 
 static const char *TAG = "app_camera";
 
@@ -89,7 +91,10 @@ static void app_camera_task(void *arg)
             if(frame == NULL) {
                 ESP_LOGE(TAG, "Camera capture failed");
             } else {
+                app_coco_od_detect((uint16_t *)frame->buf, 240, 240);
                 esp_lcd_panel_draw_bitmap(st_lcd_panel, 0, 0, 240, 240, frame->buf);
+                vTaskDelay(100 / portTICK_PERIOD_MS);
+                ESP_LOGW(TAG, "Draw bitmap");
 
                 esp_camera_fb_return(frame);
             }
