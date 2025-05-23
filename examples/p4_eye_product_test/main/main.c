@@ -173,6 +173,12 @@ void app_main(void)
         return;
     }
 
+    if(bsp_sdcard_mount() != ESP_OK) {
+        lv_obj_set_style_text_color(label, lv_color_make(255, 0, 0), LV_PART_MAIN);
+        lv_label_set_text(label, "SD card test: FAIL");
+        return;
+    }
+
     // Wait for USB HS
     while(!app_usb_hid_stage()) {
         lv_label_set_text(label, "Detecting USB HS...");
