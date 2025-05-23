@@ -17,6 +17,7 @@
 #include "app_sr.h"
 #include "app_wifi_scan.h"
 #include "app_video.h"
+#include "app_gpio.h"
 
 #define TEST_DISK_PATH "/spiflash"
 #define TEST_RESULT_FILE_FORMAT "%s/%s.txt" 
@@ -145,6 +146,9 @@ void app_main(void)
     char file_path[128];
     snprintf(file_path, sizeof(file_path), TEST_RESULT_FILE_FORMAT, TEST_DISK_PATH, mac_str);
 
+    // Initialize GPIO
+    init_gpio();
+
     // Initialize USB MSC
     app_usb_hid_init();
     create_and_write_file(file_path, "", false);
@@ -154,11 +158,20 @@ void app_main(void)
 
     lv_obj_t *label = lv_label_create(lv_scr_act());
     lv_obj_set_style_text_font(label, &lv_font_montserrat_24, LV_PART_MAIN);
+    lv_obj_set_style_text_align(label, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN);
     lv_label_set_text(label, "Auto detecting");
     lv_obj_align(label, LV_ALIGN_CENTER, 0, 0);
     
     bsp_display_unlock();
     bsp_display_backlight_on();
+
+    if(test_gpio_connection()) {
+        lv_label_set_text(label, "GPIO test: PASS");
+    } else {
+        lv_obj_set_style_text_color(label, lv_color_make(255, 0, 0), LV_PART_MAIN);
+        lv_label_set_text(label, "GPIO test: FAIL");
+        return;
+    }
 
     // Wait for USB HS
     while(!app_usb_hid_stage()) {
@@ -194,6 +207,7 @@ void app_main(void)
             ESP_LOGI(TAG, "[WiFi MAC address]: %02X-%02X-%02X-%02X-%02X-%02X", c6_mac[0], c6_mac[1], c6_mac[2], c6_mac[3], c6_mac[4], c6_mac[5]);
             ESP_LOGI(TAG, "[Signal strength]: %d dBm", rssi);
         } else {
+            lv_obj_set_style_text_color(label, lv_color_make(255, 0, 0), LV_PART_MAIN);
             lv_label_set_text(label, "WiFi scan: FAIL\nSignal too weak");
             create_and_write_file(file_path, "WiFi scan: FAIL (Weak signal)", true);
             ESP_LOGE(TAG, "Signal strength (%d dBm) below threshold (%d dBm)", rssi, WIFI_TEST_MIN_RSSI);
@@ -201,6 +215,7 @@ void app_main(void)
             return;
         }
     } else {
+        lv_obj_set_style_text_color(label, lv_color_make(255, 0, 0), LV_PART_MAIN);
         lv_label_set_text(label, "WiFi scan: FAIL\nNo AP found");                 
         create_and_write_file(file_path, "WiFi scan: FAIL (No AP)", true);
     
