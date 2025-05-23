@@ -31,6 +31,8 @@ static uint8_t channel_list[CHANNEL_LIST_SIZE] = {1, 6, 11};
 static const char *TAG = "scan";
 
 static uint16_t ap_count = 0;
+static wifi_ap_record_t scan_results[DEFAULT_SCAN_LIST_SIZE];
+static uint16_t saved_scan_count = 0;
 
 static void print_auth_mode(int authmode)
 {
@@ -198,6 +200,11 @@ static void wifi_scan(void)
     ESP_ERROR_CHECK(esp_wifi_scan_get_ap_num(&ap_count));
     ESP_ERROR_CHECK(esp_wifi_scan_get_ap_records(&number, ap_info));
     ESP_LOGI(TAG, "Total APs scanned = %u, actual AP number ap_info holds = %u", ap_count, number);
+    
+    // Save scan results for later use
+    saved_scan_count = number;
+    memcpy(scan_results, ap_info, sizeof(wifi_ap_record_t) * number);
+    
     for (int i = 0; i < number; i++) {
         ESP_LOGI(TAG, "SSID \t\t%s", ap_info[i].ssid);
         ESP_LOGI(TAG, "RSSI \t\t%d", ap_info[i].rssi);
@@ -229,21 +236,19 @@ uint16_t app_wifi_scan_get_ap_count(void)
 
 int8_t app_wifi_scan_get_rssi_by_ssid(const char* target_ssid)
 {
-    uint16_t number = DEFAULT_SCAN_LIST_SIZE;
-    wifi_ap_record_t ap_info[DEFAULT_SCAN_LIST_SIZE];
     int8_t rssi = -100; // Default return a very weak signal strength
 
-    memset(ap_info, 0, sizeof(ap_info));
-    
-    // Get scan results
-    ESP_ERROR_CHECK(esp_wifi_scan_get_ap_records(&number, ap_info));
-    
-    // Iterate through all APs to find target SSID
-    for (int i = 0; i < number; i++) {
-        if (strcmp((const char*)ap_info[i].ssid, target_ssid) == 0) {
-            rssi = ap_info[i].rssi;
+    // Use saved scan results instead of getting fresh data
+    for (int i = 0; i < saved_scan_count; i++) {
+        if (strcmp((const char*)scan_results[i].ssid, target_ssid) == 0) {
+            rssi = scan_results[i].rssi;
+            ESP_LOGI(TAG, "Found target SSID '%s' with RSSI: %d", target_ssid, rssi);
             break;
         }
+    }
+    
+    if (rssi == -100) {
+        ESP_LOGW(TAG, "Target SSID '%s' not found in scan results", target_ssid);
     }
     
     return rssi;

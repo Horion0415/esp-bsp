@@ -22,7 +22,7 @@
 #define TEST_RESULT_FILE_FORMAT "%s/%s.txt" 
 
 /* WiFi test configuration */
-#define WIFI_TEST_TARGET_SSID    "ESP_AP"    // Target SSID for WiFi test
+#define WIFI_TEST_TARGET_SSID    "TP-LINK_Liu"    // Target SSID for WiFi test
 #define WIFI_TEST_MIN_RSSI      -70         // Minimum acceptable signal strength in dBm
 
 #define BUTTON_1_BIT BIT0
@@ -185,7 +185,7 @@ void app_main(void)
     if (ap_count > 0) {
         // Get signal strength for target SSID
         int8_t rssi = app_wifi_scan_get_rssi_by_ssid(WIFI_TEST_TARGET_SSID);
-        
+
         if (rssi > WIFI_TEST_MIN_RSSI) {
             lv_label_set_text(label, "WiFi scan: PASS\nSignal: Good");
             create_and_write_file(file_path, "WiFi scan: PASS", true);
@@ -197,10 +197,14 @@ void app_main(void)
             lv_label_set_text(label, "WiFi scan: FAIL\nSignal too weak");
             create_and_write_file(file_path, "WiFi scan: FAIL (Weak signal)", true);
             ESP_LOGE(TAG, "Signal strength (%d dBm) below threshold (%d dBm)", rssi, WIFI_TEST_MIN_RSSI);
+
+            return;
         }
     } else {
         lv_label_set_text(label, "WiFi scan: FAIL\nNo AP found");                 
         create_and_write_file(file_path, "WiFi scan: FAIL (No AP)", true);
+    
+        return;
     }
 
     /* Init Buttons */
