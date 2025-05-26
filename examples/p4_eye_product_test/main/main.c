@@ -18,6 +18,7 @@
 #include "app_wifi_scan.h"
 #include "app_video.h"
 #include "app_gpio.h"
+#include "ui.h"
 
 #define TEST_DISK_PATH  BSP_SD_MOUNT_POINT
 #define TEST_RESULT_FILE_FORMAT "%s/%s.txt" 
@@ -155,37 +156,37 @@ void app_main(void)
     bsp_display_lock(0);
 
     lv_obj_t *label = lv_label_create(lv_scr_act());
-    lv_obj_set_style_text_font(label, &lv_font_montserrat_24, LV_PART_MAIN);
+    lv_obj_set_style_text_font(label, &ui_font_shuhei_font_24, LV_PART_MAIN);
     lv_obj_set_style_text_align(label, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN);
-    lv_label_set_text(label, "Auto detecting");
+    lv_label_set_text(label, "自动检测中");
     lv_obj_align(label, LV_ALIGN_CENTER, 0, 0);
     
     bsp_display_unlock();
     bsp_display_backlight_on();
 
     if(test_gpio_connection()) {
-        lv_label_set_text(label, "GPIO test: PASS");
+        lv_label_set_text(label, "GPIO测试通过");
         create_and_write_file(file_path, "GPIO: PASS", true);
     } else {
         lv_obj_set_style_text_color(label, lv_color_make(255, 0, 0), LV_PART_MAIN);
-        lv_label_set_text(label, "GPIO test: FAIL");
+        lv_label_set_text(label, "GPIO测试失败");
         create_and_write_file(file_path, "GPIO: FAIL", true);
         return;
     }
 
     if(bsp_sdcard_mount() != ESP_OK) {
         lv_obj_set_style_text_color(label, lv_color_make(255, 0, 0), LV_PART_MAIN);
-        lv_label_set_text(label, "SD card test: FAIL");
+        lv_label_set_text(label, "SD卡测试失败");
         create_and_write_file(file_path, "SD card: FAIL", true);
         return;
     } else {
-        lv_label_set_text(label, "SD card test: PASS");
+        lv_label_set_text(label, "SD卡测试通过");
         create_and_write_file(file_path, "SD card: PASS", true);
     }
 
     // Wait for USB HS
     while(!app_usb_hid_stage()) {
-        lv_label_set_text(label, "Detecting USB HS...");
+        lv_label_set_text(label, "检测中请稍候");
         vTaskDelay(100 / portTICK_PERIOD_MS);
     }
     ESP_LOGI(TAG, "[Done] USB HS detected!");
@@ -196,14 +197,14 @@ void app_main(void)
 
     // Wait for wakeup
     while (!app_sr_get_wakeup_result()) {
-        lv_label_set_text(label, "Please say 'Hi ESP'");
+        lv_label_set_text(label, "请对我说Hi ESP");
         vTaskDelay(100 / portTICK_PERIOD_MS);
     }
     ESP_LOGI(TAG, "[Done] Wakeup detected!");
     create_and_write_file(file_path, "Microphone: PASS", true);
 
     // Scan WiFi
-    lv_label_set_text(label, "Scanning WiFi...");
+    lv_label_set_text(label, "正在扫描WiFi");
     app_wifi_scan();
     uint16_t ap_count = app_wifi_scan_get_ap_count();
     
@@ -212,7 +213,7 @@ void app_main(void)
         int8_t rssi = app_wifi_scan_get_rssi_by_ssid(WIFI_TEST_TARGET_SSID);
 
         if (rssi > WIFI_TEST_MIN_RSSI) {
-            lv_label_set_text(label, "WiFi scan: PASS\nSignal: Good");
+            lv_label_set_text(label, "WiFi扫描通过\n信号强度优");
             create_and_write_file(file_path, "WiFi scan: PASS", true);
             
             esp_wifi_remote_get_mac(WIFI_IF_STA, c6_mac);
@@ -220,7 +221,7 @@ void app_main(void)
             ESP_LOGI(TAG, "[Signal strength]: %d dBm", rssi);
         } else {
             lv_obj_set_style_text_color(label, lv_color_make(255, 0, 0), LV_PART_MAIN);
-            lv_label_set_text(label, "WiFi scan: FAIL\nSignal too weak");
+            lv_label_set_text(label, "WiFi扫描失败\n信号太弱");
             create_and_write_file(file_path, "WiFi scan: FAIL (Weak signal)", true);
             ESP_LOGE(TAG, "Signal strength (%d dBm) below threshold (%d dBm)", rssi, WIFI_TEST_MIN_RSSI);
 
@@ -228,7 +229,7 @@ void app_main(void)
         }
     } else {
         lv_obj_set_style_text_color(label, lv_color_make(255, 0, 0), LV_PART_MAIN);
-        lv_label_set_text(label, "WiFi scan: FAIL\nNo AP found");                 
+        lv_label_set_text(label, "WiFi扫描失败\n没有找到WiFi热点");                 
         create_and_write_file(file_path, "WiFi scan: FAIL (No AP)", true);
     
         return;
@@ -241,7 +242,7 @@ void app_main(void)
     ESP_ERROR_CHECK(iot_button_register_cb(btns[BSP_BUTTON_2], BUTTON_PRESS_DOWN, btn_handler, (void *) BSP_BUTTON_2));
     ESP_ERROR_CHECK(iot_button_register_cb(btns[BSP_BUTTON_3], BUTTON_PRESS_DOWN, btn_handler, (void *) BSP_BUTTON_3));
     
-    lv_label_set_text(label, "Please press the \n three buttons \n  on the right.");
+    lv_label_set_text(label, "请依次按下三个按键");
 
     button_event_group = xEventGroupCreate();
 
@@ -253,7 +254,7 @@ void app_main(void)
         portMAX_DELAY);      
 
     if((bits & ALL_BUTTONS_BITS) == ALL_BUTTONS_BITS) {
-        lv_label_set_text(label, "All buttons test \n passed!");
+        lv_label_set_text(label, "按键测试通过");
         create_and_write_file(file_path, "Buttons: PASS", true);
     }    
 
@@ -264,27 +265,27 @@ void app_main(void)
     ESP_ERROR_CHECK(bsp_knob_register_cb(KNOB_RIGHT, knob_left_cb, NULL));    
     ESP_ERROR_CHECK(iot_button_register_cb(btns[BSP_BUTTON_ED], BUTTON_PRESS_UP, btn_handler, (void *) BSP_BUTTON_ED));
 
-    lv_label_set_text(label, "   Toggle \n the knob left");
+    lv_label_set_text(label, "请向左旋转旋钮");
     xEventGroupWaitBits(button_event_group, KNOB_LEFT_BIT, pdFALSE, pdTRUE, portMAX_DELAY);
 
-    lv_label_set_text(label, "   Toggle \n the knob right");
+    lv_label_set_text(label, "请向右旋转旋钮");
     xEventGroupWaitBits(button_event_group, KNOB_RIGHT_BIT, pdFALSE, pdTRUE, portMAX_DELAY);
 
-    lv_label_set_text(label, "Press the knob");
+    lv_label_set_text(label, "请按下旋钮");
     xEventGroupWaitBits(button_event_group, KNOB_PRESS_BIT, pdFALSE, pdTRUE, portMAX_DELAY);
 
-    lv_label_set_text(label, "Knob test \n passed!");
+    lv_label_set_text(label, "旋钮测试通过");
     create_and_write_file(file_path, "Knob: PASS", true);
 
     // Initialize the led
     ESP_ERROR_CHECK(bsp_leds_init());
-    lv_label_set_text(label, "Check fill light \n        if on \n press any key.");
+    lv_label_set_text(label, "检查补光灯是否打开若已打开请按任意键");
 
     bsp_led_set(BSP_LED_WHITE, 1);  // Turn on the white LED
     
     xEventGroupWaitBits(button_event_group, LED_WHITE_BIT, pdFALSE, pdTRUE, portMAX_DELAY);
 
-    lv_label_set_text(label, "LED test \n passed!");
+    lv_label_set_text(label, "LED测试通过");
     create_and_write_file(file_path, "LED: PASS", true);
     bsp_display_lock(0);
 
@@ -295,10 +296,10 @@ void app_main(void)
     lv_obj_set_align(cam_canvas, LV_ALIGN_CENTER);
     
     cam_label = lv_label_create(cam_canvas);
-    lv_obj_set_style_text_font(cam_label, &lv_font_montserrat_24, LV_PART_MAIN);
+    lv_obj_set_style_text_font(cam_label, &ui_font_shuhei_font_24, LV_PART_MAIN);
     lv_obj_set_style_text_align(cam_label, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN);
     lv_obj_set_style_text_color(cam_label, lv_color_make(255, 0, 0), LV_PART_MAIN);
-    lv_label_set_text(cam_label, "If normal \n press any key \n to exit.");
+    lv_label_set_text(cam_label, "若显示正常按任意键退出");
     lv_obj_align(cam_label, LV_ALIGN_CENTER, 0, 0);
 
     bsp_display_unlock();
@@ -349,7 +350,7 @@ void app_main(void)
     ESP_ERROR_CHECK(app_video_stream_task_start(video_cam_fd0, 0));
 
     xEventGroupWaitBits(button_event_group, CAMERA_EXIT_BIT, pdFALSE, pdTRUE, portMAX_DELAY);
-    lv_label_set_text(cam_label, "Camera test \n passed!  \n  All checks \n are complete!");
+    lv_label_set_text(cam_label, "检测完成\n测试通过");
     create_and_write_file(file_path, "Camera: PASS", true);
 }
 
