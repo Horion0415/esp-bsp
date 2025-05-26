@@ -19,7 +19,7 @@
 #include "app_video.h"
 #include "app_gpio.h"
 
-#define TEST_DISK_PATH "/spiflash"
+#define TEST_DISK_PATH  BSP_SD_MOUNT_POINT
 #define TEST_RESULT_FILE_FORMAT "%s/%s.txt" 
 
 /* WiFi test configuration */
@@ -55,15 +55,13 @@ static void camera_video_frame_operation(uint8_t *camera_buf, uint8_t camera_buf
 
 static esp_err_t create_and_write_file(const char *path, char *data, bool append)
 {
-    // ESP_LOGI(TAG, "Opening file %s", path);
-
-    // FILE *f = fopen(path, append ? "a" : "w");
-    // if (f == NULL) {
-    //     ESP_LOGE(TAG, "Failed to open file for writing");
-    //     return ESP_FAIL;
-    // }
-    // fprintf(f, "%s\n", data);
-    // fclose(f);
+    FILE *f = fopen(path, append ? "a" : "w");
+    if (f == NULL) {
+        ESP_LOGE(TAG, "Failed to open file for writing");
+        return ESP_FAIL;
+    }
+    fprintf(f, "%s\n", data);
+    fclose(f);
 
     if (append) {
         ESP_LOGI(TAG, "[Done] %s", data);
@@ -110,7 +108,7 @@ static void knob_left_cb(void *arg, void *data)
 {
     ESP_LOGI(TAG, "Knob left pressed");
     EventBits_t current_bits = xEventGroupGetBits(button_event_group);
-    // 检查是否所有按钮都已经按下
+    // Check if all buttons have been pressed
     if((current_bits & ALL_BUTTONS_BITS) == ALL_BUTTONS_BITS) {
         xEventGroupSetBits(button_event_group, KNOB_LEFT_BIT);
     } else {
@@ -122,7 +120,7 @@ static void knob_right_cb(void *arg, void *data)
 {
     ESP_LOGI(TAG, "Knob right pressed");
     EventBits_t current_bits = xEventGroupGetBits(button_event_group);
-    // 检查是否所有按钮都已经按下
+    // Check if all buttons have been pressed
     if((current_bits & ALL_BUTTONS_BITS) == ALL_BUTTONS_BITS) {
         xEventGroupSetBits(button_event_group, KNOB_RIGHT_BIT);
     } else {
@@ -167,16 +165,22 @@ void app_main(void)
 
     if(test_gpio_connection()) {
         lv_label_set_text(label, "GPIO test: PASS");
+        create_and_write_file(file_path, "GPIO: PASS", true);
     } else {
         lv_obj_set_style_text_color(label, lv_color_make(255, 0, 0), LV_PART_MAIN);
         lv_label_set_text(label, "GPIO test: FAIL");
+        create_and_write_file(file_path, "GPIO: FAIL", true);
         return;
     }
 
     if(bsp_sdcard_mount() != ESP_OK) {
         lv_obj_set_style_text_color(label, lv_color_make(255, 0, 0), LV_PART_MAIN);
         lv_label_set_text(label, "SD card test: FAIL");
+        create_and_write_file(file_path, "SD card: FAIL", true);
         return;
+    } else {
+        lv_label_set_text(label, "SD card test: PASS");
+        create_and_write_file(file_path, "SD card: PASS", true);
     }
 
     // Wait for USB HS
@@ -185,6 +189,7 @@ void app_main(void)
         vTaskDelay(100 / portTICK_PERIOD_MS);
     }
     ESP_LOGI(TAG, "[Done] USB HS detected!");
+    create_and_write_file(file_path, "USB HS: PASS", true);
 
     bsp_extra_pdm_codec_init();
     app_sr_start(false);
@@ -195,6 +200,7 @@ void app_main(void)
         vTaskDelay(100 / portTICK_PERIOD_MS);
     }
     ESP_LOGI(TAG, "[Done] Wakeup detected!");
+    create_and_write_file(file_path, "Microphone: PASS", true);
 
     // Scan WiFi
     lv_label_set_text(label, "Scanning WiFi...");
