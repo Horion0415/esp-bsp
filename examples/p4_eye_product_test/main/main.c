@@ -150,7 +150,6 @@ void app_main(void)
 
     // Initialize USB MSC
     app_usb_hid_init();
-    create_and_write_file(file_path, "", false);
 
     bsp_display_start();
     bsp_display_lock(0);
@@ -164,6 +163,18 @@ void app_main(void)
     bsp_display_unlock();
     bsp_display_backlight_on();
 
+    if(bsp_sdcard_mount() != ESP_OK) {
+        lv_obj_set_style_text_color(label, lv_color_make(255, 0, 0), LV_PART_MAIN);
+        lv_label_set_text(label, "SD卡测试失败");
+        create_and_write_file(file_path, "", false);
+        create_and_write_file(file_path, "SD card: FAIL", true);
+        return;
+    } else {
+        lv_label_set_text(label, "SD卡测试通过");
+        create_and_write_file(file_path, "", false);
+        create_and_write_file(file_path, "SD card: PASS", true);
+    }
+
     if(test_gpio_connection()) {
         lv_label_set_text(label, "GPIO测试通过");
         create_and_write_file(file_path, "GPIO: PASS", true);
@@ -174,19 +185,9 @@ void app_main(void)
         return;
     }
 
-    if(bsp_sdcard_mount() != ESP_OK) {
-        lv_obj_set_style_text_color(label, lv_color_make(255, 0, 0), LV_PART_MAIN);
-        lv_label_set_text(label, "SD卡测试失败");
-        create_and_write_file(file_path, "SD card: FAIL", true);
-        return;
-    } else {
-        lv_label_set_text(label, "SD卡测试通过");
-        create_and_write_file(file_path, "SD card: PASS", true);
-    }
-
     // Wait for USB HS
     while(!app_usb_hid_stage()) {
-        lv_label_set_text(label, "检测中请稍候");
+        lv_label_set_text(label, "USB HS 检测中");
         vTaskDelay(100 / portTICK_PERIOD_MS);
     }
     ESP_LOGI(TAG, "[Done] USB HS detected!");
@@ -279,7 +280,7 @@ void app_main(void)
 
     // Initialize the led
     ESP_ERROR_CHECK(bsp_leds_init());
-    lv_label_set_text(label, "检查补光灯是否打开若已打开请按任意键");
+    lv_label_set_text(label, "检查补光灯是否打开\n\n 若已打开请按任意键");
 
     bsp_led_set(BSP_LED_WHITE, 1);  // Turn on the white LED
     
@@ -299,7 +300,7 @@ void app_main(void)
     lv_obj_set_style_text_font(cam_label, &ui_font_shuhei_font_24, LV_PART_MAIN);
     lv_obj_set_style_text_align(cam_label, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN);
     lv_obj_set_style_text_color(cam_label, lv_color_make(255, 0, 0), LV_PART_MAIN);
-    lv_label_set_text(cam_label, "若显示正常按任意键退出");
+    lv_label_set_text(cam_label, "若显示正常\n\n 按任意键退出");
     lv_obj_align(cam_label, LV_ALIGN_CENTER, 0, 0);
 
     bsp_display_unlock();
