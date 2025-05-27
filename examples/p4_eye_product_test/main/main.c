@@ -24,7 +24,7 @@
 #define TEST_RESULT_FILE_FORMAT "%s/%s.txt" 
 
 /* WiFi test configuration */
-#define WIFI_TEST_TARGET_SSID    "TP-LINK_Liu"    // Target SSID for WiFi test
+#define WIFI_TEST_TARGET_SSID    "P4-EYE-WIFI-TEST"    // Target SSID for WiFi test
 #define WIFI_TEST_MIN_RSSI      -70         // Minimum acceptable signal strength in dBm
 
 #define BUTTON_1_BIT BIT0
