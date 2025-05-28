@@ -5,6 +5,7 @@
  */
 
 #include <stdio.h>
+#include <math.h>
 #include "bsp/esp-bsp.h"
 #include "lvgl.h"
 #include "esp_log.h"
@@ -18,6 +19,7 @@
 #include "app_wifi_scan.h"
 #include "app_video.h"
 #include "app_gpio.h"
+#include "app_qma6100.h"
 #include "ui.h"
 
 #define TEST_DISK_PATH  BSP_SD_MOUNT_POINT
@@ -163,6 +165,19 @@ void app_main(void)
     bsp_display_unlock();
     bsp_display_backlight_on();
 
+    // Initialize the I2C
+    i2c_master_bus_handle_t i2c_handle;
+    ESP_ERROR_CHECK(bsp_i2c_init());
+    bsp_get_i2c_bus_handle(&i2c_handle);
+
+    // Initialize the QMA6100 sensor
+    ESP_LOGI(TAG, "Initializing QMA6100 IMU sensor...");
+    esp_err_t ret = app_qma6100_init(i2c_handle);
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "QMA6100 initialization failed: %s", esp_err_to_name(ret));
+        return;
+    }
+
     if(bsp_sdcard_mount() != ESP_OK) {
         lv_obj_set_style_text_color(label, lv_color_make(255, 0, 0), LV_PART_MAIN);
         lv_label_set_text(label, "SD卡测试失败");
@@ -173,6 +188,53 @@ void app_main(void)
         lv_label_set_text(label, "SD卡测试通过");
         create_and_write_file(file_path, "", false);
         create_and_write_file(file_path, "SD card: PASS", true);
+    }
+
+    // Perform comprehensive IMU status check
+    ESP_LOGI(TAG, "Performing QMA6100 IMU status check...");
+    qma6100_status_t imu_status = app_qma6100_status_check(NULL); // Use default test configuration
+    
+    switch (imu_status) {
+        case QMA6100_STATUS_OK:
+            ESP_LOGI(TAG, "✓ QMA6100 IMU test PASSED - Device is working normally");
+            lv_label_set_text(label, "IMU QMA6100测试通过");
+            create_and_write_file(file_path, "IMU QMA6100: PASS", true);
+            break;
+            
+        case QMA6100_STATUS_NOT_INITIALIZED:
+            ESP_LOGE(TAG, "✗ QMA6100 IMU test FAILED - Device not initialized");
+            lv_obj_set_style_text_color(label, lv_color_make(255, 0, 0), LV_PART_MAIN);
+            lv_label_set_text(label, "IMU QMA6100测试失败");
+            create_and_write_file(file_path, "IMU QMA6100: FAIL (Not initialized)", true);
+            break;
+            
+        case QMA6100_STATUS_COMMUNICATION_ERROR:
+            ESP_LOGE(TAG, "✗ QMA6100 IMU test FAILED - Communication error");
+            lv_obj_set_style_text_color(label, lv_color_make(255, 0, 0), LV_PART_MAIN);
+            lv_label_set_text(label, "IMU QMA6100测试失败");
+            create_and_write_file(file_path, "IMU QMA6100: FAIL (Communication error)", true);
+            break;
+            
+        case QMA6100_STATUS_INVALID_DATA:
+            ESP_LOGE(TAG, "✗ QMA6100 IMU test FAILED - Invalid sensor data");
+            lv_obj_set_style_text_color(label, lv_color_make(255, 0, 0), LV_PART_MAIN);
+            lv_label_set_text(label, "IMU QMA6100测试失败");
+            create_and_write_file(file_path, "IMU QMA6100: FAIL (Invalid data)", true);
+            break;
+            
+        case QMA6100_STATUS_UNSTABLE_DATA:
+            ESP_LOGE(TAG, "✗ QMA6100 IMU test FAILED - Unstable sensor data");
+            lv_obj_set_style_text_color(label, lv_color_make(255, 0, 0), LV_PART_MAIN);
+            lv_label_set_text(label, "IMU QMA6100测试失败");
+            create_and_write_file(file_path, "IMU QMA6100: FAIL (Unstable data)", true);
+            break;
+            
+        default:
+            ESP_LOGE(TAG, "✗ QMA6100 IMU test FAILED - Unknown error");
+            lv_obj_set_style_text_color(label, lv_color_make(255, 0, 0), LV_PART_MAIN);
+            lv_label_set_text(label, "IMU QMA6100测试失败");
+            create_and_write_file(file_path, "IMU QMA6100: FAIL (Unknown error)", true);
+            break;
     }
 
     if(test_gpio_connection()) {
@@ -322,13 +384,8 @@ void app_main(void)
         }
     }
 
-    // Initialize the I2C
-    i2c_master_bus_handle_t i2c_handle;
-    ESP_ERROR_CHECK(bsp_i2c_init());
-    bsp_get_i2c_bus_handle(&i2c_handle);
-
     // Initialize the video camera
-    esp_err_t ret = app_video_main(i2c_handle);
+    ret = app_video_main(i2c_handle);
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "video main init failed with error 0x%x", ret);
         return;

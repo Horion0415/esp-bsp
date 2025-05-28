@@ -9,12 +9,12 @@
 static const char *TAG = "GPIO_TEST";
 
 // Define first group of GPIO pins (as sender and receiver)
-#define GROUP1_PIN_NUM 7
-const int group1_pins[GROUP1_PIN_NUM] = {10, 8, 6, 54, 53, 51, 38};
+#define GROUP1_PIN_NUM 5
+const int group1_pins[GROUP1_PIN_NUM] = {10, 8, 53, 51, 38};
 
 // Define second group of GPIO pins (as receiver and sender)
-#define GROUP2_PIN_NUM 7
-const int group2_pins[GROUP2_PIN_NUM] = {34, 7, 14, 13, 52, 50, 37};
+#define GROUP2_PIN_NUM 5
+const int group2_pins[GROUP2_PIN_NUM] = {34, 7, 52, 50, 37};
 
 // Initialize GPIO pins
 static void configure_gpio_pins(const int* output_pins, int output_num, const int* input_pins, int input_num) {

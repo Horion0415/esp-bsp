@@ -14,3 +14,6 @@ dependencies:
     
   espressif/esp_hosted:
     version: "*"
+
+  espressif/qma6100p:
+    version: "^2.0.0"
