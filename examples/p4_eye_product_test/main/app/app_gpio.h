@@ -10,12 +10,12 @@ extern "C" {
 /**
  * @brief Number of GPIO pins in group 1
  */
-#define GROUP1_PIN_NUM 5
+#define GROUP1_PIN_NUM 6
 
 /**
  * @brief Number of GPIO pins in group 2  
  */
-#define GROUP2_PIN_NUM 5
+#define GROUP2_PIN_NUM 6
 
 /**
  * @brief GPIO pins in group 1 (used as sender and receiver)
