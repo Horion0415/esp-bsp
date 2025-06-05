@@ -141,6 +141,8 @@ static void knob_right_cb(void *arg, void *data)
 
 void app_main(void)
 {
+    ESP_LOGI(TAG, "Starting product test... Version 1.0.1");
+
     // Initialize NVS
     esp_err_t ret = nvs_flash_init();
     if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
