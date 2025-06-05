@@ -6,6 +6,14 @@
 
 #include <stdio.h>
 #include <math.h>
+#include <string.h>
+#include "freertos/FreeRTOS.h"
+#include "freertos/event_groups.h"
+#include "esp_wifi.h"
+#include "esp_log.h"
+#include "esp_event.h"
+#include "nvs_flash.h"
+
 #include "bsp/esp-bsp.h"
 #include "lvgl.h"
 #include "esp_log.h"
@@ -133,6 +141,23 @@ static void knob_right_cb(void *arg, void *data)
 
 void app_main(void)
 {
+    // Initialize NVS
+    esp_err_t ret = nvs_flash_init();
+    if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
+        ESP_ERROR_CHECK(nvs_flash_erase());
+        ret = nvs_flash_init();
+    }
+    ESP_ERROR_CHECK( ret );
+
+    // Initialize WiFi
+    ESP_ERROR_CHECK(esp_netif_init());
+    ESP_ERROR_CHECK(esp_event_loop_create_default());
+    esp_netif_t *sta_netif = esp_netif_create_default_wifi_sta();
+    assert(sta_netif);
+
+    wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
+    ESP_ERROR_CHECK(esp_wifi_init(&cfg));
+
     // Get base MAC address
     uint8_t base_mac_addr[6] = {0};
     char mac_str[18];
@@ -143,6 +168,15 @@ void app_main(void)
              base_mac_addr[0], base_mac_addr[1], base_mac_addr[2],
              base_mac_addr[3], base_mac_addr[4], base_mac_addr[5]);
     ESP_LOGI(TAG, "[MAC address]: %s", mac_str);
+
+    // Try to get WiFi C6 MAC address
+    esp_err_t wifi_mac_ret = esp_wifi_remote_get_mac(WIFI_IF_STA, c6_mac);
+    if (wifi_mac_ret == ESP_OK) {
+        ESP_LOGI(TAG, "[WiFi C6 MAC address]: %02X-%02X-%02X-%02X-%02X-%02X", 
+                 c6_mac[0], c6_mac[1], c6_mac[2], c6_mac[3], c6_mac[4], c6_mac[5]);
+    } else {
+        ESP_LOGE(TAG, "[WiFi C6 MAC address]: Failed to get - %s", esp_err_to_name(wifi_mac_ret));
+    }
 
     char file_path[128];
     snprintf(file_path, sizeof(file_path), TEST_RESULT_FILE_FORMAT, TEST_DISK_PATH, mac_str);
@@ -172,7 +206,7 @@ void app_main(void)
 
     // Initialize the QMA6100 sensor
     ESP_LOGI(TAG, "Initializing QMA6100 IMU sensor...");
-    esp_err_t ret = app_qma6100_init(i2c_handle);
+    ret = app_qma6100_init(i2c_handle);
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "QMA6100 initialization failed: %s", esp_err_to_name(ret));
         return;
@@ -279,8 +313,6 @@ void app_main(void)
             lv_label_set_text(label, "WiFi扫描通过\n信号强度优");
             create_and_write_file(file_path, "WiFi scan: PASS", true);
             
-            esp_wifi_remote_get_mac(WIFI_IF_STA, c6_mac);
-            ESP_LOGI(TAG, "[WiFi MAC address]: %02X-%02X-%02X-%02X-%02X-%02X", c6_mac[0], c6_mac[1], c6_mac[2], c6_mac[3], c6_mac[4], c6_mac[5]);
             ESP_LOGI(TAG, "[Signal strength]: %d dBm", rssi);
         } else {
             lv_obj_set_style_text_color(label, lv_color_make(255, 0, 0), LV_PART_MAIN);
