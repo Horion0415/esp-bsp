@@ -138,6 +138,11 @@ static const button_config_t bsp_button_config[BSP_BUTTON_NUM] = {
         .gpio_button_config.active_level = 0,
         .gpio_button_config.gpio_num = BSP_BUTTON_ENCODER
     },
+    {
+        .type = BUTTON_TYPE_GPIO,
+        .gpio_button_config.active_level = 0,
+        .gpio_button_config.gpio_num = BSP_BUTTON_BOOT
+    }
 };
 
 esp_err_t bsp_i2c_init(void)
@@ -478,7 +483,7 @@ esp_err_t bsp_display_new(const bsp_display_config_t *config, esp_lcd_panel_hand
         .lcd_cmd_bits = LCD_CMD_BITS,
         .lcd_param_bits = LCD_PARAM_BITS,
         .spi_mode = 3,
-        .trans_queue_depth = 5,
+        .trans_queue_depth = 3,
     };
     ESP_GOTO_ON_ERROR(esp_lcd_new_panel_io_spi((esp_lcd_spi_bus_handle_t)BSP_LCD_SPI_NUM, &io_config, ret_io), err, TAG, "New panel IO failed");
 
@@ -529,7 +534,7 @@ static lv_disp_t *bsp_display_lcd_init(const bsp_display_cfg_t *cfg)
 {
     assert(cfg != NULL);
     const bsp_display_config_t bsp_disp_cfg = {
-        .max_transfer_sz = BSP_LCD_DRAW_BUFF_SIZE * sizeof(uint16_t),
+        .max_transfer_sz = BSP_LCD_H_RES * 80 * sizeof(uint16_t),
     };
     BSP_ERROR_CHECK_RETURN_NULL(bsp_display_new(&bsp_disp_cfg, &panel_handle, &io_handle));
 
@@ -598,6 +603,7 @@ lv_disp_t *bsp_display_start_with_config(const bsp_display_cfg_t *cfg)
     assert(cfg != NULL);
     BSP_ERROR_CHECK_RETURN_NULL(lvgl_port_init(&cfg->lvgl_port_cfg));
     BSP_NULL_CHECK(disp = bsp_display_lcd_init(cfg), NULL);
+    printf("test after display start 1\n");
 
     return disp;
 }
