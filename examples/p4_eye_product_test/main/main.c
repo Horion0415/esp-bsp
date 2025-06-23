@@ -194,6 +194,7 @@ void app_main(void)
     app_usb_hid_init();
 
     bsp_display_start();
+    bsp_display_backlight_on();
     bsp_display_lock(0);
 
     lv_obj_t *label = lv_label_create(lv_scr_act());
@@ -203,7 +204,6 @@ void app_main(void)
     lv_obj_align(label, LV_ALIGN_CENTER, 0, 0);
     
     bsp_display_unlock();
-    bsp_display_backlight_on();
 
     // Initialize the I2C
     i2c_master_bus_handle_t i2c_handle;
