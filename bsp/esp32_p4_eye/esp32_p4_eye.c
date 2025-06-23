@@ -534,7 +534,7 @@ static lv_disp_t *bsp_display_lcd_init(const bsp_display_cfg_t *cfg)
 {
     assert(cfg != NULL);
     const bsp_display_config_t bsp_disp_cfg = {
-        .max_transfer_sz = BSP_LCD_H_RES * 80 * sizeof(uint16_t),
+        .max_transfer_sz = BSP_LCD_H_RES * 10 * sizeof(uint16_t),
     };
     BSP_ERROR_CHECK_RETURN_NULL(bsp_display_new(&bsp_disp_cfg, &panel_handle, &io_handle));
 
