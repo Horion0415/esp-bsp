@@ -40,7 +40,8 @@
 #define BUTTON_1_BIT BIT0
 #define BUTTON_2_BIT BIT1
 #define BUTTON_3_BIT BIT2
-#define ALL_BUTTONS_BITS (BUTTON_1_BIT | BUTTON_2_BIT | BUTTON_3_BIT)
+#define BUTTON_BT_BIT BIT3
+#define ALL_BUTTONS_BITS (BUTTON_1_BIT | BUTTON_2_BIT | BUTTON_3_BIT | BUTTON_BT_BIT)
 
 #define KNOB_LEFT_BIT BIT3
 #define KNOB_RIGHT_BIT BIT4
@@ -94,6 +95,9 @@ static void btn_handler(void *arg, void *data)
     } else if ((int)data == BSP_BUTTON_3) {
         ESP_LOGI(TAG, "Button 3 pressed");
         xEventGroupSetBits(button_event_group, BUTTON_3_BIT);
+    } else if ((int)data == BSP_BUTTON_BT) {
+        ESP_LOGI(TAG, "Button BT pressed");
+        xEventGroupSetBits(button_event_group, BUTTON_BT_BIT);
     } else if ((int)data == BSP_BUTTON_ED) {
         ESP_LOGI(TAG, "Button ED pressed");
         EventBits_t current_bits = xEventGroupGetBits(button_event_group);
@@ -338,8 +342,9 @@ void app_main(void)
     ESP_ERROR_CHECK(iot_button_register_cb(btns[BSP_BUTTON_1], BUTTON_PRESS_DOWN, btn_handler, (void *) BSP_BUTTON_1));
     ESP_ERROR_CHECK(iot_button_register_cb(btns[BSP_BUTTON_2], BUTTON_PRESS_DOWN, btn_handler, (void *) BSP_BUTTON_2));
     ESP_ERROR_CHECK(iot_button_register_cb(btns[BSP_BUTTON_3], BUTTON_PRESS_DOWN, btn_handler, (void *) BSP_BUTTON_3));
+    ESP_ERROR_CHECK(iot_button_register_cb(btns[BSP_BUTTON_BT], BUTTON_PRESS_DOWN, btn_handler, (void *) BSP_BUTTON_BT));
     
-    lv_label_set_text(label, "请依次按下三个按键");
+    lv_label_set_text(label, "请依次按下三个按键 \n   Boot 按键");
 
     button_event_group = xEventGroupCreate();
 

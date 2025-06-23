@@ -488,6 +488,7 @@ esp_err_t bsp_display_new(const bsp_display_config_t *config, esp_lcd_panel_hand
         .color_space = BSP_LCD_COLOR_SPACE,
         .bits_per_pixel = BSP_LCD_BITS_PER_PIXEL,
     };
+
     ESP_GOTO_ON_ERROR(esp_lcd_new_panel_st7789(*ret_io, &panel_config, ret_panel), err, TAG, "New panel failed");
 
     const st7789_lcd_init_cmd_t *cmd = vendor_specific_init;
@@ -576,8 +577,8 @@ lv_disp_t *bsp_display_start(void)
         .buffer_size = BSP_LCD_DRAW_BUFF_SIZE,
         .double_buffer = BSP_LCD_DRAW_BUFF_DOUBLE,
         .flags = {
-            .buff_dma = true,
-            .buff_spiram = false,
+            .buff_dma = false,
+            .buff_spiram = true,
         }
     };
     return bsp_display_start_with_config(&cfg);

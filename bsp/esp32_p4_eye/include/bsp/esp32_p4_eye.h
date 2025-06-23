@@ -98,6 +98,7 @@
 #define BSP_BUTTON_NUM2      (GPIO_NUM_4)
 #define BSP_BUTTON_NUM3      (GPIO_NUM_5)
 #define BSP_BUTTON_ENCODER   (GPIO_NUM_2)
+#define BSP_BUTTON_BOOT      (GPIO_NUM_35)
 
 typedef enum bsp_led_t {
     BSP_LED_WHITE = GPIO_NUM_23,
@@ -123,6 +124,7 @@ typedef enum {
     BSP_BUTTON_2,
     BSP_BUTTON_3,
     BSP_BUTTON_ED,
+    BSP_BUTTON_BT,
     BSP_BUTTON_NUM
 } bsp_button_t;
 
@@ -281,7 +283,7 @@ esp_err_t bsp_knob_register_cb(knob_event_t event, knob_cb_t cb, void *usr_data)
 #define BSP_LCD_SPI_NUM            (SPI2_HOST)
 
 #if (BSP_CONFIG_NO_GRAPHIC_LIB == 0)
-#define BSP_LCD_DRAW_BUFF_SIZE     (BSP_LCD_H_RES * BSP_LCD_V_RES / 4)
+#define BSP_LCD_DRAW_BUFF_SIZE     (BSP_LCD_H_RES * BSP_LCD_V_RES)
 #define BSP_LCD_DRAW_BUFF_DOUBLE   (0)
 
 /**
