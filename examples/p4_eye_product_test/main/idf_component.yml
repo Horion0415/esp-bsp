@@ -10,10 +10,10 @@ dependencies:
   espressif/esp-sr: "*"
 
   espressif/esp_wifi_remote:
-    version: "*"
+    version: "0.*"
     
   espressif/esp_hosted:
-    version: "*"
+    version: "1.*"
 
   espressif/qma6100p:
     version: "^2.0.0"

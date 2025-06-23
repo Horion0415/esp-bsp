@@ -18,7 +18,7 @@
 #include "lvgl.h"
 #include "esp_log.h"
 #include "esp_mac.h"
-#include "esp_hosted_api.h"
+#include "esp_wifi_remote_api.h"
 #include "driver/ppa.h"
 #include "esp_private/esp_cache_private.h"
 

@@ -5,7 +5,7 @@
 
 static const char *TAG = "bsp_p4_eye";
 
-static void __attribute__((constructor)) bsp_p4_eye_auto_init(void)
+static void __attribute__((constructor(101))) bsp_p4_eye_auto_init(void)
 {
     ESP_LOGW(TAG, "Auto-initializing ESP32-P4-EYE board using constructor attribute");
     esp_err_t ret = bsp_p4_eye_init();
