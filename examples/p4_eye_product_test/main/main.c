@@ -23,7 +23,7 @@
 #include "esp_private/esp_cache_private.h"
 
 #include "app_usb_hid.h"
-#include "app_sr.h"
+#include "app_mic_check.h"
 #include "app_wifi_scan.h"
 #include "app_video.h"
 #include "app_gpio.h"
@@ -296,14 +296,13 @@ void app_main(void)
     create_and_write_file(file_path, "USB HS: PASS", true);
 
     bsp_extra_pdm_codec_init();
-    app_sr_start(false);
 
-    // Wait for wakeup
-    while (!app_sr_get_wakeup_result()) {
+    // Wait for voice activity (keep UI prompt unchanged)
+    while (!app_mic_wait_for_voice(3000)) {
         lv_label_set_text(label, "请对我说Hi ESP");
         vTaskDelay(100 / portTICK_PERIOD_MS);
     }
-    ESP_LOGI(TAG, "[Done] Wakeup detected!");
+    ESP_LOGI(TAG, "[Done] Microphone activity detected!");
     create_and_write_file(file_path, "Microphone: PASS", true);
 
     // Scan WiFi
