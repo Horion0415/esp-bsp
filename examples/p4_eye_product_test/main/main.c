@@ -64,6 +64,15 @@ static size_t data_cache_line_size = 0;
 static void *canvas_buf[EXAMPLE_CAM_BUF_NUM];
 
 static void camera_video_frame_operation(uint8_t *camera_buf, uint8_t camera_buf_index, uint32_t camera_buf_hes, uint32_t camera_buf_ves, size_t camera_buf_len);
+static void ui_set_label_text(lv_obj_t *label, const char *text);
+
+static void ui_set_label_text(lv_obj_t *label, const char *text)
+{
+    bsp_display_lock(0);
+    lv_label_set_text(label, text);
+    lv_refr_now(NULL);
+    bsp_display_unlock();
+}
 
 static esp_err_t create_and_write_file(const char *path, char *data, bool append)
 {
@@ -288,9 +297,9 @@ void app_main(void)
     }
 
     // Wait for USB HS
-    while(!app_usb_hid_stage()) {
-        lv_label_set_text(label, "USB HS 检测中");
-        vTaskDelay(100 / portTICK_PERIOD_MS);
+    ui_set_label_text(label, "USB HS 检测中");
+    while (!app_usb_hid_stage()) {
+        vTaskDelay(20 / portTICK_PERIOD_MS);
     }
     ESP_LOGI(TAG, "[Done] USB HS detected!");
     create_and_write_file(file_path, "USB HS: PASS", true);
@@ -298,10 +307,23 @@ void app_main(void)
     bsp_extra_pdm_codec_init();
 
     // Wait for voice activity (keep UI prompt unchanged)
-    while (!app_mic_wait_for_voice(3000)) {
-        lv_label_set_text(label, "请对我说Hi ESP");
-        vTaskDelay(100 / portTICK_PERIOD_MS);
+    app_mic_checker_t mic_checker;
+    app_mic_check_cfg_t mic_cfg = {
+        .sample_rate = 16000,
+        .channels = 2,
+        .window_ms = 120,
+        .baseline_windows = 8,
+        .hit_windows = 1,
+        .min_threshold = 80,
+        .baseline_mul_num = 3,
+        .baseline_mul_den = 2,
+    };
+    ESP_ERROR_CHECK(app_mic_checker_init(&mic_checker, &mic_cfg));
+    ui_set_label_text(label, "请对我说Hi ESP");
+    while (!app_mic_checker_step(&mic_checker, NULL)) {
+        vTaskDelay(10 / portTICK_PERIOD_MS);
     }
+    app_mic_checker_deinit(&mic_checker);
     ESP_LOGI(TAG, "[Done] Microphone activity detected!");
     create_and_write_file(file_path, "Microphone: PASS", true);
 

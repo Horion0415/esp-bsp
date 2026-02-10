@@ -31,86 +31,89 @@ static int32_t calc_mean_abs(const int16_t *buf, int samples)
     return (int32_t)(sum / samples);
 }
 
-bool app_mic_check_activity(int sample_rate, int channels, int window_ms, int total_windows, int hit_windows)
+esp_err_t app_mic_checker_init(app_mic_checker_t *checker, const app_mic_check_cfg_t *cfg)
 {
-    if (sample_rate <= 0 || channels <= 0 || window_ms <= 0 || total_windows <= 0) {
+    if (checker == NULL || cfg == NULL) {
+        ESP_LOGE(TAG, "Invalid checker or cfg");
+        return ESP_ERR_INVALID_ARG;
+    }
+    if (cfg->sample_rate <= 0 || cfg->channels <= 0 || cfg->window_ms <= 0 ||
+        cfg->baseline_windows <= 0 || cfg->hit_windows <= 0 ||
+        cfg->baseline_mul_den == 0) {
         ESP_LOGE(TAG, "Invalid parameters");
-        return false;
+        return ESP_ERR_INVALID_ARG;
     }
 
-    int samples_per_window = (sample_rate * window_ms) / 1000;
-    if (samples_per_window <= 0) {
+    memset(checker, 0, sizeof(*checker));
+    checker->cfg = *cfg;
+    checker->samples_per_window = (cfg->sample_rate * cfg->window_ms) / 1000;
+    if (checker->samples_per_window <= 0) {
         ESP_LOGE(TAG, "Window too small");
-        return false;
+        return ESP_ERR_INVALID_ARG;
     }
-
-    size_t bytes_per_window = (size_t)samples_per_window * channels * sizeof(int16_t);
-    int16_t *pcm = (int16_t *)heap_caps_malloc(bytes_per_window, MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT);
-    if (pcm == NULL) {
+    checker->bytes_per_window = (size_t)checker->samples_per_window * cfg->channels * sizeof(int16_t);
+    checker->pcm = (int16_t *)heap_caps_malloc(checker->bytes_per_window, MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT);
+    if (checker->pcm == NULL) {
         ESP_LOGE(TAG, "No memory for PCM buffer");
-        return false;
+        return ESP_ERR_NO_MEM;
     }
 
-    const int baseline_windows = 8; // ~640ms for 80ms windows
-    int64_t baseline_sum = 0;
-    int baseline_count = 0;
-
-    for (int i = 0; i < baseline_windows; i++) {
-        size_t bytes_read = 0;
-        esp_err_t ret = bsp_extra_pdm_i2s_read((void *)pcm, bytes_per_window, &bytes_read, portMAX_DELAY);
-        if (ret != ESP_OK || bytes_read != bytes_per_window) {
-            ESP_LOGW(TAG, "PDM read failed during baseline: ret=%d, read=%u", ret, (unsigned)bytes_read);
-            continue;
-        }
-        int32_t mean_abs = calc_mean_abs(pcm, samples_per_window * channels);
-        baseline_sum += mean_abs;
-        baseline_count++;
-    }
-
-    int32_t baseline = 0;
-    if (baseline_count > 0) {
-        baseline = (int32_t)(baseline_sum / baseline_count);
-    }
-
-    int32_t min_threshold = 80;
-    int32_t threshold = (baseline * 3) / 2;
-    if (threshold < min_threshold) {
-        threshold = min_threshold;
-    }
-
-    ESP_LOGI(TAG, "Baseline=%d, Threshold=%d, windows=%d, hit=%d", baseline, threshold, total_windows, hit_windows);
-
-    int hit = 0;
-    for (int i = 0; i < total_windows; i++) {
-        size_t bytes_read = 0;
-        esp_err_t ret = bsp_extra_pdm_i2s_read((void *)pcm, bytes_per_window, &bytes_read, portMAX_DELAY);
-        if (ret != ESP_OK || bytes_read != bytes_per_window) {
-            ESP_LOGW(TAG, "PDM read failed: ret=%d, read=%u", ret, (unsigned)bytes_read);
-            continue;
-        }
-        int32_t mean_abs = calc_mean_abs(pcm, samples_per_window * channels);
-        if (mean_abs >= threshold) {
-            hit++;
-            if (hit >= hit_windows) {
-                ESP_LOGI(TAG, "Audio activity detected (mean_abs=%d)", mean_abs);
-                heap_caps_free(pcm);
-                return true;
-            }
-        }
-    }
-
-    ESP_LOGW(TAG, "Audio activity not detected");
-    heap_caps_free(pcm);
-    return false;
+    ESP_LOGI(TAG, "Mic checker init: %d Hz, %d ch, %d ms", cfg->sample_rate, cfg->channels, cfg->window_ms);
+    return ESP_OK;
 }
 
-bool app_mic_wait_for_voice(uint32_t timeout_ms)
+void app_mic_checker_deinit(app_mic_checker_t *checker)
 {
-    const int sample_rate = 16000;
-    const int channels = 2;
-    const int window_ms = 120;
-    const int total_windows = (timeout_ms + window_ms - 1) / window_ms;
-    const int hit_windows = 1;
+    if (checker == NULL) {
+        return;
+    }
+    if (checker->pcm) {
+        heap_caps_free(checker->pcm);
+        checker->pcm = NULL;
+    }
+}
 
-    return app_mic_check_activity(sample_rate, channels, window_ms, total_windows, hit_windows);
+bool app_mic_checker_step(app_mic_checker_t *checker, int32_t *out_level)
+{
+    if (checker == NULL || checker->pcm == NULL) {
+        ESP_LOGE(TAG, "Checker not initialized");
+        return false;
+    }
+
+    size_t bytes_read = 0;
+    esp_err_t ret = bsp_extra_pdm_i2s_read((void *)checker->pcm, checker->bytes_per_window, &bytes_read, portMAX_DELAY);
+    if (ret != ESP_OK || bytes_read != checker->bytes_per_window) {
+        ESP_LOGW(TAG, "PDM read failed: ret=%d, read=%u", ret, (unsigned)bytes_read);
+        return false;
+    }
+
+    int32_t mean_abs = calc_mean_abs(checker->pcm, checker->samples_per_window * checker->cfg.channels);
+    if (out_level) {
+        *out_level = mean_abs;
+    }
+
+    if (!checker->threshold_ready) {
+        checker->baseline_sum += mean_abs;
+        checker->collected++;
+        if (checker->collected >= checker->cfg.baseline_windows) {
+            checker->baseline = (int32_t)(checker->baseline_sum / checker->collected);
+            checker->threshold = (checker->baseline * checker->cfg.baseline_mul_num) / checker->cfg.baseline_mul_den;
+            if (checker->threshold < checker->cfg.min_threshold) {
+                checker->threshold = checker->cfg.min_threshold;
+            }
+            checker->threshold_ready = true;
+            ESP_LOGI(TAG, "Baseline=%d, Threshold=%d", checker->baseline, checker->threshold);
+        }
+        return false;
+    }
+
+    if (mean_abs >= checker->threshold) {
+        checker->hit++;
+        if (checker->hit >= checker->cfg.hit_windows) {
+            ESP_LOGI(TAG, "Audio activity detected (mean_abs=%d)", mean_abs);
+            return true;
+        }
+    }
+
+    return false;
 }
